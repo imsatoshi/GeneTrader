@@ -57,6 +57,41 @@ Use `--config` to specify a custom configuration file (default is 'ga.json').
 - `genetic_algorithm/`: Classes and functions for the genetic algorithm
 - `strategy/`: Strategy-related code, including backtesting
 
+## Backtesting Results
+
+Here are the results from our latest backtesting:
+
+### Summary Metrics
+
+| Metric | Value |
+|--------|-------|
+| Backtesting from | 2024-01-01 00:00:00 |
+| Backtesting to | 2024-09-07 02:30:00 |
+| Max open trades | 2 |
+| Total/Daily Avg Trades | 372 / 1.49 |
+| Starting balance | 60 USDT |
+| Final balance | 615.421 USDT |
+| Absolute profit | 555.421 USDT |
+| Total profit % | 925.70% |
+| CAGR % | 2892.89% |
+| Sharpe | 24.29 |
+| Profit factor | 1608.62 |
+| Avg. daily profit % | 3.70% |
+| Best Pair | OM/USDT 60.48% |
+| Worst Pair | ENA/USDT 0.00% |
+| Best trade | PEOPLE/USDT 5.00% |
+| Worst trade | RUNE/USDT -0.11% |
+| Win / Draw / Loss | 371 / 0 / 1 |
+| Win% | 99.7% |
+
+### Strategy Performance
+
+| Strategy | Trades | Avg Profit % | Tot Profit USDT | Tot Profit % | Avg Duration | Win / Draw / Loss | Win% | Drawdown |
+|----------|--------|--------------|-----------------|--------------|--------------|-------------------|------|----------|
+| GeneTrader_gen2_20240907_174909_7870 | 372 | 1.28 | 555.421 | 925.7 | 1 day, 8:08:00 | 371 / 0 / 1 | 99.7 | 0.345 USDT (0.06%) |
+
+These results demonstrate the effectiveness of our genetic algorithm in optimizing trading strategies.
+
 ## Contributing
 
 Contributions are welcome! Please submit issues or pull requests.
