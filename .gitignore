@@ -1,6 +1,11 @@
 user_data/data/*
 !user_data/data/.gitkeep
 
+
+user_data/backtest_results/*
+!user_data/backtest_results/.gitkeep
+
+
 user_data/strategies/*
 !user_data/strategies/.gitkeep
 
