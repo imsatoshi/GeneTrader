@@ -119,8 +119,6 @@ class ${strategy_name}(IStrategy):
                             **kwargs) -> float:
         available_balance = self.wallets.get_available_stake_amount()
         max_stake_for_trade = available_balance * self.initial_entry_ratio.value
-
-        # 确保留有足够的资金进行DCA
         stake_amount = min(proposed_stake, max_stake_for_trade)
         return stake_amount
 
@@ -306,18 +304,14 @@ class ${strategy_name}(IStrategy):
                         time_in_force: str, current_time: datetime, entry_tag: Optional[str],
                         side: str, **kwargs) -> bool:
     
-        # 获取当前的dataframe
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         
-        # 计算整个dataframe的成交量均值
         volume_mean = dataframe['volume'].rolling(window=24).mean()
         
-        # 获取最后一根蜡烛的数据
         last_candle = dataframe.iloc[-1]
         
-        # 检查市场条件是否适合入场
-        if (last_candle['volume'] > volume_mean.iloc[-1] and  # 最后一根蜡烛的成交量高于24小时平均
-            last_candle['close'] > last_candle['ema_long']):  # 价格高于长期均线
+        if (last_candle['volume'] > volume_mean.iloc[-1] and
+            last_candle['close'] > last_candle['ema_long']):
             return True
         
         return False

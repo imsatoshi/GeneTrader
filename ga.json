@@ -7,6 +7,7 @@
     "freqtrade_path": "/Users/zhangjiawei/Projects/freqtrade/.venv/bin/freqtrade",
     "strategy_dir": "user_data/strategies",
     "user_dir": "user_data",
+    "data_dir": "user_data/data/binance",
     "results_dir": "results",
     "config_file": "user_data/config_large.json",
     "population_size": 40,

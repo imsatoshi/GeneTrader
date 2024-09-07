@@ -21,6 +21,7 @@ class Settings:
         self.crossover_prob = self.config['crossover_prob']
         self.mutation_prob = self.config['mutation_prob']
         self.tournament_size = self.config['tournament_size']
+        self.data_dir = self.config['data_dir']  # Add this line
 
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
