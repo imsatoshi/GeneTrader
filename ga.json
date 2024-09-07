@@ -16,6 +16,6 @@
     "pool_processes": 6,
     "max_retries": 10,
     "retry_delay": 0.1,
-    "project_dir": "/Users/zhangjiawei/Library/CloudStorage/Dropbox/trades/dailybuystrategy",
+    "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations"
 }

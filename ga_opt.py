@@ -161,7 +161,7 @@ def evaluate_strategy(individual, generation):
     
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     random_number = random.randint(1000, 9999)  # Generate a random 4-digit number
-    strategy_name = f"DailyBuy_gen{generation}_{timestamp}_{random_number}"
+    strategy_name = f"GeneTrader_gen{generation}_{timestamp}_{random_number}"
     strategy_file = f"{config['strategy_dir']}/{strategy_name}.py"
     params['strategy_name'] = strategy_name
     
@@ -374,7 +374,7 @@ def optimize_and_update(download_data_flag):
                 'dca_profit_threshold': round(best_params[23], 2),
             })
             
-            strategy_name = f"DailyBuy_{gen}"
+            strategy_name = f"GeneTrader_{gen}"
             params['strategy_name'] = strategy_name
             
             strategy_file = f"{config['best_generations_dir']}/{strategy_name}.py"

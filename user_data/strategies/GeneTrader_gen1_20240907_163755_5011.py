@@ -1,6 +1,4 @@
-from string import Template
 
-strategy_template = Template("""
 import json
 import logging
 import os
@@ -26,7 +24,7 @@ import freqtrade.vendor.qtpylib.indicators as qtpylib
 import pandas_ta as pta
 
 
-class ${strategy_name}(IStrategy):
+class GeneTrader_gen1_20240907_163755_5011(IStrategy):
     INTERFACE_VERSION = 3
 
     minimal_roi = {
@@ -72,43 +70,43 @@ class ${strategy_name}(IStrategy):
     last_dca_price = {}
     csl = {}
     commands = []
-    initial_entry_ratio = DecimalParameter(0.4, 1.0, default=$initial_entry_ratio, space='buy', optimize=True)
+    initial_entry_ratio = DecimalParameter(0.4, 1.0, default=0.71, space='buy', optimize=True)
 
-    new_sl_coef = DecimalParameter(0.3, 0.9, default=$new_sl_coef, space='sell', optimize=False)
+    new_sl_coef = DecimalParameter(0.3, 0.9, default=0.66, space='sell', optimize=False)
 
     # TTF
-    lookback_length = IntParameter(1, 30, default=$lookback_length, space='buy', optimize=True)
-    upper_trigger_level = IntParameter(1, 300, default=$upper_trigger_level, space='buy', optimize=True)
-    lower_trigger_level = IntParameter(-300, -1, default=$lower_trigger_level, space='buy', optimize=True)
+    lookback_length = IntParameter(1, 30, default=8, space='buy', optimize=True)
+    upper_trigger_level = IntParameter(1, 300, default=7, space='buy', optimize=True)
+    lower_trigger_level = IntParameter(-300, -1, default=-157, space='buy', optimize=True)
 
     # Hyperoptable parameters
-    buy_rsi = IntParameter(25, 60, default=$buy_rsi, space='buy', optimize=False)
-    sell_rsi = IntParameter(50, 70, default=$sell_rsi, space='sell', optimize=False)
+    buy_rsi = IntParameter(25, 60, default=26, space='buy', optimize=False)
+    sell_rsi = IntParameter(50, 70, default=55, space='sell', optimize=False)
 
     # ATR based stop loss parameters
-    atr_multiplier = DecimalParameter(1.0, 3.0, default=$atr_multiplier, space='stoploss', optimize=False)
+    atr_multiplier = DecimalParameter(1.0, 3.0, default=2.8, space='stoploss', optimize=False)
 
     # SWINGS
-    swing_window = IntParameter(10, 50, default=$swing_window, space='buy', optimize=False)
-    swing_min_periods = IntParameter(1, 10, default=$swing_min_periods, space='buy', optimize=False)
-    swing_buffer = DecimalParameter(0.01, 0.1, default=$swing_buffer, space='buy', optimize=False)
+    swing_window = IntParameter(10, 50, default=16, space='buy', optimize=False)
+    swing_min_periods = IntParameter(1, 10, default=6, space='buy', optimize=False)
+    swing_buffer = DecimalParameter(0.01, 0.1, default=0.04, space='buy', optimize=False)
 
-    buy_macd = DecimalParameter(-0.02, 0.02, default=$buy_macd, space='buy', optimize=False)
-    buy_ema_short = IntParameter(5, 50, default=$buy_ema_short, space='buy', optimize=False)
-    buy_ema_long = IntParameter(50, 200, default=$buy_ema_long, space='buy', optimize=False)
+    buy_macd = DecimalParameter(-0.02, 0.02, default=0.02, space='buy', optimize=False)
+    buy_ema_short = IntParameter(5, 50, default=24, space='buy', optimize=False)
+    buy_ema_long = IntParameter(50, 200, default=132, space='buy', optimize=False)
 
-    sell_macd = DecimalParameter(-0.02, 0.02, default=$sell_macd, space='sell', optimize=False)
-    sell_ema_short = IntParameter(5, 50, default=$sell_ema_short, space='sell', optimize=False)
-    sell_ema_long = IntParameter(50, 200, default=$sell_ema_long, space='sell', optimize=False)
+    sell_macd = DecimalParameter(-0.02, 0.02, default=0.01, space='sell', optimize=False)
+    sell_ema_short = IntParameter(5, 50, default=5, space='sell', optimize=False)
+    sell_ema_long = IntParameter(50, 200, default=117, space='sell', optimize=False)
 
-    volume_dca_int = IntParameter(1, 30, default=$volume_dca_int, space='buy', optimize=False)
-    a_vol_coef = DecimalParameter(1, 2, default=$a_vol_coef, space='buy', optimize=False)
-    dca_candles_modulo = IntParameter(1, 100, default=$dca_candles_modulo, space='buy', optimize=True)
-    dca_threshold = DecimalParameter(0.01, 0.5, default=$dca_threshold, space='buy', optimize=False)
+    volume_dca_int = IntParameter(1, 30, default=18, space='buy', optimize=False)
+    a_vol_coef = DecimalParameter(1, 2, default=1.7, space='buy', optimize=False)
+    dca_candles_modulo = IntParameter(1, 100, default=94, space='buy', optimize=True)
+    dca_threshold = DecimalParameter(0.01, 0.5, default=0.05, space='buy', optimize=False)
 
-    dca_multiplier = DecimalParameter(1.0, 2.0, default=$dca_multiplier, space='buy', optimize=True)
-    max_dca_orders = IntParameter(1, 5, default=$max_dca_orders, space='buy', optimize=True)
-    dca_profit_threshold = DecimalParameter(-0.20, -0.05, default=$dca_profit_threshold, space='buy', optimize=True)
+    dca_multiplier = DecimalParameter(1.0, 2.0, default=1.3, space='buy', optimize=True)
+    max_dca_orders = IntParameter(1, 5, default=3, space='buy', optimize=True)
+    dca_profit_threshold = DecimalParameter(-0.20, -0.05, default=-0.2, space='buy', optimize=True)
 
     def __init__(self, config):
         return super().__init__(config)
@@ -358,40 +356,3 @@ class ${strategy_name}(IStrategy):
         resistance_1 = 2 * pivot_point - dataframe['low']
         support_1 = 2 * pivot_point - dataframe['high']
         return pivot_point, resistance_1, support_1
-""")
-
-strategy_params = {
-    'strategy_name': "GeneTrader",
-    'initial_entry_ratio': 0.5,
-    'new_sl_coef': 0.6,
-    'lookback_length': 15,
-    'upper_trigger_level': 150,
-    'lower_trigger_level': -150,
-    'buy_rsi': 40,
-    'sell_rsi': 60,
-    'atr_multiplier': 2.0,
-    'swing_window': 30,
-    'swing_min_periods': 5,
-    'swing_buffer': 0.05,
-    'buy_macd': 0.0,
-    'buy_ema_short': 25,
-    'buy_ema_long': 100,
-    'sell_macd': 0.0,
-    'sell_ema_short': 25,
-    'sell_ema_long': 100,
-    'volume_dca_int': 15,
-    'a_vol_coef': 1.5,
-    'dca_candles_modulo': 50,
-    'dca_threshold': 0.25,
-    'dca_multiplier': 1.5,
-    'max_dca_orders': 3,
-    'dca_profit_threshold': -0.10,  
-}
-
-
-def render_strategy(params):
-    return strategy_template.substitute(params)
-
-
-if __name__ == "__main__":
-    print(render_strategy(strategy_params))
