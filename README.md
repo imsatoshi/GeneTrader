@@ -1,6 +1,6 @@
 # Genetic Algorithm Optimization for Trading Strategies
 
-This project uses genetic algorithms to optimize trading strategy parameters for the Freqtrade trading bot.
+This project uses genetic algorithms to optimize trading strategy parameters.
 
 ## Features
 
@@ -13,9 +13,7 @@ This project uses genetic algorithms to optimize trading strategy parameters for
 ## Prerequisites
 
 - Python 3.7+
-- Freqtrade
-- DEAP
-- NumPy
+- Required libraries (specified in requirements.txt)
 
 ## Installation
 
@@ -34,8 +32,7 @@ This project uses genetic algorithms to optimize trading strategy parameters for
 
 Edit `ga.json` (or your custom config file) to configure:
 
-- Genetic algorithm parameters
-- Population size and number of generations
+- Genetic algorithm parameters (population size, generations, tournament size)
 - Mutation and crossover probabilities
 - Parallel processing options
 - File paths and directories
@@ -47,23 +44,18 @@ Ensure all necessary directories specified in the configuration file exist befor
 Run the optimization script:
 
 ```
-python main.py [--download-data]
+python main.py [--config CONFIG_FILE]
 ```
 
-Use `--download-data` to download data before optimization.
+Use `--config` to specify a custom configuration file (default is 'ga.json').
 
-## Performance Example
+## Project Structure
 
-Here's a sample of optimized strategy performance:
-
-| Metric | Value |
-|--------|-------|
-| Total Trades | 342 |
-| Profit | 586.16% |
-| Sharpe Ratio | 49.83 |
-| Max Drawdown | 0.10% |
-
-Full metrics available in the results directory.
+- `main.py`: Main script to run the genetic algorithm
+- `config/settings.py`: Settings class to load configuration
+- `utils/`: Utility functions for logging and file operations
+- `genetic_algorithm/`: Classes and functions for the genetic algorithm
+- `strategy/`: Strategy-related code, including backtesting
 
 ## Contributing
 
