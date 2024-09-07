@@ -1,0 +1,28 @@
+# Python version
+python>=3.7
+
+# Core dependencies
+datetime
+typing
+
+# Logging
+logging
+
+# Configuration management
+python-dotenv
+
+# Template rendering
+string
+
+# Additional libraries
+numpy
+pandas
+os
+time
+random
+
+# Freqtrade (assuming it's used based on the backtest command)
+freqtrade
+
+# Regular expressions
+re
