@@ -32,18 +32,22 @@ This project uses genetic algorithms to optimize trading strategy parameters for
 
 ## Configuration
 
-Edit `ga.json` to configure:
+Edit `ga.json` (or your custom config file) to configure:
 
-- Freqtrade paths and directories
 - Genetic algorithm parameters
+- Population size and number of generations
+- Mutation and crossover probabilities
 - Parallel processing options
+- File paths and directories
+
+Ensure all necessary directories specified in the configuration file exist before running the script.
 
 ## Usage
 
 Run the optimization script:
 
 ```
-python ga_opt.py [--download-data]
+python main.py [--download-data]
 ```
 
 Use `--download-data` to download data before optimization.
