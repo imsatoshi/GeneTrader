@@ -68,27 +68,27 @@ Here are the results from our latest backtesting:
 | Backtesting from | 2024-01-01 00:00:00 |
 | Backtesting to | 2024-09-07 02:30:00 |
 | Max open trades | 2 |
-| Total/Daily Avg Trades | 372 / 1.49 |
+| Total/Daily Avg Trades | 665 / 2.66 |
 | Starting balance | 60 USDT |
-| Final balance | 615.421 USDT |
-| Absolute profit | 555.421 USDT |
-| Total profit % | 925.70% |
-| CAGR % | 2892.89% |
-| Sharpe | 24.29 |
-| Profit factor | 1608.62 |
-| Avg. daily profit % | 3.70% |
-| Best Pair | OM/USDT 60.48% |
+| Final balance | 1281.509 USDT |
+| Absolute profit | 1221.509 USDT |
+| Total profit % | 2035.85% |
+| CAGR % | 8633.18% |
+| Sharpe | 31.51 |
+| Profit factor | 0.00 |
+| Avg. daily profit % | 8.14% |
+| Best Pair | PEOPLE/USDT 61.41% |
 | Worst Pair | ENA/USDT 0.00% |
 | Best trade | PEOPLE/USDT 5.00% |
-| Worst trade | RUNE/USDT -0.11% |
-| Win / Draw / Loss | 371 / 0 / 1 |
-| Win% | 99.7% |
+| Worst trade | ETC/USDT 0.50% |
+| Win / Draw / Loss | 665 / 0 / 0 |
+| Win% | 100% |
 
 ### Strategy Performance
 
 | Strategy | Trades | Avg Profit % | Tot Profit USDT | Tot Profit % | Avg Duration | Win / Draw / Loss | Win% | Drawdown |
 |----------|--------|--------------|-----------------|--------------|--------------|-------------------|------|----------|
-| GeneTrader_gen2_20240907_174909_7870 | 372 | 1.28 | 555.421 | 925.7 | 1 day, 8:08:00 | 371 / 0 / 1 | 99.7 | 0.345 USDT (0.06%) |
+| GeneTrader_gen6_1725791801_3038 | 665 | 1.23 | 1221.509 | 2035.85 | 17:12:00 | 665 / 0 / 0 | 100 | 0 USDT (0.00%) |
 
 These results demonstrate the effectiveness of our genetic algorithm in optimizing trading strategies.
 
