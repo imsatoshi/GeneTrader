@@ -18,6 +18,6 @@
     "pool_processes": 8,
     "max_retries": 10,
     "retry_delay": 0.1,
-    "project_dir": "/Users/zhangjiawei/Downloads/GeneTrader-main",
+    "project_dir": "/Users/zhangjiawei/Downloads/GeneTrader",
     "best_generations_dir": "bestgenerations"
 }
