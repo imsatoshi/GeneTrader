@@ -4,6 +4,7 @@ import time
 from typing import List
 import multiprocessing
 import random
+from datetime import datetime, date
 
 from config.settings import Settings
 from utils.logging_config import logger
@@ -12,6 +13,7 @@ from genetic_algorithm.individual import Individual
 from genetic_algorithm.population import Population
 from genetic_algorithm.operators import crossover, mutate, select_tournament
 from strategy.backtest import run_backtest
+from data.downloader import download_data  # 假设您有一个数据下载模块
 
 def genetic_algorithm(settings: Settings) -> List[tuple[int, Individual]]:
     population = Population.create_random(settings.population_size)
@@ -69,6 +71,9 @@ def save_best_individual(individual: Individual, generation: int, settings: Sett
 def main():
     parser = argparse.ArgumentParser(description='Run genetic algorithm for trading strategy optimization')
     parser.add_argument('--config', type=str, default='ga.json', help='Path to the configuration file')
+    parser.add_argument('--download', action='store_true', help='Download data before running the algorithm')
+    parser.add_argument('--start-date', type=str, default='20240101', help='Start date for data download (YYYYMMDD)')
+    parser.add_argument('--end-date', type=str, default=date.today().strftime('%Y%m%d'), help='End date for data download (YYYYMMDD)')
     args = parser.parse_args()
 
     try:
@@ -77,6 +82,13 @@ def main():
 
         # Create necessary directories
         create_directories([settings.results_dir, settings.best_generations_dir])
+
+        # Download data if requested
+        if args.download:
+            start_date = datetime.strptime(args.start_date, '%Y%m%d').date()
+            end_date = datetime.strptime(args.end_date, '%Y%m%d').date()
+            logger.info(f"Downloading data from {start_date} to {end_date}")
+            download_data(start_date, end_date)
 
         # Record start time
         start_time = time.time()
