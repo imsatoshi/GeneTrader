@@ -1,3 +1,10 @@
+import sys
+import os
+
+# 将项目根目录添加到 Python 路径
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
+
 import re
 from typing import Dict
 from utils.logging_config import logger
@@ -55,7 +62,7 @@ def parse_backtest_results(output_file: str) -> Dict[str, float]:
         'sharpe_ratio': extract_value(r'Sharpe\s*│\s*([\d.]+)'),
         'sortino_ratio': extract_value(r'Sortino\s*│\s*([\d.]+)'),
         'profit_factor': extract_value(r'Profit factor\s*│\s*([\d.]+)'),
-        'avg_profit': extract_value(r'Avg Profit %\s*([\d.-]+)'),
+        'avg_profit': extract_value(r'│\s*TOTAL\s*│.*?│\s*([\d.-]+)\s*│', default=0),  # Updated pattern
         'total_trades': extract_value(r'Total/Daily Avg Trades\s*│\s*(\d+)\s*/'),
         'daily_avg_trades': extract_value(r'Total/Daily Avg Trades\s*│\s*\d+\s*/\s*([\d.]+)'),
         'avg_trade_duration': parse_duration(extract_value(r'Avg\. Duration Winners\s*│\s*(.*?)\s*│', default='0:00:00', is_string=True))
@@ -64,20 +71,47 @@ def parse_backtest_results(output_file: str) -> Dict[str, float]:
     return parsed_result
 
 def fitness_function(parsed_result: Dict[str, float]) -> float:
-    sortino = parsed_result['sortino_ratio']
-    profit = parsed_result['total_profit_percent']
-    trade_count = parsed_result['total_trades']
+    total_profit_usdt = parsed_result['total_profit_usdt']
+    win_rate = parsed_result['win_rate']
+    max_drawdown = parsed_result['max_drawdown']
     avg_profit = parsed_result['avg_profit']
-    avg_duration = parsed_result['avg_trade_duration']
+    avg_trade_duration = parsed_result['avg_trade_duration']
+    total_trades = parsed_result['total_trades']
 
-    if trade_count < 10:
-        return float('-inf')  # Heavily penalize low trade count
+    # 确保至少有一定数量的交易
+    if total_trades < 100:
+        return float('-inf')
 
-    # Adjust fitness based on average trade duration
-    duration_factor = min(avg_duration / 1440, 1)  # Cap at 1 day (1440 minutes)
-    fitness = sortino + avg_profit * 0.1 + duration_factor
+    # 利润因子：总利润与最大回撤的比率
+    profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)  # 避免除以零
 
-    if profit <= 0:
-        fitness = fitness / 2
+    # 平均交易持续时间因子（假设理想的平均持续时间为4小时）
+    duration_factor = min(240 / (avg_trade_duration + 1e-6), 1)
+
+    # 组合这些因素来计算fitness
+    fitness = (
+        total_profit_usdt * 0.3 +  # 总利润的权重
+        win_rate * 100 +           # 胜率的权重
+        avg_profit * 10 +          # 平均利润的权重
+        profit_drawdown_ratio * 0.2 +  # 利润与回撤比率的权重
+        duration_factor * 50        # 交易持续时间的权重
+    )
 
     return fitness
+
+if __name__ == "__main__":
+    import sys
+
+    # 默认文件路径
+    default_file = "/Users/zhangjiawei/Downloads/GeneTrader/results/backtest_results_gen1_1725779283_7665.txt"
+    
+    # 允许从命令行传入文件路径
+    file_path = sys.argv[1] if len(sys.argv) > 1 else default_file
+    
+    results = parse_backtest_results(file_path)
+    print("Parsed results:")
+    for key, value in results.items():
+        print(f"{key}: {value}")
+    
+    fitness = fitness_function(results)
+    print(f"\nFitness score: {fitness}")
