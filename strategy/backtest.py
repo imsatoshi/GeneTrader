@@ -59,7 +59,9 @@ def render_strategy(params: list, strategy_name: str) -> str:
     return rendered_strategy
 
 def run_backtest(params: Dict[str, any], generation: int) -> float:
-    strategy_name = f"GeneTrader_gen{generation}_{int(time.time())}_{random.randint(1000, 9999)}"
+    timestamp = int(time.time())
+    random_id = random.randint(1000, 9999)
+    strategy_name = f"GeneTrader_gen{generation}_{timestamp}_{random_id}"
     strategy_file = f"{settings.strategy_dir}/{strategy_name}.py"
     
     # Render new strategy file
@@ -72,7 +74,7 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
     start_date = end_date - timedelta(weeks=18)
     timerange = f"{start_date.strftime('%Y%m%d')}-"
 
-    output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{int(time.time())}_{random.randint(1000, 9999)}.txt"
+    output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{timestamp}_{random_id}.txt"
     
     for attempt in range(settings.max_retries):
         command = (
