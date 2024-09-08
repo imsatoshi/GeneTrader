@@ -26,8 +26,15 @@ def genetic_algorithm(settings: Settings) -> List[tuple[int, Individual]]:
             for ind, fit in zip(population.individuals, fitnesses):
                 ind.fitness = fit
 
+            # Filter out individuals with None fitness
+            valid_individuals = [ind for ind in population.individuals if ind.fitness is not None]
+            
+            if not valid_individuals:
+                logger.warning(f"No valid individuals in generation {gen+1}. Terminating early.")
+                break
+
             # Select individuals for the next generation
-            offspring = [select_tournament(population.individuals, settings.tournament_size) for _ in range(settings.population_size)]
+            offspring = [select_tournament(valid_individuals, settings.tournament_size) for _ in range(settings.population_size)]
 
             # Apply crossover and mutation
             for i in range(0, len(offspring), 2):
@@ -41,7 +48,7 @@ def genetic_algorithm(settings: Settings) -> List[tuple[int, Individual]]:
             population.individuals = offspring
 
             # Find the best individual in the current generation
-            best_ind = population.get_best()
+            best_ind = max(valid_individuals, key=lambda ind: ind.fitness)
             best_individuals.append((gen+1, best_ind))
 
             logger.info(f"Best individual in generation {gen+1}: Fitness: {best_ind.fitness}")

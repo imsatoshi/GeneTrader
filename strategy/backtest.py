@@ -8,27 +8,55 @@ from utils.logging_config import logger
 from strategy.evaluation import parse_backtest_results, fitness_function
 from strategy.template import strategy_template, strategy_params
 
-def render_strategy(params: Dict[str, any], strategy_name: str) -> str:
-    # Ensure strategy_params is a dictionary
-    if isinstance(strategy_params, list):
-        strategy_params_dict = {str(i): v for i, v in enumerate(strategy_params)}
-    else:
-        strategy_params_dict = strategy_params
+def render_strategy(params: list, strategy_name: str) -> str:
+    print(f"Input params: {params}")
+    print(f"Input strategy_name: {strategy_name}")
 
-    # Ensure params is a dictionary
-    if isinstance(params, list):
-        params_dict = {str(i): v for i, v in enumerate(params)}
-    else:
-        params_dict = params
-
-    # Merge the default strategy_params with the provided params
-    merged_params = {**strategy_params_dict, **params_dict}
+    # Create a copy of strategy_params
+    strategy_params_copy = strategy_params.copy()
     
-    # Use the provided strategy_name instead of generating a new one
-    merged_params['strategy_name'] = strategy_name
+    # Convert the params list to a dictionary using predefined keys
+    param_keys = [
+        'initial_entry_ratio', 'new_sl_coef', 'lookback_length', 'upper_trigger_level',
+        'lower_trigger_level', 'buy_rsi', 'sell_rsi', 'atr_multiplier', 'swing_window',
+        'swing_min_periods', 'swing_buffer', 'buy_macd', 'buy_ema_short', 'buy_ema_long',
+        'sell_macd', 'sell_ema_short', 'sell_ema_long', 'volume_dca_int', 'a_vol_coef',
+        'dca_candles_modulo', 'dca_threshold', 'dca_multiplier', 'max_dca_orders',
+        'dca_profit_threshold'
+    ]
+    
+    if len(params) != len(param_keys):
+        raise ValueError(f"Expected {len(param_keys)} parameters, but got {len(params)}")
+    
+    params_dict = {}
+    for key, value in zip(param_keys, params):
+        if key in ['initial_entry_ratio', 'new_sl_coef', 'atr_multiplier', 'swing_buffer', 
+                   'buy_macd', 'sell_macd', 'a_vol_coef', 'dca_threshold', 'dca_multiplier', 
+                   'dca_profit_threshold']:
+            params_dict[key] = float(value)  # Convert to float for Decimal values
+        elif key in ['lookback_length', 'upper_trigger_level', 'lower_trigger_level', 'buy_rsi', 
+                     'sell_rsi', 'swing_window', 'swing_min_periods', 'buy_ema_short', 'buy_ema_long', 
+                     'sell_ema_short', 'sell_ema_long', 'volume_dca_int', 'dca_candles_modulo', 
+                     'max_dca_orders']:
+            params_dict[key] = int(value)  # Convert to int for Integer values
+        else:
+            params_dict[key] = value  # Keep as is for any other types
+    
+    print(f"Converted params_dict: {params_dict}")
+    
+    # Update the copy of strategy_params with the provided params
+    strategy_params_copy.update(params_dict)
+    
+    # Add the strategy_name
+    strategy_params_copy['strategy_name'] = strategy_name
+    
+    print(f"Final strategy_params: {strategy_params_copy}")
     
     # Render the strategy using the template
-    return strategy_template.substitute(merged_params)
+    rendered_strategy = strategy_template.substitute(strategy_params_copy)
+    print(f"Rendered strategy (first 100 characters): {rendered_strategy[:100]}...")
+    
+    return rendered_strategy
 
 def run_backtest(params: Dict[str, any], generation: int) -> float:
     strategy_name = f"GeneTrader_gen{generation}_{int(time.time())}_{random.randint(1000, 9999)}"
