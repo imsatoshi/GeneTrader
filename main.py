@@ -42,9 +42,14 @@ def genetic_algorithm(settings: Settings) -> List[tuple[int, Individual]]:
             for i in range(0, len(offspring), 2):
                 if random.random() < settings.crossover_prob:
                     offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1])
+                    # 在这里添加 after_genetic_operation 调用
+                    offspring[i].after_genetic_operation()
+                    offspring[i+1].after_genetic_operation()
 
             for ind in offspring:
                 mutate(ind, settings.mutation_prob)
+                # 在这里添加 after_genetic_operation 调用
+                ind.after_genetic_operation()
 
             # Replace the population
             population.individuals = offspring
