@@ -75,7 +75,8 @@ if __name__ == "__main__":
     # Ensure the outputs directory exists
     os.makedirs("scripts/outputs", exist_ok=True)
 
-    strategy_name = "DailyBuyStrategy"
+    strategy_name = "DailyBuyStrategy_old"
+    # strategy_name = "GeneTrader_gen6_1725791922_1410"
     start_dates = [
         datetime(2024, 1, 1),
         datetime(2024, 4, 1),
