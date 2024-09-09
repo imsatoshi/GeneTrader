@@ -9,7 +9,7 @@ class Individual:
     @classmethod
     def create_random(cls):
         genes = [
-            random.uniform(0.4, 1.0),      # initial_entry_ratio (Decimal)
+            random.uniform(0.4, 0.99),      # initial_entry_ratio (Decimal)
             random.uniform(0.3, 0.9),      # new_sl_coef (Decimal)
             random.randint(1, 30),         # lookback_length (Int)
             random.randint(1, 300),        # upper_trigger_level (Int)

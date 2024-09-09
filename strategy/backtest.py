@@ -30,7 +30,9 @@ def render_strategy(params: list, strategy_name: str) -> str:
     
     params_dict = {}
     for key, value in zip(param_keys, params):
-        if key in ['initial_entry_ratio', 'new_sl_coef', 'atr_multiplier', 'swing_buffer', 
+        if key == 'initial_entry_ratio':
+            params_dict[key] = min(float(value), 0.99)  # Ensure it's always less than 1
+        elif key in ['new_sl_coef', 'atr_multiplier', 'swing_buffer', 
                    'buy_macd', 'sell_macd', 'a_vol_coef', 'dca_threshold', 'dca_multiplier', 
                    'dca_profit_threshold']:
             params_dict[key] = float(value)  # Convert to float for Decimal values
