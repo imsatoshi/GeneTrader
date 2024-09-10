@@ -16,6 +16,9 @@ from strategy.evaluation import parse_backtest_results, fitness_function
 from strategy.template import strategy_template, strategy_params
 
 def render_strategy(params: List[float], strategy_name: str) -> str:
+    print(f"Input params: {params}")
+    print(f"Input strategy_name: {strategy_name}")
+
     param_keys = [
         'initial_entry_ratio', 'new_sl_coef', 'lookback_length', 'upper_trigger_level',
         'lower_trigger_level', 'buy_rsi', 'sell_rsi', 'atr_multiplier', 'swing_window',
@@ -30,10 +33,12 @@ def render_strategy(params: List[float], strategy_name: str) -> str:
     
     params_dict = {}
     for key, value in zip(param_keys, params):
-        if key in ['initial_entry_ratio', 'new_sl_coef', 'atr_multiplier', 'swing_buffer', 
+        if key == 'initial_entry_ratio':
+            params_dict[key] = min(round(float(value), 2), 0.99)
+        elif key in ['new_sl_coef', 'atr_multiplier', 'swing_buffer', 
                    'buy_macd', 'sell_macd', 'a_vol_coef', 'dca_threshold', 'dca_multiplier', 
                    'dca_profit_threshold']:
-            params_dict[key] = float(value)
+            params_dict[key] = round(float(value), 2)
         elif key in ['lookback_length', 'upper_trigger_level', 'lower_trigger_level', 'buy_rsi', 
                      'sell_rsi', 'swing_window', 'swing_min_periods', 'buy_ema_short', 'buy_ema_long', 
                      'sell_ema_short', 'sell_ema_long', 'volume_dca_int', 'dca_candles_modulo', 
@@ -42,11 +47,18 @@ def render_strategy(params: List[float], strategy_name: str) -> str:
         else:
             params_dict[key] = value
     
+    print(f"Converted params_dict: {params_dict}")
+    
     strategy_params_copy = strategy_params.copy()
     strategy_params_copy.update(params_dict)
     strategy_params_copy['strategy_name'] = strategy_name
     
-    return strategy_template.substitute(strategy_params_copy)
+    print(f"Final strategy_params: {strategy_params_copy}")
+    
+    rendered_strategy = strategy_template.substitute(strategy_params_copy)
+    print(f"Rendered strategy (first 100 characters): {rendered_strategy[:100]}...")
+    
+    return rendered_strategy
 
 def run_backtest(params: List[float], generation: int, start_date: datetime) -> Tuple[float, str]:
     timestamp = int(time.time())
