@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 
 # 将项目根目录添加到 Python 路径
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -77,6 +78,19 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
     avg_profit = parsed_result['avg_profit']
     avg_trade_duration = parsed_result['avg_trade_duration']
     total_trades = parsed_result['total_trades']
+
+    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}"
+    
+    # 定义日志文件路径
+    log_filename = "fitness_log.txt"
+    log_path = os.path.join(os.path.dirname(__file__), log_filename)
+    
+    # 将信息追加到日志文件
+    with open(log_path, 'a') as log_file:
+        log_file.write(log_message + '\n')
+    
+    logger.info(log_message)
+    logger.info(f"Log appended to: {log_path}")
 
     # 确保至少有一定数量的交易
     if total_trades < 100:
