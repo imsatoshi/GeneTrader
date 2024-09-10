@@ -73,13 +73,15 @@ def parse_backtest_results(output_file: str) -> Dict[str, float]:
 
 def fitness_function(parsed_result: Dict[str, float]) -> float:
     total_profit_usdt = parsed_result['total_profit_usdt']
+    total_profit_percent = parsed_result['total_profit_percent']
     win_rate = parsed_result['win_rate']
     max_drawdown = parsed_result['max_drawdown']
     avg_profit = parsed_result['avg_profit']
     avg_trade_duration = parsed_result['avg_trade_duration']
     total_trades = parsed_result['total_trades']
+    sharpe_ratio = parsed_result['sharpe_ratio']
 
-    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}"
+    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}"
     
     # 定义日志文件路径
     log_filename = "fitness_log.txt"
@@ -93,7 +95,7 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
     logger.info(f"Log appended to: {log_path}")
 
     # 确保至少有一定数量的交易
-    if total_trades < 100:
+    if total_trades < 50:
         return float('-inf')
 
     # 利润因子：总利润与最大回撤的比率
@@ -102,13 +104,15 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
     # 平均交易持续时间因子（假设理想的平均持续时间为4小时）
     duration_factor = min(240 / (avg_trade_duration + 1e-6), 1)
 
-    # 组合这些因素来计算fitness
+    # 组合这些因素来计算fitness，突出利润
     fitness = (
-        total_profit_usdt * 0.3 +  # 总利润的权重
-        win_rate * 100 +           # 胜率的权重
-        avg_profit * 10 +          # 平均利润的权重
-        profit_drawdown_ratio * 0.2 +  # 利润与回撤比率的权重
-        duration_factor * 50        # 交易持续时间的权重
+        total_profit_usdt * 0.5 +          # 总利润的权重增加
+        total_profit_percent * 1000 +      # 总利润百分比
+        win_rate * 50 +                    # 胜率的权重
+        avg_profit * 20 +                  # 平均利润的权重增加
+        profit_drawdown_ratio * 0.1 +      # 利润与回撤比率的权重
+        duration_factor * 20 +             # 交易持续时间的权重
+        sharpe_ratio * 10                  # 加入夏普比率
     )
 
     return fitness
