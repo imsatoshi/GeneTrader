@@ -80,34 +80,10 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
     avg_trade_duration = parsed_result['avg_trade_duration']
     total_trades = parsed_result['total_trades']
     sharpe_ratio = parsed_result['sharpe_ratio']
-
-    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}"
-    
-    # 定义日志文件��径
-    log_filename = "fitness_log.txt"
-    log_path = os.path.join(os.path.dirname(__file__), log_filename)
-    
-    # 将信息追加到日志文件
-    with open(log_path, 'a') as log_file:
-        log_file.write(log_message + '\n')
-    
-    logger.info(log_message)
-    logger.info(f"Log appended to: {log_path}")
-
-    # 确保至少有一定数量的交易
-    if total_trades < 50:
-        return float('-inf')
-
-    # 修正异常的胜率
     corrected_win_rate = min(win_rate, 1.0)
-
-    # 利润因子：总利润与最大回撤的比率
     profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)
-
-    # 平均交易持续时间因子（假设理想的平均持续时间为4小时）
     duration_factor = min(240 / (avg_trade_duration + 1e-6), 1)
 
-    # 组合这些因素来计算fitness，突出利润和风险平衡
     fitness = (
         total_profit_usdt * 2 +            # 总利润的权重
         total_profit_percent * 500 +       # 总利润百分比
@@ -118,6 +94,20 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
         sharpe_ratio * 20 +                # 夏普比率的权重
         (1 / (max_drawdown + 1e-6)) * 0.1  # 最大回撤的倒数，鼓励较小的回撤
     )
+
+    # 更新日志消息以包含fitness值
+    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}, fitness: {fitness}"
+    
+    # 定义日志文件路径
+    log_filename = "fitness_log.txt"
+    log_path = os.path.join(os.path.dirname(__file__), log_filename)
+    
+    # 将信息追加到日志文件
+    with open(log_path, 'a') as log_file:
+        log_file.write(log_message + '\n')
+    
+    logger.info(log_message)
+    logger.info(f"Log appended to: {log_path}")
 
     return fitness
 
