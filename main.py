@@ -15,8 +15,12 @@ from genetic_algorithm.operators import crossover, mutate, select_tournament
 from strategy.backtest import run_backtest
 from data.downloader import download_data  # 假设您有一个数据下载模块
 
-def genetic_algorithm(settings: Settings) -> List[tuple[int, Individual]]:
-    population = Population.create_random(settings.population_size)
+def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
+    # Create initial population with random individuals and add initial_individuals
+    population = Population.create_random(settings.population_size - len(initial_individuals or []))
+    if initial_individuals:
+        population.individuals.extend(initial_individuals)
+    
     best_individuals = []
 
     with multiprocessing.Pool(processes=settings.pool_processes) as pool:
@@ -99,7 +103,12 @@ def main():
         start_time = time.time()
 
         # Run genetic algorithm
-        best_individuals = genetic_algorithm(settings)
+        # Initial individuals
+        initial_individuals = [
+            Individual([1.0, 0.75, 15, 100, -100, 55, 70, 1.5, 50, 10, 0.03, 0.00, 10, 50, -0.005, 10, 50, 7, 1, 10, 0.01, 1.5, 3, -0.10]),
+        ]
+
+        best_individuals = genetic_algorithm(settings, initial_individuals)
 
         # Save best individuals
         for gen, ind in best_individuals:
