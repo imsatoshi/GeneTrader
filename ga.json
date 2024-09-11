@@ -12,7 +12,7 @@
     "config_file": "user_data/config_large.json",
     "population_size": 8,
     "generations": 2,
-    "crossover_prob": 0.7,
+    "crossover_prob": 0.8,
     "mutation_prob": 0.2,
     "tournament_size": 3,
     "pool_processes": 8,
