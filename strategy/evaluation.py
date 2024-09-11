@@ -83,7 +83,7 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
 
     log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}"
     
-    # 定义日志文件路径
+    # 定义日志文件��径
     log_filename = "fitness_log.txt"
     log_path = os.path.join(os.path.dirname(__file__), log_filename)
     
@@ -98,21 +98,25 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
     if total_trades < 50:
         return float('-inf')
 
+    # 修正异常的胜率
+    corrected_win_rate = min(win_rate, 1.0)
+
     # 利润因子：总利润与最大回撤的比率
-    profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)  # 避免除以零
+    profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)
 
     # 平均交易持续时间因子（假设理想的平均持续时间为4小时）
     duration_factor = min(240 / (avg_trade_duration + 1e-6), 1)
 
-    # 组合这些因素来计算fitness，突出利润
+    # 组合这些因素来计算fitness，突出利润和风险平衡
     fitness = (
-        total_profit_usdt * 0.5 +          # 总利润的权重增加
-        total_profit_percent * 1000 +      # 总利润百分比
-        win_rate * 50 +                    # 胜率的权重
-        avg_profit * 20 +                  # 平均利润的权重增加
-        profit_drawdown_ratio * 0.1 +      # 利润与回撤比率的权重
-        duration_factor * 20 +             # 交易持续时间的权重
-        sharpe_ratio * 10                  # 加入夏普比率
+        total_profit_usdt * 2 +            # 总利润的权重
+        total_profit_percent * 500 +       # 总利润百分比
+        corrected_win_rate * 1000 +        # 修正后的胜率权重
+        avg_profit * 50 +                  # 平均利润的权重
+        profit_drawdown_ratio * 0.5 +      # 利润与回撤比率的权重
+        duration_factor * 50 +             # 交易持续时间的权重
+        sharpe_ratio * 20 +                # 夏普比率的权重
+        (1 / (max_drawdown + 1e-6)) * 0.1  # 最大回撤的倒数，鼓励较小的回撤
     )
 
     return fitness
