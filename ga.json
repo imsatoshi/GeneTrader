@@ -10,14 +10,15 @@
     "data_dir": "user_data/data/binance",
     "results_dir": "results",
     "config_file": "user_data/config_large.json",
-    "population_size": 64,
-    "generations": 30,
+    "population_size": 16,
+    "generations": 20,
     "crossover_prob": 0.8,
     "mutation_prob": 0.2,
     "tournament_size": 3,
     "pool_processes": 8,
     "max_retries": 10,
     "retry_delay": 0.01,
-    "project_dir": "/Users/zhangjiawei/Downloads/GeneTrader",
-    "best_generations_dir": "bestgenerations"
+    "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
+    "best_generations_dir": "bestgenerations",
+    "base_strategy_file": "Trader_4_1726727454_3078.py"
 }

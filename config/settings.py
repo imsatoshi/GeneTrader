@@ -22,7 +22,7 @@ class Settings:
         self.mutation_prob = self.config['mutation_prob']
         self.tournament_size = self.config['tournament_size']
         self.data_dir = self.config['data_dir']  # Add this line
-
+        self.base_strategy_file = self.config['base_strategy_file']
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
 

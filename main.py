@@ -5,6 +5,7 @@ from typing import List
 import multiprocessing
 import random
 from datetime import datetime, date
+import os
 
 from config.settings import Settings
 from utils.logging_config import logger
@@ -14,10 +15,14 @@ from genetic_algorithm.population import Population
 from genetic_algorithm.operators import crossover, mutate, select_tournament
 from strategy.backtest import run_backtest
 from data.downloader import download_data  # 假设您有一个数据下载模块
+from strategy.gen_template import generate_dynamic_template
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Create initial population with random individuals and add initial_individuals
-    population = Population.create_random(settings.population_size - len(initial_individuals or []))
+    population = Population.create_random(
+        settings.population_size - len(initial_individuals or []),
+        settings.parameters
+    )
     if initial_individuals:
         population.individuals.extend(initial_individuals)
     
@@ -46,14 +51,14 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             for i in range(0, len(offspring), 2):
                 if random.random() < settings.crossover_prob:
                     offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1])
-                    # 在这里添加 after_genetic_operation 调用
-                    offspring[i].after_genetic_operation()
-                    offspring[i+1].after_genetic_operation()
+                    # 修改这里，传入 settings.parameters
+                    offspring[i].after_genetic_operation(settings.parameters)
+                    offspring[i+1].after_genetic_operation(settings.parameters)
 
             for ind in offspring:
                 mutate(ind, settings.mutation_prob)
-                # 在这里添加 after_genetic_operation 调用
-                ind.after_genetic_operation()
+                # 修改这里，传入 settings.parameters
+                ind.after_genetic_operation(settings.parameters)
 
             # Replace the population
             population.individuals = offspring
@@ -89,6 +94,12 @@ def main():
         # Initialize settings
         settings = Settings(args.config)
 
+        # 生成动态模板并获取参数
+        _, parameters = generate_dynamic_template(settings.base_strategy_file)
+
+        # 更新 settings 中的参数
+        settings.parameters = parameters
+
         # Create necessary directories
         create_directories([settings.results_dir, settings.best_generations_dir])
 
@@ -105,7 +116,7 @@ def main():
         # Run genetic algorithm
         # Initial individuals
         initial_individuals = [
-            Individual([1.0, 0.75, 15, 100, -100, 55, 70, 1.5, 50, 10, 0.03, 0.00, 10, 50, -0.005, 10, 50, 7, 1, 10, 0.01, 1.5, 3, -0.10]),
+            # Individual([1.0, 0.75, 15, 100, -100, 55, 70, 1.5, 50, 10, 0.03, 0.00, 10, 50, -0.005, 10, 50, 7, 1, 10, 0.01, 1.5, 3, -0.10]),
         ]
 
         best_individuals = genetic_algorithm(settings, initial_individuals)

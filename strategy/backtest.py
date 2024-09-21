@@ -1,3 +1,4 @@
+import sys
 import os
 import time
 import random
@@ -6,57 +7,41 @@ from typing import Dict
 from config.settings import settings
 from utils.logging_config import logger
 from strategy.evaluation import parse_backtest_results, fitness_function
-from strategy.template import strategy_template, strategy_params
+from strategy.gen_template import generate_dynamic_template
+from string import Template
+
+# 添加项目根目录到 Python 路径
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 
 def render_strategy(params: list, strategy_name: str) -> str:
-    print(f"Input params: {params}")
-    print(f"Input strategy_name: {strategy_name}")
+    # Generate the dynamic template
+    template_content, template_params = generate_dynamic_template(settings.base_strategy_file)
+    
+    # Create a Template object
+    strategy_template = Template(template_content)
 
-    # Create a copy of strategy_params
-    strategy_params_copy = strategy_params.copy()
+    # Create a dictionary for the strategy parameters
+    strategy_params = {'strategy_name': strategy_name}
+    print(params)
+    print(template_params)
     
-    # Convert the params list to a dictionary using predefined keys
-    param_keys = [
-        'initial_entry_ratio', 'new_sl_coef', 'lookback_length', 'upper_trigger_level',
-        'lower_trigger_level', 'buy_rsi', 'sell_rsi', 'atr_multiplier', 'swing_window',
-        'swing_min_periods', 'swing_buffer', 'buy_macd', 'buy_ema_short', 'buy_ema_long',
-        'sell_macd', 'sell_ema_short', 'sell_ema_long', 'volume_dca_int', 'a_vol_coef',
-        'dca_candles_modulo', 'dca_threshold', 'dca_multiplier', 'max_dca_orders',
-        'dca_profit_threshold'
-    ]
-    
-    if len(params) != len(param_keys):
-        raise ValueError(f"Expected {len(param_keys)} parameters, but got {len(params)}")
-    
-    params_dict = {}
-    for key, value in zip(param_keys, params):
-        if key == 'initial_entry_ratio':
-            params_dict[key] = min(round(float(value), 2), 0.99)  # Ensure it's always less than 1, rounded to 2 decimal places
-        elif key in ['new_sl_coef', 'atr_multiplier', 'swing_buffer', 
-                   'buy_macd', 'sell_macd', 'a_vol_coef', 'dca_threshold', 'dca_multiplier', 
-                   'dca_profit_threshold']:
-            params_dict[key] = round(float(value), 2)  # Convert to float and round to 2 decimal places
-        elif key in ['lookback_length', 'upper_trigger_level', 'lower_trigger_level', 'buy_rsi', 
-                     'sell_rsi', 'swing_window', 'swing_min_periods', 'buy_ema_short', 'buy_ema_long', 
-                     'sell_ema_short', 'sell_ema_long', 'volume_dca_int', 'dca_candles_modulo', 
-                     'max_dca_orders']:
-            params_dict[key] = int(value)  # Convert to int for Integer values
-        else:
-            params_dict[key] = value  # Keep as is for any other types
-    
-    print(f"Converted params_dict: {params_dict}")
-    
-    # Update the copy of strategy_params with the provided params
-    strategy_params_copy.update(params_dict)
-    
-    # Add the strategy_name
-    strategy_params_copy['strategy_name'] = strategy_name
-    
-    print(f"Final strategy_params: {strategy_params_copy}")
-    
+    # Map the input params to the template params
+    for i, param_info in enumerate(template_params):
+        param_name = param_info['name']
+        if param_info['optimize']:
+            if i < len(params):
+                if param_info['type'] == 'Decimal':
+                    strategy_params[param_name] = round(float(params[i]), param_info['decimal_places'])
+                elif param_info['type'] == 'Int':
+                    strategy_params[param_name] = int(params[i])
+                else:
+                    strategy_params[param_name] = params[i]
+            else:
+                logger.warning(f"Not enough parameters provided. Skipping {param_name}")
+
     # Render the strategy using the template
-    rendered_strategy = strategy_template.substitute(strategy_params_copy)
-    print(f"Rendered strategy (first 100 characters): {rendered_strategy[:100]}...")
+    rendered_strategy = strategy_template.substitute(strategy_params)
     
     return rendered_strategy
 
@@ -104,4 +89,22 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
     if parsed_result['total_trades'] == 0:
         return float('-inf')  # Heavily penalize strategies that don't trade
     
-    return fitness_function(parsed_result)
+    return fitness_function(parsed_result, generation)
+
+if __name__ == "__main__":
+    # 测试 render_strategy 函数
+    test_params = [30.5, 70, 0.05]
+    test_strategy_name = "TestStrategy"
+    
+    rendered_strategy = render_strategy(test_params, test_strategy_name)
+    
+    print("Rendered Strategy:")
+    print(rendered_strategy)
+    
+    # 可以添加一些简单的断言来检查结果
+    assert test_strategy_name in rendered_strategy, "Strategy name not found in rendered strategy"
+    assert "30.5" in rendered_strategy, "First parameter not found in rendered strategy"
+    assert "70" in rendered_strategy, "Second parameter not found in rendered strategy"
+    assert "0.05" in rendered_strategy, "Third parameter not found in rendered strategy"
+    
+    print("All assertions passed. Test successful!")

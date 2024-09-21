@@ -6,8 +6,8 @@ class Population:
         self.individuals = individuals
 
     @classmethod
-    def create_random(cls, size: int):
-        return cls([Individual.create_random() for _ in range(size)])
+    def create_random(cls, size, parameters):
+        return cls([Individual.create_random(parameters) for _ in range(size)])
 
     def get_best(self) -> Individual:
         return max(self.individuals, key=lambda ind: ind.fitness)

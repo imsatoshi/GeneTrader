@@ -1,5 +1,6 @@
 import sys
 import os
+import math
 from datetime import datetime
 
 # 将项目根目录添加到 Python 路径
@@ -7,15 +8,25 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 import re
-from typing import Dict
+from typing import Dict, Any
 from utils.logging_config import logger
 
-def parse_backtest_results(output_file: str) -> Dict[str, float]:
-    with open(output_file, 'r') as f:
+def extract_win_rate(content: str) -> float:
+    pattern = r'│\s*TOTAL\s*│.*│\s*(\d+)\s*│.*│.*│.*│.*│\s*\d+\s+\d+\s+\d+\s+([\d.]+)\s*│'
+    match = re.search(pattern, content)
+    if match:
+        total_trades = int(match.group(1))
+        win_rate = float(match.group(2)) / 100  # 将百分比转换为小数
+        return win_rate
+    return 0.0
+
+
+def parse_backtest_results(file_path: str) -> Dict[str, Any]:
+    with open(file_path, 'r') as f:
         content = f.read()
 
     if "SUMMARY METRICS" not in content:
-        logger.warning(f"{output_file} does not contain summary metrics. No trades were executed.")
+        logger.warning(f"{file_path} does not contain summary metrics. No trades were executed.")
         return {
             'total_profit_usdt': 0,
             'total_profit_percent': 0,
@@ -29,6 +40,8 @@ def parse_backtest_results(output_file: str) -> Dict[str, float]:
             'daily_avg_trades': 0,
             'avg_trade_duration': 0
         }
+
+
 
     def extract_value(pattern: str, default: float = 0, is_string: bool = False) -> float:
         match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
@@ -57,8 +70,8 @@ def parse_backtest_results(output_file: str) -> Dict[str, float]:
 
     parsed_result = {
         'total_profit_usdt': extract_value(r'Absolute profit\s*│\s*([-\d.]+)\s*USDT'),
-        'total_profit_percent': extract_value(r'Total profit %\s*│\s*([\d.-]+)%') / 100,
-        'win_rate': extract_value(r'│\s*TOTAL\s*│.*?│.*?│.*?│.*?│.*?│.*?(\d+(?:\.\d+)?)\s*│') / 100,
+        'total_profit_percent': extract_value(r'Total profit %\s*│\s*([\d.-]+)%') * 1.0 / 100,
+        'win_rate': extract_win_rate(content),
         'max_drawdown': extract_value(r'Max % of account underwater\s*│\s*([\d.]+)%') / 100,
         'sharpe_ratio': extract_value(r'Sharpe\s*│\s*([\d.]+)'),
         'sortino_ratio': extract_value(r'Sortino\s*│\s*([\d.]+)'),
@@ -69,9 +82,12 @@ def parse_backtest_results(output_file: str) -> Dict[str, float]:
         'avg_trade_duration': parse_duration(extract_value(r'Avg\. Duration Winners\s*│\s*(.*?)\s*│', default='0:00:00', is_string=True))
     }
 
+    # 添加这行来打印提取的原始胜率值
+    print(f"Extracted win rate: {parsed_result['win_rate']}")
+
     return parsed_result
 
-def fitness_function(parsed_result: Dict[str, float]) -> float:
+def fitness_function(parsed_result: Dict[str, Any], generation: int) -> float:
     total_profit_usdt = parsed_result['total_profit_usdt']
     total_profit_percent = parsed_result['total_profit_percent']
     win_rate = parsed_result['win_rate']
@@ -80,26 +96,25 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
     avg_trade_duration = parsed_result['avg_trade_duration']
     total_trades = parsed_result['total_trades']
     sharpe_ratio = parsed_result['sharpe_ratio']
-    corrected_win_rate = min(win_rate, 1.0)
     profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)
-    duration_factor = min(240 / (avg_trade_duration + 1e-6), 1)
+    duration_factor = 2 / (1 + math.exp(avg_trade_duration / 1440)) - 1
 
     fitness = (
-        total_profit_usdt * 2 +            # 总利润的权重
-        total_profit_percent * 500 +       # 总利润百分比
-        corrected_win_rate * 1000 +        # 修正后的胜率权重
-        avg_profit * 50 +                  # 平均利润的权重
-        profit_drawdown_ratio * 0.5 +      # 利润与回撤比率的权重
-        duration_factor * 50 +             # 交易持续时间的权重
-        sharpe_ratio * 20 +                # 夏普比率的权重
-        (1 / (max_drawdown + 1e-6)) * 0.1  # 最大回撤的倒数，鼓励较小的回撤
+        total_profit_usdt * 5000 +            # 总利润的权重
+        # total_profit_percent * 500 +       # 总利润百分比
+        win_rate * 10 +        # 修正后的胜率权重
+        avg_profit * 5 +                  # 平均利润的权重
+        profit_drawdown_ratio * 0.001 +      # 利润回撤比率的权重
+        duration_factor * 5 +             # 交易持续时间的权重
+        total_trades +              # 交易次数的权重
+        sharpe_ratio * 2                 # 夏普比率的权重
     )
 
-    # 更新日志消息以包含fitness值
-    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}, fitness: {fitness}"
+    # 更新日志消息以包含 generation 和 fitness 值
+    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Generation: {generation}, total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}, fitness: {fitness}"
     
     # 定义日志文件路径
-    log_filename = "fitness_log.txt"
+    log_filename = "../fitness_log.txt"
     log_path = os.path.join(os.path.dirname(__file__), log_filename)
     
     # 将信息追加到日志文件
@@ -111,19 +126,39 @@ def fitness_function(parsed_result: Dict[str, float]) -> float:
 
     return fitness
 
-if __name__ == "__main__":
-    import sys
+def process_results_directory(directory_path: str):
+    for filename in os.listdir(directory_path):
+        if filename.startswith("backtest_results_") and filename.endswith(".txt"):
+            file_path = os.path.join(directory_path, filename)
+            with open(file_path, 'r') as f:
+                content = f.read()
+            win_rate = extract_win_rate(content)
+            print(f"File: {filename}, Win Rate: {win_rate:.2%}")
 
-    # 默认文件路径
-    default_file = "/Users/zhangjiawei/Downloads/GeneTrader/results/backtest_results_gen1_1725779283_7665.txt"
+
+
+if __name__ == "__main__":
+    # 指定文件路径
+    file_path = "/Users/zhangjiawei/Projects/GeneTrader/results/backtest_results_gen3_1726875925_4847.txt" 
+    # 解析回测结果
+    parsed_results = parse_backtest_results(file_path)
     
-    # 允许从命令行传入文件路径
-    file_path = sys.argv[1] if len(sys.argv) > 1 else default_file
-    
-    results = parse_backtest_results(file_path)
-    print("Parsed results:")
-    for key, value in results.items():
+    print("Parsed Results:")
+    for key, value in parsed_results.items():
         print(f"{key}: {value}")
     
-    fitness = fitness_function(results)
-    print(f"\nFitness score: {fitness}")
+    # 假设我们有一个 generation 变量
+    generation = 1  # 这个值应该从你的遗传算法主循环中获取
+
+    # 计算适应度
+    fitness = fitness_function(parsed_results, generation)
+    print(f"\nFitness Score: {fitness}")
+
+    # 额外的验证
+    print("\nAdditional Validations:")
+    print(f"Win Rate: {parsed_results['win_rate']}")
+    print(f"Corrected Win Rate: {min(parsed_results['win_rate'], 1.0)}")
+    print(f"Profit/Drawdown Ratio: {parsed_results['total_profit_usdt'] / (parsed_results['max_drawdown'] + 1e-6)}")
+
+    result_dir = "/Users/zhangjiawei/Projects/GeneTrader/results"
+    process_results_directory(result_dir)
