@@ -23,7 +23,8 @@ def process_results_directory(directory: str) -> Tuple[str, float, Dict[str, flo
             try:
                 results = parse_backtest_results(file_path)
                 profit = results.get('total_profit_usdt', 0)
-                if profit > max_profit:
+                win_rate = results.get('win_rate', 0)
+                if profit > max_profit and win_rate > 0.9:
                     max_profit = profit
                     max_profit_file = file_path
                     max_profit_results = results

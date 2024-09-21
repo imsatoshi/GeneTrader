@@ -116,7 +116,7 @@ def main():
         # Run genetic algorithm
         # Initial individuals
         initial_individuals = [
-            # Individual([1.0, 0.75, 15, 100, -100, 55, 70, 1.5, 50, 10, 0.03, 0.00, 10, 50, -0.005, 10, 50, 7, 1, 10, 0.01, 1.5, 3, -0.10]),
+            Individual([66, 17, 0.935, 0.51, 60, 3, -0.01]),
         ]
 
         best_individuals = genetic_algorithm(settings, initial_individuals)

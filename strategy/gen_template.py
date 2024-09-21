@@ -37,21 +37,6 @@ def parse_parameters(file_content):
 def generate_template(parameters, strategy_content):
     template = ""
     template += strategy_content + "\n"
-    # template += "\"\"\")\n\n"
-    
-    # template += "strategy_params = {\n"
-    # template += "    'strategy_name': '${strategy_name}',\n"
-    
-    # for param in parameters:
-    #     if param['optimize']:
-    #         if param['type'] == 'DecimalParameter':
-    #             value = f"{{'{param['name']}': {param['default']:.{param['decimal_places']}f}}}"
-    #         else:
-    #             value = f"{{'{param['name']}': {int(param['default'])}}}"
-            
-    #         template += f"    '{param['name']}': {value},\n"
-    
-    # template += "}\n\n"
     return template
 
 def replace_parameters(content, parameters):

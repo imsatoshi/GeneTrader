@@ -96,23 +96,64 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int) -> float:
     avg_trade_duration = parsed_result['avg_trade_duration']
     total_trades = parsed_result['total_trades']
     sharpe_ratio = parsed_result['sharpe_ratio']
+    daily_avg_trades = parsed_result['daily_avg_trades']
     profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)
     duration_factor = 2 / (1 + math.exp(avg_trade_duration / 1440)) - 1
 
+    def daily_trades_weight(x, mu=0.7, sigma=0.3):
+        return math.exp(-((x - mu) ** 2) / (2 * sigma ** 2))
+
+    daily_trades_factor = daily_trades_weight(daily_avg_trades)
+
+    # 新增：根据win_rate调整权重
+    def win_rate_weight(x):
+        if x < 0.9:
+            return x * 10  # 当胜率低于0.9时，权重较小
+        else:
+            return 9 + (x - 0.9) * 100  # 当胜率高于0.9时，权重急剧增加
+
+    win_rate_factor = win_rate_weight(win_rate)
+
+    # Calculate individual fitness components
+    profit_component = total_profit_percent * 50
+    win_rate_component = win_rate_factor
+    avg_profit_component = avg_profit * 5
+    # profit_drawdown_component = profit_drawdown_ratio * 0.001
+    duration_component = duration_factor * 5
+    sharpe_component = sharpe_ratio * 0.1
+    daily_trades_component = daily_trades_factor * 10
+
     fitness = (
-        total_profit_usdt * 5000 +            # 总利润的权重
-        # total_profit_percent * 500 +       # 总利润百分比
-        win_rate * 10 +        # 修正后的胜率权重
-        avg_profit * 5 +                  # 平均利润的权重
-        profit_drawdown_ratio * 0.001 +      # 利润回撤比率的权重
-        duration_factor * 5 +             # 交易持续时间的权重
-        total_trades +              # 交易次数的权重
-        sharpe_ratio * 2                 # 夏普比率的权重
+        profit_component +
+        win_rate_component +
+        avg_profit_component +
+        # profit_drawdown_component +
+        duration_component +
+        sharpe_component +
+        daily_trades_component
     )
 
-    # 更新日志消息以包含 generation 和 fitness 值
-    log_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Generation: {generation}, total_profit_usdt: {total_profit_usdt}, total_profit_percent: {total_profit_percent}, win_rate: {win_rate}, max_drawdown: {max_drawdown}, avg_profit: {avg_profit}, avg_trade_duration: {avg_trade_duration}, total_trades: {total_trades}, sharpe_ratio: {sharpe_ratio}, fitness: {fitness}"
-    
+    # Update log message to include fitness components
+    log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                   f"Generation: {generation}, "
+                   f"total_profit_usdt: {total_profit_usdt}, "
+                   f"total_profit_percent: {total_profit_percent}, "
+                   f"win_rate: {win_rate}, "
+                   f"max_drawdown: {max_drawdown}, "
+                   f"avg_profit: {avg_profit}, "
+                   f"avg_trade_duration: {avg_trade_duration}, "
+                   f"total_trades: {total_trades}, "
+                   f"sharpe_ratio: {sharpe_ratio}, "
+                   f"daily_avg_trades: {daily_avg_trades}, "
+                   f"profit_component: {profit_component}, "
+                   f"win_rate_component: {win_rate_component}, "
+                   f"avg_profit_component: {avg_profit_component}, "
+                #    f"profit_drawdown_component: {profit_drawdown_component}, "
+                   f"duration_component: {duration_component}, "
+                   f"sharpe_component: {sharpe_component}, "
+                   f"daily_trades_component: {daily_trades_component}, "
+                   f"fitness: {fitness}")
+
     # 定义日志文件路径
     log_filename = "../fitness_log.txt"
     log_path = os.path.join(os.path.dirname(__file__), log_filename)
