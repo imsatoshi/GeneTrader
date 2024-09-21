@@ -89,7 +89,7 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
     if parsed_result['total_trades'] == 0:
         return float('-inf')  # Heavily penalize strategies that don't trade
     
-    return fitness_function(parsed_result, generation)
+    return fitness_function(parsed_result, generation, strategy_name)  # 添加 strategy_name 参数
 
 if __name__ == "__main__":
     # 测试 render_strategy 函数

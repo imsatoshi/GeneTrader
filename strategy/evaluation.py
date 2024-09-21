@@ -87,7 +87,7 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
 
     return parsed_result
 
-def fitness_function(parsed_result: Dict[str, Any], generation: int) -> float:
+def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_name: str) -> float:
     total_profit_usdt = parsed_result['total_profit_usdt']
     total_profit_percent = parsed_result['total_profit_percent']
     win_rate = parsed_result['win_rate']
@@ -133,8 +133,9 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int) -> float:
         daily_trades_component
     )
 
-    # Update log message to include fitness components
+    # Update log message to include fitness components and strategy name
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                   f"Strategy: {strategy_name}, "  # 添加策略名称
                    f"Generation: {generation}, "
                    f"total_profit_usdt: {total_profit_usdt}, "
                    f"total_profit_percent: {total_profit_percent}, "
