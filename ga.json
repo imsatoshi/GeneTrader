@@ -11,7 +11,7 @@
     "results_dir": "results",
     "config_file": "user_data/config_large.json",
     "population_size": 80,
-    "generations": 10,
+    "generations": 20,
     "crossover_prob": 0.8,
     "mutation_prob": 0.2,
     "tournament_size": 3,
@@ -20,5 +20,5 @@
     "retry_delay": 0.01,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
-    "base_strategy_file": "E0V1E.py"
+    "base_strategy_file": "newstrategy53.py"
 }
