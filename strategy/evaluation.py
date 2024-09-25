@@ -112,8 +112,12 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     # Apply exponential function to win_rate to amplify differences
     amplified_win_rate = math.exp(5 * (win_rate - 0.5)) - 1  # Subtracting 0.8 to center the exponential curve
 
+    base_fitness = 1.0
+    if daily_avg_trades < 0.4:
+        base_fitness = daily_avg_trades
+
     # Calculate fitness using a weighted product method
-    fitness = (normalized_profit_component + 1) ** alpha * (amplified_win_rate + 1) ** beta
+    fitness = base_fitness * (normalized_profit_component + 1) ** alpha * (amplified_win_rate + 1) ** beta
 
     # Update log message to include fitness components and strategy name
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
