@@ -1,5 +1,6 @@
 from typing import List
 import random
+import copy
 
 class Individual:
     def __init__(self, genes: List[float]):
@@ -28,5 +29,8 @@ class Individual:
     # 在交叉和变异操作后调用此方法
     def after_genetic_operation(self, parameters):
         self.constrain_genes(parameters)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
 

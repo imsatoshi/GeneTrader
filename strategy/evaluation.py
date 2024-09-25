@@ -97,41 +97,23 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     total_trades = parsed_result['total_trades']
     sharpe_ratio = parsed_result['sharpe_ratio']
     daily_avg_trades = parsed_result['daily_avg_trades']
-    profit_drawdown_ratio = total_profit_usdt / (max_drawdown + 1e-6)
-    duration_factor = 2 / (1 + math.exp(avg_trade_duration / 1440)) - 1
 
-    def daily_trades_weight(x, mu=0.7, sigma=0.3):
-        return math.exp(-((x - mu) ** 2) / (2 * sigma ** 2))
 
-    daily_trades_factor = daily_trades_weight(daily_avg_trades)
+    # Define weights for profit and win rate
+    alpha = 2  # Adjust this value based on the importance of profit
+    beta = 4   # Adjust this value based on the importance of win rate
 
-    # 新增：根据win_rate调整权重
-    def win_rate_weight(x):
-        if x < 0.9:
-            return x * 10  # 当胜率低于0.9时，权重较小
-        else:
-            return 9 + (x - 0.9) * 100  # 当胜率高于0.9时，权重急剧增加
+    # Define the maximum possible profit for normalization
+    max_profit = 4  # This value should be set based on your specific context
 
-    win_rate_factor = win_rate_weight(win_rate)
+    # Normalize profit component
+    normalized_profit_component = total_profit_percent / max_profit
 
-    # Calculate individual fitness components
-    profit_component = total_profit_percent * 50
-    win_rate_component = win_rate_factor
-    avg_profit_component = avg_profit * 5
-    # profit_drawdown_component = profit_drawdown_ratio * 0.001
-    duration_component = duration_factor * 5
-    sharpe_component = sharpe_ratio * 0.1
-    daily_trades_component = daily_trades_factor * 10
+    # Apply exponential function to win_rate to amplify differences
+    amplified_win_rate = math.exp(5 * (win_rate - 0.5)) - 1  # Subtracting 0.8 to center the exponential curve
 
-    fitness = (
-        profit_component +
-        win_rate_component +
-        avg_profit_component +
-        # profit_drawdown_component +
-        duration_component +
-        sharpe_component +
-        daily_trades_component
-    )
+    # Calculate fitness using a weighted product method
+    fitness = (normalized_profit_component + 1) ** alpha * (amplified_win_rate + 1) ** beta
 
     # Update log message to include fitness components and strategy name
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
@@ -146,13 +128,6 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
                    f"total_trades: {total_trades}, "
                    f"sharpe_ratio: {sharpe_ratio}, "
                    f"daily_avg_trades: {daily_avg_trades}, "
-                   f"profit_component: {profit_component}, "
-                   f"win_rate_component: {win_rate_component}, "
-                   f"avg_profit_component: {avg_profit_component}, "
-                #    f"profit_drawdown_component: {profit_drawdown_component}, "
-                   f"duration_component: {duration_component}, "
-                   f"sharpe_component: {sharpe_component}, "
-                   f"daily_trades_component: {daily_trades_component}, "
                    f"fitness: {fitness}")
 
     # 定义日志文件路径

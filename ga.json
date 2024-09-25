@@ -10,8 +10,8 @@
     "data_dir": "user_data/data/binance",
     "results_dir": "results",
     "config_file": "user_data/config_large.json",
-    "population_size": 4,
-    "generations": 2,
+    "population_size": 12,
+    "generations": 30,
     "crossover_prob": 0.8,
     "mutation_prob": 0.2,
     "tournament_size": 3,
@@ -20,5 +20,5 @@
     "retry_delay": 0.01,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
-    "base_strategy_file": "newstrategy53.py"
+    "base_strategy_file": "E0V1E.py"
 }
