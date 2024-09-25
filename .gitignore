@@ -1,3 +1,5 @@
+fitness_log.txt
+
 user_data/data/*
 !user_data/data/.gitkeep
 
