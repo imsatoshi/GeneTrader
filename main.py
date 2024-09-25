@@ -70,7 +70,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             logger.info(f"Best individual in generation {gen+1}: Fitness: {best_ind.fitness}")
 
             # Ensure the best individual is passed to the next generation
-            offspring[0] = best_ind.copy()  # Replace the first offspring with a copy of the best individual
+            # offspring[0] = best_ind.copy()  # Replace the first offspring with a copy of the best individual
 
     return best_individuals
 
