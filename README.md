@@ -1,14 +1,15 @@
-# Genetic Algorithm Optimization for Trading Strategies
+# Genetic Algorithm for Trading Strategy Optimization
 
-This project uses genetic algorithms to optimize trading strategy parameters.
+This project implements a genetic algorithm to optimize trading strategy parameters. It supports multi-process parallel computation, dynamic generation of strategies, and saving the best strategy from each generation.
 
 ## Features
 
-- Optimize trading strategy parameters using genetic algorithms
-- Multi-process parallel computation support
-- Dynamic generation and evaluation of strategies
-- Save the best strategy from each generation
+- Genetic algorithm optimization for trading strategies
+- Multi-process parallel computation
+- Dynamic strategy generation and evaluation
+- Saving of best individuals from each generation
 - Configurable optimization parameters
+- Optional data downloading before running the algorithm
 
 ## Prerequisites
 
@@ -36,8 +37,6 @@ Edit `ga.json` (or your custom config file) to configure:
 - Mutation and crossover probabilities
 - Parallel processing options
 - File paths and directories
-
-Ensure all necessary directories specified in the configuration file exist before running the script.
 
 ## Usage
 
@@ -76,55 +75,27 @@ Examples:
    python main.py --download --start-date 20230101 --end-date 20231231
    ```
 
-5. Combine options:
-   ```
-   python main.py --config my_config.json --download --start-date 20230101
-   ```
-
-Make sure to configure your settings in the specified configuration file (default 'ga.json') before running the script.
-
 ## Project Structure
 
 - `main.py`: Main script to run the genetic algorithm
 - `config/settings.py`: Settings class to load configuration
 - `utils/`: Utility functions for logging and file operations
 - `genetic_algorithm/`: Classes and functions for the genetic algorithm
-- `strategy/`: Strategy-related code, including backtesting
+- `strategy/`: Strategy-related code, including backtesting and template generation
+- `data/`: Data handling, including the downloader module
 
-## Backtesting Results
+## How It Works
 
-Here are the results from our latest backtesting:
-
-### Summary Metrics
-
-| Metric | Value |
-|--------|-------|
-| Backtesting from | 2024-01-01 00:00:00 |
-| Backtesting to | 2024-09-07 02:30:00 |
-| Max open trades | 2 |
-| Total/Daily Avg Trades | 665 / 2.66 |
-| Starting balance | 60 USDT |
-| Final balance | 1281.509 USDT |
-| Absolute profit | 1221.509 USDT |
-| Total profit % | 2035.85% |
-| CAGR % | 8633.18% |
-| Sharpe | 31.51 |
-| Profit factor | 0.00 |
-| Avg. daily profit % | 8.14% |
-| Best Pair | PEOPLE/USDT 61.41% |
-| Worst Pair | ENA/USDT 0.00% |
-| Best trade | PEOPLE/USDT 5.00% |
-| Worst trade | ETC/USDT 0.50% |
-| Win / Draw / Loss | 665 / 0 / 0 |
-| Win% | 100% |
-
-### Strategy Performance
-
-| Strategy | Trades | Avg Profit % | Tot Profit USDT | Tot Profit % | Avg Duration | Win / Draw / Loss | Win% | Drawdown |
-|----------|--------|--------------|-----------------|--------------|--------------|-------------------|------|----------|
-| GeneTrader_gen6_1725791801_3038 | 665 | 1.23 | 1221.509 | 2035.85 | 17:12:00 | 665 / 0 / 0 | 100 | 0 USDT (0.00%) |
-
-These results demonstrate the effectiveness of our genetic algorithm in optimizing trading strategies.
+1. The script loads configuration settings from a JSON file.
+2. It generates a dynamic strategy template and extracts parameters.
+3. If requested, it downloads historical data for backtesting.
+4. The genetic algorithm creates an initial population of trading strategies.
+5. For each generation:
+   - Strategies are evaluated in parallel using backtesting.
+   - The best strategies are selected for the next generation.
+   - Crossover and mutation operations are applied to create new strategies.
+   - The best individual from each generation is saved.
+6. After all generations, the overall best strategy is reported.
 
 ## Contributing
 
