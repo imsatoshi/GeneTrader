@@ -58,7 +58,8 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
     
     # Calculate the start_date for the timerange
     end_date = datetime.now()
-    start_date = end_date - timedelta(weeks=9)
+    # start_date = end_date - timedelta(weeks=9)
+    start_date = end_date - timedelta(weeks=2)
     timerange = f"{start_date.strftime('%Y%m%d')}-"
 
     output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{timestamp}_{random_id}.txt"
