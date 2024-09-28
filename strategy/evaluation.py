@@ -117,7 +117,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
         base_fitness = daily_avg_trades
 
     # Calculate fitness using a weighted product method
-    fitness = base_fitness * (normalized_profit_component + 1) ** alpha * (amplified_win_rate + 1) ** beta
+    fitness = base_fitness * (normalized_profit_component + 1) ** alpha * (amplified_win_rate + 1) ** beta / avg_trade_duration
 
     # Update log message to include fitness components and strategy name
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
