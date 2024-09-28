@@ -1,5 +1,7 @@
 fitness_log.txt
 
+genetic_algorithm_results*
+
 user_data/data/*
 !user_data/data/.gitkeep
 

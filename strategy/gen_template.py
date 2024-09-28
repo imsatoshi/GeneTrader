@@ -60,6 +60,18 @@ def generate_dynamic_template(strategy_file_path):
     # Parse parameters
     params = parse_parameters(content)
 
+    # Add max_open_trades parameter
+    params.append({
+        'name': 'max_open_trades',
+        'type': 'Int',
+        'start': 1.0,
+        'end': 6.0,
+        'default': 2.0,  # You can change this default value if needed
+        'space': 'buy',
+        'optimize': True,
+        'decimal_places': 0
+    })
+
     # Replace parameters with placeholders
     modified_content = replace_parameters(content, params)
 
@@ -69,19 +81,12 @@ def generate_dynamic_template(strategy_file_path):
     return template, params
 
 if __name__ == "__main__":
-    strategy_file_path = '../user_data/strategies/E0V1E_20231017_1059.py'
+    strategy_file_path = './E0V1E.py'
     
     template, params = generate_dynamic_template(strategy_file_path)
-    
-    # print("Generated Template:")
-    # print(template)
-    
+        
     print("\nParsed Parameters:")
     for param in params:
         print(param)
-
-    # 可选：将生成的模板写入文件
-    # with open('generated_template.py', 'w') as file:
-    #     file.write(template)
 
     print("\nTemplate has been generated and saved to 'generated_template.py'")

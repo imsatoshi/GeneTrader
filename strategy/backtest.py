@@ -23,11 +23,11 @@ def render_strategy(params: list, strategy_name: str) -> str:
 
     # Create a dictionary for the strategy parameters
     strategy_params = {'strategy_name': strategy_name}
-    print(params)
-    print(template_params)
+    # print(params)
+    # print(template_params)
     
     # Map the input params to the template params
-    for i, param_info in enumerate(template_params):
+    for i, param_info in enumerate(template_params[:-1]):
         param_name = param_info['name']
         if param_info['optimize']:
             if i < len(params):
@@ -56,6 +56,8 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
     with open(strategy_file, 'w') as f:
         f.write(rendered_strategy)
     
+    max_open_trades = int(params[-1])
+
     # Calculate the start_date for the timerange
     end_date = datetime.now()
     # start_date = end_date - timedelta(weeks=9)
@@ -72,8 +74,10 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
             f"--timerange {timerange} "
             f"-d {os.path.abspath(settings.data_dir)} "
             f"--userdir {os.path.abspath(settings.user_dir)} "
+            f"--max-open-trades {max_open_trades} "
             f"> {output_file}"
         )
+        
         logger.info(f"Running command: {command}")
         out = os.system(command)
         
