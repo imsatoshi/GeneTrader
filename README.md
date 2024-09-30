@@ -112,3 +112,13 @@ This project is for educational and research purposes only. It does not constitu
 ## Contact
 
 For questions or suggestions, please open an issue on GitHub.
+
+## Community
+
+Join our Telegram group for discussions, updates, and support:
+
+[GeneTrader Telegram Group](https://t.me/gene_trader)
+
+## Disclaimer
+
+This project is for educational and research purposes only. It does not constitute investment advice. Users are responsible for any risks associated with using this project for actual trading.
