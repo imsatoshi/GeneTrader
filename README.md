@@ -115,9 +115,10 @@ For questions or suggestions, please open an issue on GitHub.
 
 ## Community
 
-Join our Telegram group for discussions, updates, and support:
+Stay updated and engage with our community:
 
-[GeneTrader Telegram Group](https://t.me/gene_trader)
+- [GeneTrader Telegram Channel](https://t.me/gene_trader) - For updates and announcements
+- [GeneTrader Algorithm Group](https://t.me/gaalgo_trader) - For discussions and support
 
 ## Disclaimer
 
