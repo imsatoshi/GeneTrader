@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-# 添加项目根目录到Python路径
 project_root = str(Path(__file__).resolve().parent.parent)
 sys.path.append(project_root)
 
@@ -18,7 +17,7 @@ class DataDownloader:
         self.config_file = settings.config_file
         self.data_dir = settings.data_dir
         self.freqtrade_path = settings.freqtrade_path
-        self.timeframes = ["5m", "15m", "1h", "4h", "1d", "1w", "1M"]
+        self.timeframes = ["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
     def download_data(self, start_date: date, end_date: date):
         timerange = f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"

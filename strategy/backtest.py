@@ -72,7 +72,7 @@ def run_backtest(params: Dict[str, any], generation: int) -> float:
             f"-c {os.path.abspath(settings.config_file)} "
             f"--timerange {timerange} "
             f"-d {os.path.abspath(settings.data_dir)} "
-            f"--userdir {os.path.abspath(settings.user_dir)} "
+            f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m " 
             f"--max-open-trades {max_open_trades} "
             f"> {output_file}"
         )
