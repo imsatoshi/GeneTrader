@@ -104,20 +104,23 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     beta = 4   # Adjust this value based on the importance of win rate
 
     # Define the maximum possible profit for normalization
-    max_profit = 4  # This value should be set based on your specific context
+    max_profit = 40  # This value should be set based on your specific context
 
     # Normalize profit component
     normalized_profit_component = total_profit_percent / max_profit
 
     # Apply exponential function to win_rate to amplify differences
-    amplified_win_rate = math.exp(5 * (win_rate - 0.5)) - 1  # Subtracting 0.8 to center the exponential curve
+    amplified_win_rate = math.exp(5 * (win_rate - 0.8)) - 1  # Subtracting 0.8 to center the exponential curve
+    duration_factor = math.exp(-avg_trade_duration / 1440)  # 1440分钟 = 1天
 
     base_fitness = 1.0
     if daily_avg_trades < 0.4:
         base_fitness = daily_avg_trades
+    if daily_avg_trades > 10:
+        base_fitness = base_fitness / daily_avg_trades
 
     # Calculate fitness using a weighted product method
-    fitness = base_fitness * (normalized_profit_component + 1) ** alpha * (amplified_win_rate + 1) ** beta / avg_trade_duration
+    fitness = base_fitness * (normalized_profit_component + 1) ** alpha * (1 +amplified_win_rate) ** beta * duration_factor
 
     # Update log message to include fitness components and strategy name
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
