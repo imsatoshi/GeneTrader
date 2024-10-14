@@ -2,35 +2,34 @@ import re
 
 def parse_parameters(file_content):
     parameters = []
-    pattern = r'(\w+)\s*=\s*(Int|Decimal)Parameter\(([-\d.]+),\s*([-\d.]+),\s*default=([-\d.]+)(?:,\s*decimals=(\d+))?,\s*space=\'(\w+)\',\s*optimize=(True|False)\)'
+    pattern = r'(\w+)\s*=\s*(Int|Decimal|Boolean)Parameter\(((?:[^()]+|\([^()]*\))*)\)'
     matches = re.findall(pattern, file_content)
     
     for match in matches:
-        name, param_type, start, end, default, decimals, space, optimize = match
+        name, param_type, args = match
+        args_dict = {}
+        for key, value in re.findall(r'(\w+)\s*=\s*([^,\)]+)', args):
+            args_dict[key] = value.strip()
         
-        if param_type == 'Decimal':
-            if decimals:
-                decimal_places = int(decimals)
-            else:
-                # 使用 start, end, 和 default 值来确定最大小数位数
-                decimal_places = max(
-                    len(str(float(start)).split('.')[-1]),
-                    len(str(float(end)).split('.')[-1]),
-                    len(str(float(default)).split('.')[-1])
-                )
-        else:
-            decimal_places = 0
-        
-        parameters.append({
+        param = {
             'name': name,
             'type': param_type,
-            'start': float(start),
-            'end': float(end),
-            'default': float(default),
-            'space': space,
-            'optimize': optimize == 'True',
-            'decimal_places': decimal_places
-        })
+            'optimize': args_dict.get('optimize', 'False').strip().lower() == 'true',
+            'space': args_dict.get('space', '').strip("'\""),
+            'load': args_dict.get('load', 'False').strip().lower() == 'true'
+        }
+        
+        if param_type in ['Int', 'Decimal']:
+            param.update({
+                'start': float(args_dict.get('low', args_dict.get('start', 0))),
+                'end': float(args_dict.get('high', args_dict.get('end', 0))),
+                'default': float(args_dict.get('default', 0)),
+                'decimal_places': int(args_dict.get('decimals', 0)) if param_type == 'Decimal' else 0
+            })
+        elif param_type == 'Boolean':
+            param['default'] = args_dict.get('default', 'False').strip().lower() == 'true'
+        
+        parameters.append(param)
     
     return parameters
 
@@ -47,8 +46,12 @@ def replace_parameters(content, parameters):
 
     for param in parameters:
         if param['optimize']:
-            pattern = rf"{param['name']}\s*=\s*{param['type']}Parameter\([^)]+\)"
-            replacement = f"{param['name']} = {param['type']}Parameter({param['start']}, {param['end']}, default=${{{param['name']}}}, space='{param['space']}', optimize=True)"
+            if param['type'] in ['Int', 'Decimal']:
+                pattern = rf"{param['name']}\s*=\s*{param['type']}Parameter\([^)]+\)"
+                replacement = f"{param['name']} = {param['type']}Parameter({param['start']}, {param['end']}, default=${{{param['name']}}}, space='{param['space']}', optimize=True)"
+            elif param['type'] == 'Boolean':
+                pattern = rf"{param['name']}\s*=\s*BooleanParameter\([^)]+\)"
+                replacement = f"{param['name']} = BooleanParameter(default=${{{param['name']}}}, space='{param['space']}', optimize=True)"
             content = re.sub(pattern, replacement, content)
     return content
 
@@ -90,3 +93,4 @@ if __name__ == "__main__":
         print(param)
 
     print("\nTemplate has been generated and saved to 'generated_template.py'")
+    print(len(params))
