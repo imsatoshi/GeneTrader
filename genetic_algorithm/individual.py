@@ -36,6 +36,27 @@ class Individual:
         return copy.deepcopy(self)
 
     def mutate_trading_pairs(self, all_pairs, mutation_rate):
+        # 创建一个集合来存储当前的交易对
+        current_pairs = set(self.trading_pairs)
+        
         for i in range(len(self.trading_pairs)):
             if random.random() < mutation_rate:
-                self.trading_pairs[i] = random.choice(all_pairs)
+                # 创建一个可选择的交易对列表，排除当前已有的交易对
+                available_pairs = [pair for pair in all_pairs if pair not in current_pairs]
+                
+                if available_pairs:
+                    # 从可用的交易对中随机选择一个
+                    new_pair = random.choice(available_pairs)
+                    
+                    # 从当前集合中移除旧的交易对
+                    current_pairs.remove(self.trading_pairs[i])
+                    
+                    # 添加新的交易对到集合和列表中
+                    current_pairs.add(new_pair)
+                    self.trading_pairs[i] = new_pair
+                else:
+                    # 如果没有可用的新交易对，保持原样
+                    pass
+
+        # 更新 self.trading_pairs 为新的列表（可选，因为我们是直接修改的列表）
+        self.trading_pairs = list(current_pairs)

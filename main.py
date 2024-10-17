@@ -29,6 +29,17 @@ def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs:
     else:
         return all_pairs
 
+def crossover(parent1: Individual, parent2: Individual) -> tuple[Individual, Individual]:
+    crossover_point = random.randint(1, len(parent1.genes) - 1)
+    child1_genes = parent1.genes[:crossover_point] + parent2.genes[crossover_point:]
+    child2_genes = parent2.genes[:crossover_point] + parent1.genes[crossover_point:]
+    
+    # Crossover trading pairs
+    child1_pairs = crossover_trading_pairs(parent1, parent2, len(parent1.trading_pairs))
+    child2_pairs = crossover_trading_pairs(parent1, parent2, len(parent2.trading_pairs))
+    
+    return Individual(child1_genes, child1_pairs), Individual(child2_genes, child2_pairs)
+
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
     all_pairs = load_trading_pairs(settings.config_file)
@@ -72,9 +83,6 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             for i in range(0, len(offspring), 2):
                 if random.random() < settings.crossover_prob:
                     offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1])
-                    # Crossover trading pairs
-                    offspring[i].trading_pairs = crossover_trading_pairs(offspring[i], offspring[i+1], settings.num_pairs)
-                    offspring[i+1].trading_pairs = crossover_trading_pairs(offspring[i], offspring[i+1], settings.num_pairs)
                     offspring[i].after_genetic_operation(settings.parameters)
                     offspring[i+1].after_genetic_operation(settings.parameters)
 

@@ -81,8 +81,6 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
             f"--timerange {timerange} "
             f"-d {os.path.abspath(settings.data_dir)} "
             f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m " 
-            f"--max-open-trades {max_open_trades} "
-            f"--pairs {' '.join(trading_pairs)} "  # Add trading pairs to the command
             f"> {output_file}"
         )
         
