@@ -1,10 +1,12 @@
 # Genetic Algorithm for Trading Strategy Optimization
 
-This project implements a genetic algorithm to optimize trading strategy parameters. It supports multi-process parallel computation, dynamic generation of strategies, and saving the best strategy from each generation.
+This project implements a genetic algorithm to optimize trading strategy parameters and trading pair selection. It supports multi-process parallel computation, dynamic generation of strategies, and saving the best strategy from each generation.
 
 ## Features
 
 - Genetic algorithm optimization for trading strategies
+- Optimization of strategy parameters and trading pair selection
+- Support for setting maximum open trades
 - Multi-process parallel computation
 - Dynamic strategy generation and evaluation
 - Saving of best individuals from each generation
@@ -13,7 +15,6 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 
 ## Prerequisites
 
-- Python 3.7+
 - Required libraries (specified in requirements.txt)
 
 ## Installation
@@ -35,6 +36,8 @@ Edit `ga.json` (or your custom config file) to configure:
 
 - Genetic algorithm parameters (population size, generations, tournament size)
 - Mutation and crossover probabilities
+- Number of trading pairs to optimize
+- Maximum open trades
 - Parallel processing options
 - File paths and directories
 
