@@ -47,7 +47,7 @@
         "rateLimit": 200
       },
       "pair_whitelist": [
-        "LEVER/USDT"
+        "BTC/USDT"
       ]
     },
     "pairlists": [

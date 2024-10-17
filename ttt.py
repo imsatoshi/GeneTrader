@@ -32,29 +32,23 @@ class E0V1E(IStrategy):
         'stoploss_on_exchange_market_ratio': 0.99
     }
 
-    # stoploss = -0.25
-    stoploss_opt = DecimalParameter(-0.99, -0.1, default=-0.25, decimals=2, space='sell', optimize=True)
-    stoploss = stoploss_opt.value
-
+    stoploss = -0.25
     trailing_stop = True
-    # trailing_stop_positive = 0.003
-    # trailing_stop_positive_offset = 0.03
-
-    trailing_stop_positive_opt = DecimalParameter(0.001, 0.01, default=0.003, decimals=3, space='sell', optimize=True)
-    trailing_stop_positive = trailing_stop_positive_opt.value
-
-    trailing_stop_positive_offset_opt = DecimalParameter(0.01, 0.1, default=0.03, decimals=2, space='sell', optimize=True)
-    trailing_stop_positive_offset = trailing_stop_positive_offset_opt.value
-
+    trailing_stop_positive = 0.003
+    trailing_stop_positive_offset = 0.03
     trailing_only_offset_is_reached = True
-    buy_rsi_fast_32 = IntParameter(20, 70, default=40, space='buy', optimize=True)
-    buy_rsi_32 = IntParameter(15, 50, default=42, space='buy', optimize=True)
-    buy_sma15_32 = DecimalParameter(0.900, 1, default=0.973, decimals=3, space='buy', optimize=True)
-    buy_cti_32 = DecimalParameter(-1, 1, default=0.69, decimals=2, space='buy', optimize=True)
+
+    is_optimize_32 = True
+    buy_rsi_fast_32 = IntParameter(20, 70, default=40, space='buy', optimize=is_optimize_32)
+    buy_rsi_32 = IntParameter(15, 50, default=42, space='buy', optimize=is_optimize_32)
+    buy_sma15_32 = DecimalParameter(0.900, 1, default=0.973, decimals=3, space='buy', optimize=is_optimize_32)
+    buy_cti_32 = DecimalParameter(-1, 1, default=0.69, decimals=2, space='buy', optimize=is_optimize_32)
 
     sell_fastx = IntParameter(50, 100, default=84, space='sell', optimize=True)
-    sell_loss_cci = IntParameter(0, 600, default=120, space='sell', optimize=True)
-    sell_loss_cci_profit = DecimalParameter(-0.15, 0, default=-0.15, decimals=2, space='sell', optimize=True)
+
+    cci_opt = True
+    sell_loss_cci = IntParameter(low=0, high=600, default=120, space='sell', optimize=cci_opt)
+    sell_loss_cci_profit = DecimalParameter(-0.15, 0, default=-0.15, decimals=2, space='sell', optimize=cci_opt)
     
     @property
     def protections(self):

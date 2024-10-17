@@ -7,27 +7,25 @@ def parse_parameters(file_content):
     
     for match in matches:
         name, param_type, args = match
-        args_dict = {}
-        for key, value in re.findall(r'(\w+)\s*=\s*([^,\)]+)', args):
-            args_dict[key] = value.strip()
+        args_list = [arg.strip() for arg in args.split(',')]
         
         param = {
             'name': name,
             'type': param_type,
-            'optimize': args_dict.get('optimize', 'False').strip().lower() == 'true',
-            'space': args_dict.get('space', '').strip("'\""),
-            'load': args_dict.get('load', 'False').strip().lower() == 'true'
+            'optimize': 'optimize=True' in args,
+            'space': next((arg.split('=')[1].strip("'\"") for arg in args_list if arg.startswith('space=')), ''),
+            'load': 'load=True' in args
         }
         
         if param_type in ['Int', 'Decimal']:
             param.update({
-                'start': float(args_dict.get('low', args_dict.get('start', 0))),
-                'end': float(args_dict.get('high', args_dict.get('end', 0))),
-                'default': float(args_dict.get('default', 0)),
-                'decimal_places': int(args_dict.get('decimals', 0)) if param_type == 'Decimal' else 0
+                'start': float(args_list[0]),
+                'end': float(args_list[1]),
+                'default': float(next((arg.split('=')[1] for arg in args_list if arg.startswith('default=')), 0)),
+                'decimal_places': int(next((arg.split('=')[1] for arg in args_list if arg.startswith('decimals=')), 0))
             })
         elif param_type == 'Boolean':
-            param['default'] = args_dict.get('default', 'False').strip().lower() == 'true'
+            param['default'] = 'default=True' in args
         
         parameters.append(param)
     
