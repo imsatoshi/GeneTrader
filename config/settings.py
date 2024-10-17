@@ -23,6 +23,7 @@ class Settings:
         self.tournament_size = self.config['tournament_size']
         self.data_dir = self.config['data_dir']  # Add this line
         self.base_strategy_file = self.config['base_strategy_file']
+        self.num_pairs = self.config['num_pairs']
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
 

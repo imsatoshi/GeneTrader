@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from genetic_algorithm.individual import Individual
 
 class Population:
@@ -6,8 +6,8 @@ class Population:
         self.individuals = individuals
 
     @classmethod
-    def create_random(cls, size, parameters):
-        return cls([Individual.create_random(parameters) for _ in range(size)])
+    def create_random(cls, size: int, parameters: Dict, trading_pairs: List[str], num_pairs: int):
+        return cls([Individual.create_random(parameters, trading_pairs, num_pairs) for _ in range(size)])
 
     def get_best(self) -> Individual:
         return max(self.individuals, key=lambda ind: ind.fitness)

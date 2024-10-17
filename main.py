@@ -6,7 +6,6 @@ import multiprocessing
 import random
 from datetime import datetime, date
 import os
-
 from config.settings import Settings
 from utils.logging_config import logger
 from utils.file_operations import create_directories
@@ -14,14 +13,36 @@ from genetic_algorithm.individual import Individual
 from genetic_algorithm.population import Population
 from genetic_algorithm.operators import crossover, mutate, select_tournament
 from strategy.backtest import run_backtest
-from data.downloader import download_data  # 假设您有一个数据下载模块
+from data.downloader import download_data  
 from strategy.gen_template import generate_dynamic_template
 
+
+def load_trading_pairs(config_file):
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+    return config['exchange']['pair_whitelist']
+
+def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int):
+    all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
+    if len(all_pairs) > num_pairs:
+        return random.sample(all_pairs, num_pairs)
+    else:
+        return all_pairs
+
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
+    # Load trading pairs
+    all_pairs = load_trading_pairs(settings.config_file)
+    
+    print(settings.parameters)
+    print(all_pairs)
+    print(settings.num_pairs)
+
     # Create initial population with random individuals and add initial_individuals
     population = Population.create_random(
         settings.population_size - len(initial_individuals or []),
-        settings.parameters
+        settings.parameters,
+        all_pairs,
+        settings.num_pairs
     )
     if initial_individuals:
         population.individuals.extend(initial_individuals)
@@ -33,7 +54,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             logger.info(f"Generation {gen+1}")
             
             # Evaluate fitness in parallel
-            fitnesses = pool.starmap(run_backtest, [(ind.genes, gen+1) for ind in population.individuals])
+            fitnesses = pool.starmap(run_backtest, [(ind.genes, ind.trading_pairs, gen+1) for ind in population.individuals])
             for ind, fit in zip(population.individuals, fitnesses):
                 ind.fitness = fit
 
@@ -51,13 +72,16 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             for i in range(0, len(offspring), 2):
                 if random.random() < settings.crossover_prob:
                     offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1])
-                    # 修改这里，传入 settings.parameters
+                    # Crossover trading pairs
+                    offspring[i].trading_pairs = crossover_trading_pairs(offspring[i], offspring[i+1], settings.num_pairs)
+                    offspring[i+1].trading_pairs = crossover_trading_pairs(offspring[i], offspring[i+1], settings.num_pairs)
                     offspring[i].after_genetic_operation(settings.parameters)
                     offspring[i+1].after_genetic_operation(settings.parameters)
 
             for ind in offspring:
                 mutate(ind, settings.mutation_prob)
-                # 修改这里，传入 settings.parameters
+                # Mutate trading pairs
+                ind.mutate_trading_pairs(all_pairs, settings.mutation_prob)
                 ind.after_genetic_operation(settings.parameters)
 
             # Replace the population
@@ -76,7 +100,8 @@ def save_best_individual(individual: Individual, generation: int, settings: Sett
     data = {
         'generation': generation,
         'fitness': individual.fitness,
-        'genes': individual.genes
+        'genes': individual.genes,
+        'trading_pairs': individual.trading_pairs
     }
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
@@ -94,10 +119,10 @@ def main():
         # Initialize settings
         settings = Settings(args.config)
 
-        # 生成动态模板并获取参数
+        # Generate dynamic template and get parameters
         _, parameters = generate_dynamic_template(settings.base_strategy_file)
 
-        # 更新 settings 中的参数
+        # Update parameters in settings
         settings.parameters = parameters
 
         # Create necessary directories
@@ -114,10 +139,9 @@ def main():
         start_time = time.time()
 
         # Run genetic algorithm
-        # Initial individuals
+        # Initial individuals (now including trading pairs)
+        all_pairs = load_trading_pairs(settings.config_file)
         initial_individuals = [
-                # Individual([66, 17, 0.935, 0.51, 60, 3, -0.01]),
-                # Individual([40, 42, 0.973, 0.69, 84, 80, -0.15]),
         ]
 
         best_individuals = genetic_algorithm(settings, initial_individuals)
@@ -133,6 +157,7 @@ def main():
         # Log overall best individual
         overall_best = max(best_individuals, key=lambda x: x[1].fitness)
         logger.info(f"Overall best individual: Generation {overall_best[0]}, Fitness: {overall_best[1].fitness}")
+        logger.info(f"Best trading pairs: {overall_best[1].trading_pairs}")
         logger.info(f"Genetic algorithm completed successfully in {duration:.2f} seconds")
 
     except Exception as e:

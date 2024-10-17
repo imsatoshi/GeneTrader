@@ -3,12 +3,13 @@ import random
 import copy
 
 class Individual:
-    def __init__(self, genes: List[float]):
+    def __init__(self, genes: List[float], trading_pairs: List[str]):
         self.genes = genes
+        self.trading_pairs = trading_pairs
         self.fitness = None
 
     @classmethod
-    def create_random(cls, parameters):
+    def create_random(cls, parameters, all_pairs, num_pairs):
         genes = []
         for param in parameters:
             if param['type'] == 'Int':
@@ -17,7 +18,8 @@ class Individual:
                 value = random.uniform(param['start'] + 1e-10, param['end'] - 1e-10)
                 value = round(value, param['decimal_places'])
             genes.append(value)
-        return cls(genes)
+        trading_pairs = random.sample(all_pairs, num_pairs)
+        return cls(genes, trading_pairs)
 
     def constrain_genes(self, parameters):
         for i, param in enumerate(parameters):
@@ -33,4 +35,7 @@ class Individual:
     def copy(self):
         return copy.deepcopy(self)
 
-
+    def mutate_trading_pairs(self, all_pairs, mutation_rate):
+        for i in range(len(self.trading_pairs)):
+            if random.random() < mutation_rate:
+                self.trading_pairs[i] = random.choice(all_pairs)
