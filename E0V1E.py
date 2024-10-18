@@ -43,8 +43,13 @@ class E0V1E(IStrategy):
     trailing_stop_positive_opt = DecimalParameter(0.001, 0.01, default=0.003, decimals=3, space='sell', optimize=True)
     trailing_stop_positive = trailing_stop_positive_opt.value
 
-    trailing_stop_positive_offset_opt = DecimalParameter(0.01, 0.1, default=0.03, decimals=2, space='sell', optimize=True)
-    trailing_stop_positive_offset = trailing_stop_positive_offset_opt.value
+    trailing_stop_positive_offset_opt = DecimalParameter(0.02, 0.1, default=0.05, decimals=2, space='sell', optimize=True)
+
+    # 确保 trailing_stop_positive_offset 始终大于 trailing_stop_positive
+    def trailing_stop_positive_offset_guard(self):
+        return max(self.trailing_stop_positive + 0.01, self.trailing_stop_positive_offset_opt.value)
+
+    trailing_stop_positive_offset = property(trailing_stop_positive_offset_guard)
 
     trailing_only_offset_is_reached = True
     buy_rsi_fast_32 = IntParameter(20, 70, default=40, space='buy', optimize=True)

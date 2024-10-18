@@ -70,7 +70,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
 
     # Calculate the start_date for the timerange
     end_date = datetime.now()
-    start_date = end_date - timedelta(weeks=9)
+    start_date = end_date - timedelta(weeks=settings.backtest_timerange_weeks)
     timerange = f"{start_date.strftime('%Y%m%d')}-"
     output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{timestamp}_{random_id}.txt"
     for attempt in range(settings.max_retries):
