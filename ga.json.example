@@ -1,0 +1,26 @@
+{
+    "proxy": {
+        "https": "http://127.0.0.1:7890",
+        "http": "http://127.0.0.1:7890",
+        "all": "socks5://127.0.0.1:7890"
+    },
+    "freqtrade_path": "/Users/zhangjiawei/Projects/freqtrade/.venv/bin/freqtrade",
+    "strategy_dir": "user_data/strategies",
+    "user_dir": "user_data",
+    "data_dir": "user_data/data/binance",
+    "results_dir": "results",
+    "config_file": "user_data/config.json",
+    "population_size": 32,
+    "generations": 20,
+    "crossover_prob": 0.8,
+    "mutation_prob": 0.2,
+    "backtest_timerange_weeks": 30,
+    "tournament_size": 3,
+    "pool_processes": 8,
+    "max_retries": 10,
+    "retry_delay": 0.01,
+    "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
+    "best_generations_dir": "bestgenerations",
+    "base_strategy_file": "E0V1E.py",
+    "num_pairs": 80
+}
