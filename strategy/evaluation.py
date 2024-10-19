@@ -88,60 +88,57 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
     return parsed_result
 
 def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_name: str) -> float:
-    total_profit_usdt = parsed_result['total_profit_usdt']
+    # Extract relevant metrics
     total_profit_percent = parsed_result['total_profit_percent']
     win_rate = parsed_result['win_rate']
     max_drawdown = parsed_result['max_drawdown']
-    avg_profit = parsed_result['avg_profit']
-    avg_trade_duration = parsed_result['avg_trade_duration']
-    total_trades = parsed_result['total_trades']
     sharpe_ratio = parsed_result['sharpe_ratio']
     daily_avg_trades = parsed_result['daily_avg_trades']
+    avg_trade_duration = parsed_result['avg_trade_duration']
 
+    # 1. Profit component (non-linear transformation)
+    profit_score = math.tanh(total_profit_percent / 0.5)  # 0.5 as a scaling factor
 
-    # Define weights for profit and win rate
-    alpha = 2  # Adjust this value based on the importance of profit
-    beta = 4   # Adjust this value based on the importance of win rate
+    # 2. Win rate component (sigmoid function)
+    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.5)))
 
-    # Define the maximum possible profit for normalization
-    max_profit = 40  # This value should be set based on your specific context
+    # 3. Risk-adjusted return (using Sharpe ratio)
+    risk_adjusted_score = math.tanh(sharpe_ratio / 2)  # 2 as a scaling factor
 
-    # Normalize profit component
-    normalized_profit_component = total_profit_percent / max_profit
+    # 4. Drawdown penalty
+    drawdown_penalty = math.exp(-5 * max_drawdown)
 
-    # Apply exponential function to win_rate to amplify differences
-    amplified_win_rate = math.exp(5 * (win_rate - 0.8)) - 1  # Subtracting 0.8 to center the exponential curve
-    duration_factor = math.exp(-avg_trade_duration / 1440)  # 1440分钟 = 1天
+    # 5. Trade frequency score
+    trade_frequency_score = math.exp(-(daily_avg_trades - 3)**2 / 4)  # Optimal at 3 trades per day
 
-    base_fitness = 1.0
-    if daily_avg_trades < 0.4:
-        base_fitness = daily_avg_trades
-    if daily_avg_trades > 10:
-        base_fitness = base_fitness / daily_avg_trades
+    # 6. Trade duration score
+    duration_score = math.exp(-avg_trade_duration / 1440)  # 1440 minutes = 1 day
 
-    # Calculate fitness using a weighted product method
-    fitness = base_fitness * (normalized_profit_component + 1) ** alpha * (1 +amplified_win_rate) ** beta * duration_factor
+    # Combine all components
+    fitness = (
+        profit_score * 0.3 +
+        win_rate_score * 0.2 +
+        risk_adjusted_score * 0.2 +
+        drawdown_penalty * 0.1 +
+        trade_frequency_score * 0.1 +
+        duration_score * 0.1
+    )
 
-    # Update log message to include fitness components and strategy name
+    # Log the fitness components and final score
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-                   f"Strategy: {strategy_name}, "  # 添加策略名称
+                   f"Strategy: {strategy_name}, "
                    f"Generation: {generation}, "
-                   f"total_profit_usdt: {total_profit_usdt}, "
-                   f"total_profit_percent: {total_profit_percent}, "
-                   f"win_rate: {win_rate}, "
-                   f"max_drawdown: {max_drawdown}, "
-                   f"avg_profit: {avg_profit}, "
-                   f"avg_trade_duration: {avg_trade_duration}, "
-                   f"total_trades: {total_trades}, "
-                   f"sharpe_ratio: {sharpe_ratio}, "
-                   f"daily_avg_trades: {daily_avg_trades}, "
-                   f"fitness: {fitness}")
+                   f"Profit Score: {profit_score:.4f}, "
+                   f"Win Rate Score: {win_rate_score:.4f}, "
+                   f"Risk-Adjusted Score: {risk_adjusted_score:.4f}, "
+                   f"Drawdown Penalty: {drawdown_penalty:.4f}, "
+                   f"Trade Frequency Score: {trade_frequency_score:.4f}, "
+                   f"Duration Score: {duration_score:.4f}, "
+                   f"Final Fitness: {fitness:.4f}")
 
-    # 定义日志文件路径
+    # Write to log file
     log_filename = "../fitness_log.txt"
     log_path = os.path.join(os.path.dirname(__file__), log_filename)
-    
-    # 将信息追加到日志文件
     with open(log_path, 'a') as log_file:
         log_file.write(log_message + '\n')
     
