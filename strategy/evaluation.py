@@ -100,7 +100,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     profit_score = math.tanh(total_profit_percent / 0.5)  # 0.5 as a scaling factor
 
     # 2. Win rate component (sigmoid function)
-    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.5)))
+    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.8)))
 
     # 3. Risk-adjusted return (using Sharpe ratio)
     risk_adjusted_score = math.tanh(sharpe_ratio / 2)  # 2 as a scaling factor
@@ -116,8 +116,8 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
 
     # Combine all components
     fitness = (
-        profit_score * 0.3 +
-        win_rate_score * 0.2 +
+        profit_score * 0.2 +
+        win_rate_score * 0.3 +
         risk_adjusted_score * 0.2 +
         drawdown_penalty * 0.1 +
         trade_frequency_score * 0.1 +
@@ -128,12 +128,12 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                    f"Strategy: {strategy_name}, "
                    f"Generation: {generation}, "
-                   f"Profit Score: {profit_score:.4f}, "
-                   f"Win Rate Score: {win_rate_score:.4f}, "
-                   f"Risk-Adjusted Score: {risk_adjusted_score:.4f}, "
-                   f"Drawdown Penalty: {drawdown_penalty:.4f}, "
-                   f"Trade Frequency Score: {trade_frequency_score:.4f}, "
-                   f"Duration Score: {duration_score:.4f}, "
+                   f"Total Profit %: {total_profit_percent:.4f}, Profit Score: {profit_score:.4f}, "
+                   f"Win Rate: {win_rate:.4f}, Win Rate Score: {win_rate_score:.4f}, "
+                   f"Sharpe Ratio: {sharpe_ratio:.4f}, Risk-Adjusted Score: {risk_adjusted_score:.4f}, "
+                   f"Max Drawdown: {max_drawdown:.4f}, Drawdown Penalty: {drawdown_penalty:.4f}, "
+                   f"Daily Avg Trades: {daily_avg_trades:.2f}, Trade Frequency Score: {trade_frequency_score:.4f}, "
+                   f"Avg Trade Duration (min): {avg_trade_duration:.2f}, Duration Score: {duration_score:.4f}, "
                    f"Final Fitness: {fitness:.4f}")
 
     # Write to log file
