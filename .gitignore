@@ -2,7 +2,9 @@ fitness_log.txt
 
 ga.json
 
-checkpoints/*
+checkpoints/checkpoint_gen*.pkl.gz
+
+
 !checkpoints/.gitkeep
 
 genetic_algorithm_results*
