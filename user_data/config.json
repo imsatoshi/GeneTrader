@@ -6,7 +6,7 @@
   "timeframe": "5m",
   "fiat_display_currency": "CNY",
   "dry_run": true,
-  "dry_run_wallet": 60,
+  "dry_run_wallet": 100,
   "cancel_open_orders_on_exit": false,
   "use_exit_signal": true,
   "exit_profit_only": false,

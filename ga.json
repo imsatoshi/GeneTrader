@@ -21,6 +21,6 @@
     "retry_delay": 0.01,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
-    "base_strategy_file": "BB_RPB_TSL_BI.py",
+    "base_strategy_file": "E0V1E.py",
     "num_pairs": 40
 }

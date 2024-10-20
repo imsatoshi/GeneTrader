@@ -61,13 +61,18 @@ class E0V1E(IStrategy):
     sell_loss_cci = IntParameter(0, 600, default=120, space='sell', optimize=True)
     sell_loss_cci_profit = DecimalParameter(-0.15, 0, default=-0.15, decimals=2, space='sell', optimize=True)
     
+    custom_sell_cci = IntParameter(0, 600, default=80, space='sell', optimize=True)
+    custom_sell_cci_profit = DecimalParameter(-0.25, 0, default=-0.15, decimals=2, space='sell', optimize=True)
+    # if current_profit > 0:
+    custom_current_profit = DecimalParameter(0.0, 0.05, default=0.01, decimals=2, space='sell', optimize=True)
+    stop_duration_candles = IntParameter(12, 96, default=18, space='sell', optimize=True)
+
     @property
     def protections(self):
-        
         return [
         {
             "method": "CooldownPeriod",
-            "stop_duration_candles": 18
+            "stop_duration_candles": self.stop_duration_candles.value
         }
         ]
 
@@ -134,15 +139,15 @@ class E0V1E(IStrategy):
             if trade.id not in TMP_HOLD1:
                 TMP_HOLD1.append(trade.id)
 
-        if current_profit > 0:
+        if current_profit > self.custom_current_profit.value:
             if current_candle["fastk"] > self.sell_fastx.value:
                 return "fastk_profit_sell"
 
-        if current_candle["cci"] > 80:
+        if current_candle["cci"] > self.custom_sell_cci.value:
             if current_candle["high"] >= trade.open_rate:
                 return "cci_high_sell"
             
-        if min_profit <= -0.15:
+        if min_profit <= self.custom_sell_cci_profit.value:
             if current_profit > self.sell_loss_cci_profit.value:
                 if current_candle["cci"] > self.sell_loss_cci.value:
                     return "cci_loss_sell"
