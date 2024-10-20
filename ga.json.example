@@ -19,8 +19,10 @@
     "pool_processes": 8,
     "max_retries": 10,
     "retry_delay": 0.01,
+    "checkpoint_dir": "checkpoints",
+    "checkpoint_frequency": 1,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
     "base_strategy_file": "E0V1E.py",
-    "num_pairs": 80
+    "num_pairs": 40
 }

@@ -25,7 +25,10 @@ class Settings:
         self.base_strategy_file = self.config['base_strategy_file']
         self.backtest_timerange_weeks = self.config['backtest_timerange_weeks']
         self.num_pairs = self.config['num_pairs']
+        self.checkpoint_dir = os.path.join(self.project_dir, self.config['checkpoint_dir'])
+        self.checkpoint_frequency = self.config['checkpoint_frequency']
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
+
 
 settings = Settings()
