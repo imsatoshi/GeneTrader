@@ -6,6 +6,7 @@ import multiprocessing
 import random
 from datetime import datetime, date
 import os
+import pickle
 from config.settings import Settings
 from utils.logging_config import logger
 from utils.file_operations import create_directories
@@ -40,28 +41,49 @@ def crossover(parent1: Individual, parent2: Individual) -> tuple[Individual, Ind
     
     return Individual(child1_genes, child1_pairs), Individual(child2_genes, child2_pairs)
 
+def save_checkpoint(population, generation, settings):
+    checkpoint = {
+        'population': population,
+        'generation': generation
+    }
+    filename = f"{settings.checkpoint_dir}/checkpoint_gen{generation}.pkl"
+    with open(filename, 'wb') as f:
+        pickle.dump(checkpoint, f)
+    logger.info(f"Saved checkpoint for generation {generation}")
+
+def load_latest_checkpoint(settings):
+    checkpoints = os.listdir(settings.checkpoint_dir)
+    if not checkpoints:
+        return None, 0
+    latest_checkpoint = max(checkpoints, key=lambda x: int(x.split('gen')[1].split('.')[0]))
+    filename = f"{settings.checkpoint_dir}/{latest_checkpoint}"
+    with open(filename, 'rb') as f:
+        checkpoint = pickle.load(f)
+    logger.info(f"Loaded checkpoint from generation {checkpoint['generation']}")
+    return checkpoint['population'], checkpoint['generation']
+
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
     all_pairs = load_trading_pairs(settings.config_file)
     
-    print(settings.parameters)
-    print(all_pairs)
-    print(settings.num_pairs)
-
-    # Create initial population with random individuals and add initial_individuals
-    population = Population.create_random(
-        settings.population_size - len(initial_individuals or []),
-        settings.parameters,
-        all_pairs,
-        settings.num_pairs
-    )
-    if initial_individuals:
-        population.individuals.extend(initial_individuals)
+    # Load the latest checkpoint if it exists
+    population, start_generation = load_latest_checkpoint(settings)
+    
+    if population is None:
+        # Create initial population if no checkpoint was found
+        population = Population.create_random(
+            settings.population_size - len(initial_individuals or []),
+            settings.parameters,
+            all_pairs,
+            settings.num_pairs
+        )
+        if initial_individuals:
+            population.individuals.extend(initial_individuals)
     
     best_individuals = []
 
     with multiprocessing.Pool(processes=settings.pool_processes) as pool:
-        for gen in range(settings.generations):
+        for gen in range(start_generation, settings.generations):
             logger.info(f"Generation {gen+1}")
             
             # Evaluate fitness in parallel
@@ -101,6 +123,10 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
 
             logger.info(f"Best individual in generation {gen+1}: Fitness: {best_ind.fitness}")
 
+            # Save checkpoint every N generations
+            if (gen + 1) % settings.checkpoint_frequency == 0:
+                save_checkpoint(population, gen + 1, settings)
+
     return best_individuals
 
 def save_best_individual(individual: Individual, generation: int, settings: Settings):
@@ -121,6 +147,7 @@ def main():
     parser.add_argument('--download', action='store_true', help='Download data before running the algorithm')
     parser.add_argument('--start-date', type=str, default='20240101', help='Start date for data download (YYYYMMDD)')
     parser.add_argument('--end-date', type=str, default=date.today().strftime('%Y%m%d'), help='End date for data download (YYYYMMDD)')
+    parser.add_argument('--resume', action='store_true', help='Resume from the latest checkpoint')
     args = parser.parse_args()
 
     try:
@@ -134,7 +161,7 @@ def main():
         settings.parameters = parameters
 
         # Create necessary directories
-        create_directories([settings.results_dir, settings.best_generations_dir])
+        create_directories([settings.results_dir, settings.best_generations_dir, settings.checkpoint_dir])
 
         # Download data if requested
         if args.download:
@@ -147,12 +174,15 @@ def main():
         start_time = time.time()
 
         # Run genetic algorithm
-        # Initial individuals (now including trading pairs)
         all_pairs = load_trading_pairs(settings.config_file)
-        initial_individuals = [
-        ]
+        initial_individuals = []
 
-        best_individuals = genetic_algorithm(settings, initial_individuals)
+        if args.resume:
+            logger.info("Resuming from the latest checkpoint")
+            best_individuals = genetic_algorithm(settings)
+        else:
+            logger.info("Starting a new genetic algorithm run")
+            best_individuals = genetic_algorithm(settings, initial_individuals)
 
         # Save best individuals
         for gen, ind in best_individuals:
