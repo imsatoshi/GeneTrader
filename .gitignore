@@ -2,6 +2,9 @@ fitness_log.txt
 
 ga.json
 
+checkpoints/*
+!checkpoints/.gitkeep
+
 genetic_algorithm_results*
 
 user_data/data/*

@@ -16,6 +16,8 @@ from genetic_algorithm.operators import crossover, mutate, select_tournament
 from strategy.backtest import run_backtest
 from data.downloader import download_data  
 from strategy.gen_template import generate_dynamic_template
+import asyncio
+import gzip
 
 
 def load_trading_pairs(config_file):
@@ -41,26 +43,47 @@ def crossover(parent1: Individual, parent2: Individual) -> tuple[Individual, Ind
     
     return Individual(child1_genes, child1_pairs), Individual(child2_genes, child2_pairs)
 
-def save_checkpoint(population, generation, settings):
+async def save_checkpoint_async(population, generation, settings):
     checkpoint = {
-        'population': population,
-        'generation': generation
+        'generation': generation,
+        'individuals': [
+            {
+                'genes': ind.genes,
+                'trading_pairs': ind.trading_pairs,
+                'fitness': ind.fitness
+            } for ind in population.individuals
+        ]
     }
-    filename = f"{settings.checkpoint_dir}/checkpoint_gen{generation}.pkl"
-    with open(filename, 'wb') as f:
-        pickle.dump(checkpoint, f)
-    logger.info(f"Saved checkpoint for generation {generation}")
+    filename = f"{settings.checkpoint_dir}/checkpoint_gen{generation}.pkl.gz"
+    
+    def save_to_file():
+        with gzip.open(filename, 'wb') as f:
+            pickle.dump(checkpoint, f)
+    
+    await asyncio.get_event_loop().run_in_executor(None, save_to_file)
+    logger.info(f"Saved compressed checkpoint for generation {generation}")
+
+def save_checkpoint(population, generation, settings):
+    asyncio.run(save_checkpoint_async(population, generation, settings))
 
 def load_latest_checkpoint(settings):
-    checkpoints = os.listdir(settings.checkpoint_dir)
+    checkpoints = [f for f in os.listdir(settings.checkpoint_dir) if f.endswith('.pkl.gz')]
     if not checkpoints:
         return None, 0
     latest_checkpoint = max(checkpoints, key=lambda x: int(x.split('gen')[1].split('.')[0]))
     filename = f"{settings.checkpoint_dir}/{latest_checkpoint}"
-    with open(filename, 'rb') as f:
+    
+    with gzip.open(filename, 'rb') as f:
         checkpoint = pickle.load(f)
-    logger.info(f"Loaded checkpoint from generation {checkpoint['generation']}")
-    return checkpoint['population'], checkpoint['generation']
+    
+    population = Population([])
+    for ind_data in checkpoint['individuals']:
+        individual = Individual(ind_data['genes'], ind_data['trading_pairs'])
+        individual.fitness = ind_data['fitness']
+        population.individuals.append(individual)
+    
+    logger.info(f"Loaded compressed checkpoint from generation {checkpoint['generation']}")
+    return population, checkpoint['generation']
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
