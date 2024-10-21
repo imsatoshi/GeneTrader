@@ -58,7 +58,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     
     max_open_trades = int(genes[-1])
 
-# Read and modify the config file
+    # Read and modify the config file
     config_path = os.path.join(settings.user_dir, 'config.json')
     with open(config_path, 'r') as f:
         config = json.load(f)

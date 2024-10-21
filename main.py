@@ -18,6 +18,8 @@ from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
 import asyncio
 import gzip
+from functools import lru_cache
+from functools import wraps
 
 
 def load_trading_pairs(config_file):
@@ -85,6 +87,24 @@ def load_latest_checkpoint(settings):
     logger.info(f"Loaded compressed checkpoint from generation {checkpoint['generation']}")
     return population, checkpoint['generation']
 
+def custom_cache(func):
+    cache = {}
+    @wraps(func)
+    def wrapper(genes_tuple, trading_pairs_tuple, generation):
+        key = (genes_tuple, trading_pairs_tuple)
+        if key in cache:
+            return cache[key]
+        result = func(genes_tuple, trading_pairs_tuple, generation)
+        cache[key] = result
+        return result
+    return wrapper
+
+@custom_cache
+def cached_run_backtest(genes_tuple, trading_pairs_tuple, generation):
+    genes = list(genes_tuple)
+    trading_pairs = list(trading_pairs_tuple)
+    return run_backtest(genes, trading_pairs, generation)
+
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
     all_pairs = load_trading_pairs(settings.config_file)
@@ -110,7 +130,8 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             logger.info(f"Generation {gen+1}")
             
             # Evaluate fitness in parallel
-            fitnesses = pool.starmap(run_backtest, [(ind.genes, ind.trading_pairs, gen+1) for ind in population.individuals])
+            fitnesses = pool.starmap(cached_run_backtest, 
+                [(tuple(ind.genes), tuple(ind.trading_pairs), gen+1) for ind in population.individuals])
             for ind, fit in zip(population.individuals, fitnesses):
                 ind.fitness = fit
 

@@ -146,3 +146,42 @@ Stay updated and engage with our community:
 ## Disclaimer
 
 This project is for educational and research purposes only. It does not constitute investment advice. Users are responsible for any risks associated with using this project for actual trading.
+
+## Optimization Summary
+
+Below is an example of optimization progress over 20 generations:
+
+| Generation | Total Trades | Win Rate (%) | Total Profit (%) | Profit Factor | Sharpe Ratio | Max Drawdown (%) | Duration (HH:MM) |
+|------------|--------------|--------------|------------------|---------------|--------------|------------------|-------------------|
+| Gen 1      | 257.00       | 68.50        | 36.23            | 1.13          | 0.97         | 6.28             | 1:38              |
+| Gen 2      | 569.00       | 69.80        | 243.62           | 1.43          | 6.85         | 93.70            | 2:10              |
+| Gen 3      | 354.00       | 72.30        | 145.16           | 1.36          | 3.45         | 26.62            | 0:57              |
+| Gen 4      | 358.00       | 74.30        | 202.59           | 1.45          | 4.27         | 49.34            | 0:56              |
+| Gen 5      | 322.00       | 82.00        | 97.63            | 1.23          | 2.01         | 21.16            | 1:22              |
+| Gen 6      | 376.00       | 79.50        | 1048.38          | 1.75          | 6.77         | 270.10           | 1:30              |
+| Gen 7      | 565.00       | 85.70        | 365.68           | 1.56          | 6.66         | 100.31           | 0:51              |
+| Gen 8      | 473.00       | 87.10        | 1695.53          | 2.39          | 9.24         | 1273.81          | 0:57              |
+| Gen 9      | 421.00       | 85.50        | 669.49           | 2.00          | 8.25         | 758.28           | 0:54              |
+| Gen 10     | 587.00       | 84.20        | 62.30            | 1.17          | 2.28         | 10.27            | 1:01              |
+| Gen 11     | 471.00       | 86.60        | 1039.76          | 2.07          | 9.10         | 227.49           | 0:54              |
+| Gen 12     | 457.00       | 87.10        | 952.52           | 2.16          | 8.75         | 1078.84          | 0:54              |
+| Gen 13     | 505.00       | 86.90        | 1974.44          | 2.23          | 9.38         | 2236.29          | 0:57              |
+| Gen 14     | 460.00       | 88.70        | 2567.82          | 2.99          | 11.25        | 2908.36          | 0:51              |
+| Gen 15     | 403.00       | 87.80        | 1209.20          | 2.60          | 10.91        | 424.23           | 0:54              |
+| Gen 16     | 393.00       | 86.50        | 894.79           | 2.10          | 8.30         | 203.45           | 0:57              |
+| Gen 17     | 360.00       | 86.10        | 637.22           | 2.02          | 7.30         | 148.79           | 1:01              |
+| Gen 18     | 382.00       | 85.10        | 373.27           | 1.68          | 5.73         | 81.84            | 1:09              |
+| Gen 19     | 384.00       | 87.20        | 519.37           | 1.74          | 5.89         | 133.51           | 1:03              |
+| Gen 20     | 335.00       | 86.30        | 309.84           | 1.91          | 5.97         | 62.27            | 1:06              |
+
+This table shows the progress of the genetic algorithm optimization over 20 generations. Key metrics include:
+
+- Total Trades: The number of trades executed by the strategy.
+- Win Rate: The percentage of profitable trades.
+- Total Profit: The cumulative profit percentage.
+- Profit Factor: The ratio of gross profit to gross loss.
+- Sharpe Ratio: A measure of risk-adjusted return.
+- Max Drawdown: The maximum observed loss from a peak to a trough.
+- Duration: The time taken for each generation's optimization.
+
+The optimization
