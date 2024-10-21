@@ -182,6 +182,6 @@ This table shows the progress of the genetic algorithm optimization over 20 gene
 - Profit Factor: The ratio of gross profit to gross loss.
 - Sharpe Ratio: A measure of risk-adjusted return.
 - Max Drawdown: The maximum observed loss from a peak to a trough.
-- Duration: The time taken for each generation's optimization.
+- Duration: The trade duration.
 
 The optimization process aims to improve these metrics over time, finding strategies with higher profitability, better risk management, and improved overall performance. As seen in the table, there's a general trend of improvement in key metrics such as Win Rate, Total Profit, and Sharpe Ratio as the generations progress, although there are some fluctuations due to the nature of genetic algorithms and market complexity.
