@@ -12,6 +12,7 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 - Saving of best individuals from each generation
 - Configurable optimization parameters
 - Optional data downloading before running the algorithm
+- Checkpointing and ability to resume from the latest checkpoint
 
 ## Prerequisites
 
@@ -30,6 +31,13 @@ This project implements a genetic algorithm to optimize trading strategy paramet
    pip install -r requirements.txt
    ```
 
+3. Create a configuration file:
+   ```
+   cp ga.json.example ga.json
+   ```
+
+4. Edit `ga.json` to configure the genetic algorithm parameters and other settings according to your needs.
+
 ## Configuration
 
 Edit `ga.json` (or your custom config file) to configure:
@@ -40,6 +48,7 @@ Edit `ga.json` (or your custom config file) to configure:
 - Maximum open trades
 - Parallel processing options
 - File paths and directories
+- Checkpoint frequency
 
 ## Usage
 
@@ -55,6 +64,7 @@ Available options:
 - `--download`: Download data before running the algorithm
 - `--start-date YYYYMMDD`: Start date for data download (default is '20240101')
 - `--end-date YYYYMMDD`: End date for data download (default is today's date)
+- `--resume`: Resume from the latest checkpoint
 
 Examples:
 
@@ -78,6 +88,11 @@ Examples:
    python main.py --download --start-date 20230101 --end-date 20231231
    ```
 
+5. Resume from the latest checkpoint:
+   ```
+   python main.py --resume
+   ```
+
 ## Project Structure
 
 - `main.py`: Main script to run the genetic algorithm
@@ -92,13 +107,18 @@ Examples:
 1. The script loads configuration settings from a JSON file.
 2. It generates a dynamic strategy template and extracts parameters.
 3. If requested, it downloads historical data for backtesting.
-4. The genetic algorithm creates an initial population of trading strategies.
+4. The genetic algorithm creates an initial population of trading strategies or loads the latest checkpoint if resuming.
 5. For each generation:
    - Strategies are evaluated in parallel using backtesting.
    - The best strategies are selected for the next generation.
    - Crossover and mutation operations are applied to create new strategies.
    - The best individual from each generation is saved.
+   - A checkpoint is saved at regular intervals.
 6. After all generations, the overall best strategy is reported.
+
+## Checkpointing
+
+The algorithm saves checkpoints at regular intervals (configurable in the settings). These checkpoints allow you to resume the optimization process from where it left off in case of interruption. Use the `--resume` option to start from the latest checkpoint.
 
 ## Contributing
 
