@@ -63,9 +63,15 @@ class E0V1E(IStrategy):
     
     custom_sell_cci = IntParameter(0, 600, default=80, space='sell', optimize=True)
     custom_sell_cci_profit = DecimalParameter(-0.25, 0, default=-0.15, decimals=2, space='sell', optimize=True)
-    # if current_profit > 0:
+
     custom_current_profit = DecimalParameter(0.0, 0.05, default=0.01, decimals=2, space='sell', optimize=True)
     stop_duration_candles = IntParameter(12, 96, default=18, space='sell', optimize=True)
+
+    buy_new_rsi_fast = IntParameter(30, 50, default=34, space='buy', optimize=True)
+    buy_new_rsi = IntParameter(20, 40, default=28, space='buy', optimize=True)
+    low_min_profit = DecimalParameter(-0.4, -0.1, default=-0.15, decimals=2, space='sell', optimize=True)
+    high_min_profit = DecimalParameter(-0.1, 0, default=-0.05, decimals=2, space='sell', optimize=True)
+    hold_time = IntParameter(8, 48, default=18, space='sell', optimize=True)
 
     @property
     def protections(self):
@@ -107,8 +113,8 @@ class E0V1E(IStrategy):
 
         buy_new = (
                 (dataframe['rsi_slow'] < dataframe['rsi_slow'].shift(1)) &
-                (dataframe['rsi_fast'] < 34) &
-                (dataframe['rsi'] > 28) &
+                (dataframe['rsi_fast'] < self.buy_new_rsi_fast.value) &
+                (dataframe['rsi'] > self.buy_new_rsi.value) &
                 (dataframe['close'] < dataframe['sma_15'] * 0.96) &
                 (dataframe['cti'] < self.buy_cti_32.value)
         )
@@ -154,13 +160,13 @@ class E0V1E(IStrategy):
 
         if trade.id in TMP_HOLD and current_candle["close"] < current_candle["ma120"] and current_candle["close"] < \
                 current_candle["ma240"]:
-            if current_time - timedelta(minutes=12) > trade.open_date_utc:
+            if current_time - timedelta(minutes=self.hold_time.value) > trade.open_date_utc:
                 TMP_HOLD.remove(trade.id)
                 return "ma120_sell"
 
         if trade.id in TMP_HOLD1:
             if current_candle["high"] > current_candle["ma120"] or current_candle["high"] > current_candle["ma240"]:
-                if -0.1<= min_profit <= -0.05:
+                if self.low_min_profit.value <= min_profit <= self.high_min_profit.value:
                     TMP_HOLD1.remove(trade.id)
                     return "cross_120_or_240_sell"
 
