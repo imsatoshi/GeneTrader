@@ -6,3 +6,5 @@
 
 /Users/zhangjiawei/Projects/freqtrade/.venv/bin/freqtrade backtesting --strategy GeneTrader_gen3_1729545074_1277 -c user_data/temp_config_1729545074_1277.json --timerange 20240401- --timeframe-detail 1m > generation_3.txt
 
+/Users/zhangjiawei/Projects/freqtrade/.venv/bin/freqtrade backtesting --strategy GeneTrader_gen4_1729562720_1374 -c user_data/temp_config_1729562720_1374.json --timerange 20240401- --timeframe-detail 1m > generation_4.txt
+

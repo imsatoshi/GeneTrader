@@ -83,7 +83,7 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
     }
 
     # 添加这行来打印提取的原始胜率值
-    print(f"Extracted win rate: {parsed_result['win_rate']}")
+    # print(f"Extracted win rate: {parsed_result['win_rate']}")
 
     return parsed_result
 
@@ -109,7 +109,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     drawdown_penalty = math.exp(-5 * max_drawdown)
 
     # 5. Trade frequency score
-    trade_frequency_score = math.exp(-(daily_avg_trades - 3)**2 / 4)  # Optimal at 3 trades per day
+    trade_frequency_score = math.exp(-(daily_avg_trades - 1.5)**2 / 4)  # Optimal at 3 trades per day
 
     # 6. Trade duration score
     duration_score = math.exp(-avg_trade_duration / 1440)  # 1440 minutes = 1 day

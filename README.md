@@ -175,12 +175,10 @@ Below is an example of optimization progress over 20 generations:
 
 This table shows the progress of the genetic algorithm optimization over 20 generations. Key metrics include:
 
-- Total Trades: The number of trades executed by the strategy.
-- Win Rate: The percentage of profitable trades.
-- Total Profit: The cumulative profit percentage.
-- Profit Factor: The ratio of gross profit to gross loss.
-- Sharpe Ratio: A measure of risk-adjusted return.
-- Max Drawdown: The maximum observed loss from a peak to a trough.
-- Duration: The trade duration.
+- Trades: The number of trades executed by the strategy.
+- Avg Profit %: The average profit percentage per trade.
+- Tot Profit %: The total cumulative profit percentage.
+- Win Draw Loss: The number of winning, draw, and losing trades.
+- Drawdown %: The maximum observed loss from a peak to a trough, expressed as a percentage.
 
 The optimization process aims to improve these metrics over time, finding strategies with higher profitability, better risk management, and improved overall performance. As seen in the table, there's a general trend of improvement in key metrics such as Win Rate, Total Profit, and Sharpe Ratio as the generations progress, although there are some fluctuations due to the nature of genetic algorithms and market complexity.
