@@ -1,5 +1,7 @@
 fitness_log.txt
 
+generation_*.txt
+
 backtesting_commands.sh
 
 ga.json
