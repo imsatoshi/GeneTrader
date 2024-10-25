@@ -24,8 +24,6 @@ def render_strategy(params: list, strategy_name: str) -> str:
 
     # Create a dictionary for the strategy parameters
     strategy_params = {'strategy_name': strategy_name}
-    print(params)
-    
     # Map the input params to the template params
     for i, param_info in enumerate(template_params[:-1]):
         param_name = param_info['name']

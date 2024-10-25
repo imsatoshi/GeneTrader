@@ -82,9 +82,6 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
         'avg_trade_duration': parse_duration(extract_value(r'Avg\. Duration Winners\s*│\s*(.*?)\s*│', default='0:00:00', is_string=True))
     }
 
-    # 添加这行来打印提取的原始胜率值
-    # print(f"Extracted win rate: {parsed_result['win_rate']}")
-
     return parsed_result
 
 def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_name: str) -> float:

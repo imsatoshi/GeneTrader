@@ -33,7 +33,7 @@ class E0V1E(IStrategy):
     }
 
     # stoploss = -0.25
-    stoploss_opt = DecimalParameter(-0.99, -0.1, default=-0.25, decimals=2, space='sell', optimize=True)
+    stoploss_opt = DecimalParameter(-0.5, -0.1, default=-0.25, decimals=2, space='sell', optimize=True)
     stoploss = stoploss_opt.value
 
     trailing_stop = True
@@ -175,3 +175,4 @@ class E0V1E(IStrategy):
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[:, ['exit_long', 'exit_tag']] = (0, 'long_out')
         return dataframe
+
