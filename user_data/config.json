@@ -1,5 +1,5 @@
 {
-  "max_open_trades": 1,
+  "max_open_trades": 4,
   "stake_currency": "USDT",
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
@@ -54,7 +54,6 @@
       "ADA/USDT",
       "XRP/USDT",
       "EOS/USDT",
-      "TUSD/USDT",
       "IOTA/USDT",
       "XLM/USDT",
       "ONT/USDT",
@@ -253,7 +252,6 @@
       "DYDX/USDT",
       "IDEX/USDT",
       "VIDT/USDT",
-      "USDP/USDT",
       "GALA/USDT",
       "ILV/USDT",
       "YGG/USDT",

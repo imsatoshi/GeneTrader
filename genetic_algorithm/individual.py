@@ -3,10 +3,11 @@ import random
 import copy
 
 class Individual:
-    def __init__(self, genes: List[float], trading_pairs: List[str]):
+    def __init__(self, genes: List[float], trading_pairs: List[str], param_types: List[dict]):
         self.genes = genes
         self.trading_pairs = trading_pairs
         self.fitness = None
+        self.param_types = param_types  # 添加参数类型信息
 
     @classmethod
     def create_random(cls, parameters, all_pairs, num_pairs):
@@ -14,19 +15,27 @@ class Individual:
         for param in parameters:
             if param['type'] == 'Int':
                 value = random.randint(int(param['start']), int(param['end']))
-            else:  # DecimalParameter
+            elif param['type'] == 'Decimal':
                 value = random.uniform(param['start'] + 1e-10, param['end'] - 1e-10)
                 value = round(value, param['decimal_places'])
+            if param['type'] == 'Categorical':
+                value = random.choice(param['options'])
+            if param['type'] == 'Boolean':
+                value = random.choice([True, False])
             genes.append(value)
-        trading_pairs = random.sample(all_pairs, num_pairs)
-        return cls(genes, trading_pairs)
+        if num_pairs is not None:
+            trading_pairs = random.sample(all_pairs, num_pairs)
+        else:
+            trading_pairs = all_pairs
+        return cls(genes, trading_pairs, parameters)  # 传入 parameters
 
     def constrain_genes(self, parameters):
         for i, param in enumerate(parameters):
             if param['type'] == 'Int':
                 self.genes[i] = int(max(param['start'], min(param['end'], self.genes[i])))
-            else:  # DecimalParameter
+            if param['type'] == 'Decimal':
                 self.genes[i] = round(max(param['start'], min(param['end'], self.genes[i])), param['decimal_places'])
+
 
     # 在交叉和变异操作后调用此方法
     def after_genetic_operation(self, parameters):
@@ -37,6 +46,8 @@ class Individual:
 
     def mutate_trading_pairs(self, all_pairs, mutation_rate):
         # 创建一个集合来存储当前的交易对
+        if self.trading_pairs is None:
+            return
         current_pairs = set(self.trading_pairs)
         
         for i in range(len(self.trading_pairs)):

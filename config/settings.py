@@ -27,6 +27,9 @@ class Settings:
         self.num_pairs = self.config['num_pairs']
         self.checkpoint_dir = os.path.join(self.project_dir, self.config['checkpoint_dir'])
         self.checkpoint_frequency = self.config['checkpoint_frequency']
+        self.add_max_open_trades = self.config['add_max_open_trades']
+        self.fix_pairs = self.config['fix_pairs']
+        self.add_dynamic_timeframes = self.config['add_dynamic_timeframes']
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
 

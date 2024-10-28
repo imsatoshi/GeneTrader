@@ -11,21 +11,35 @@ from strategy.evaluation import parse_backtest_results, fitness_function
 from strategy.gen_template import generate_dynamic_template
 from string import Template
 
+
+int2timeframe = {
+    0: "5m",
+    1: "15m",
+    2: "30m",
+    3: "1h",
+    4: "4h",
+    5: "8h",
+    6: "12h",
+    7: "1d"
+}
+
+
 # 添加项目根目录到 Python 路径
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 def render_strategy(params: list, strategy_name: str) -> str:
     # Generate the dynamic template
-    template_content, template_params = generate_dynamic_template(settings.base_strategy_file)
-    
+    template_content, template_params = generate_dynamic_template(settings.base_strategy_file, add_max_open_trades=settings.add_max_open_trades, add_dynamic_timeframes=settings.add_dynamic_timeframes)
     # Create a Template object
     strategy_template = Template(template_content)
-
     # Create a dictionary for the strategy parameters
     strategy_params = {'strategy_name': strategy_name}
     # Map the input params to the template params
-    for i, param_info in enumerate(template_params[:-1]):
+
+    logger.info(params)
+
+    for i, param_info in enumerate(template_params):
         param_name = param_info['name']
         if param_info['optimize']:
             if i < len(params):
@@ -38,9 +52,10 @@ def render_strategy(params: list, strategy_name: str) -> str:
             else:
                 logger.warning(f"Not enough parameters provided. Skipping {param_name}")
 
+    # logger.info(f"Strategy params: {strategy_params}")
     # Render the strategy using the template
     rendered_strategy = strategy_template.substitute(strategy_params)
-    
+    # logger.info(f"Rendered strategy: {rendered_strategy}")  
     return rendered_strategy
 
 def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
@@ -50,21 +65,40 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     strategy_file = f"{settings.strategy_dir}/{strategy_name}.py"
     
     # Render new strategy file
+    logger.info(f"Rendering strategy for generation {generation}")
     rendered_strategy = render_strategy(genes, strategy_name)
     with open(strategy_file, 'w') as f:
         f.write(rendered_strategy)
     
-    max_open_trades = int(genes[-1])
+    max_open_trades = 1
+    strategy_gene = genes.copy()
+    dynamic_timeframe = "5m" # default
+    
+    if settings.add_dynamic_timeframes:
+        dynamic_timeframe = int2timeframe[int(strategy_gene.pop())]
+        logger.info(f"Setting dynamic_timeframe to {dynamic_timeframe}")
+
+    if settings.add_max_open_trades:
+        max_open_trades = int(strategy_gene.pop())
+        logger.info(f"Setting max_open_trades to {max_open_trades}")
 
     # Read and modify the config file
     config_path = os.path.join(settings.user_dir, 'config.json')
     with open(config_path, 'r') as f:
         config = json.load(f)
-    config['max_open_trades'] = max_open_trades
+    
+    if settings.add_max_open_trades:
+        logger.info(f"Setting max_open_trades to {max_open_trades}")
+        config['max_open_trades'] = max_open_trades
+    if settings.add_dynamic_timeframes:
+        config['timeframe'] = dynamic_timeframe
     config["exchange"]["pair_whitelist"] = trading_pairs
     config_file_name = os.path.join(settings.user_dir, f'temp_config_{timestamp}_{random_id}.json')
     with open(config_file_name, 'w') as f:
         json.dump(config, f, indent=4)
+
+    timeframe = config['timeframe']
+    logger.info(f"Running backtest for generation {generation}")
 
     # Calculate the start_date for the timerange
     end_date = datetime.now()
@@ -98,7 +132,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     if parsed_result['total_trades'] == 0:
         return float('-inf')  # Heavily penalize strategies that don't trade
     
-    return fitness_function(parsed_result, generation, strategy_name)  # 添加 strategy_name 参数
+    return fitness_function(parsed_result, generation, strategy_name, timeframe)  # 添加 strategy_name 参数
 
 if __name__ == "__main__":
     # 测试 render_strategy 函数

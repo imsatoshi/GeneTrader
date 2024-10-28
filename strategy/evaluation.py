@@ -84,7 +84,7 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
 
     return parsed_result
 
-def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_name: str) -> float:
+def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_name: str, timeframe: str) -> float:
     # Extract relevant metrics
     total_profit_percent = parsed_result['total_profit_percent']
     win_rate = parsed_result['win_rate']
@@ -97,7 +97,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     profit_score = math.tanh(total_profit_percent / 0.5)  # 0.5 as a scaling factor
 
     # 2. Win rate component (sigmoid function)
-    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.8)))
+    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.95)))
 
     # 3. Risk-adjusted return (using Sharpe ratio)
     risk_adjusted_score = math.tanh(sharpe_ratio / 2)  # 2 as a scaling factor
@@ -124,6 +124,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     # Log the fitness components and final score
     log_message = (f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                    f"Strategy: {strategy_name}, "
+                   f"Timeframe: {timeframe}, "
                    f"Generation: {generation}, "
                    f"Total Profit %: {total_profit_percent:.4f}, Profit Score: {profit_score:.4f}, "
                    f"Win Rate: {win_rate:.4f}, Win Rate Score: {win_rate_score:.4f}, "

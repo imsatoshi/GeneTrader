@@ -34,17 +34,6 @@ def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs:
     else:
         return all_pairs
 
-def crossover(parent1: Individual, parent2: Individual) -> tuple[Individual, Individual]:
-    crossover_point = random.randint(1, len(parent1.genes) - 1)
-    child1_genes = parent1.genes[:crossover_point] + parent2.genes[crossover_point:]
-    child2_genes = parent2.genes[:crossover_point] + parent1.genes[crossover_point:]
-    
-    # Crossover trading pairs
-    child1_pairs = crossover_trading_pairs(parent1, parent2, len(parent1.trading_pairs))
-    child2_pairs = crossover_trading_pairs(parent1, parent2, len(parent2.trading_pairs))
-    
-    return Individual(child1_genes, child1_pairs), Individual(child2_genes, child2_pairs)
-
 async def save_checkpoint_async(population, generation, settings):
     checkpoint = {
         'generation': generation,
@@ -87,23 +76,6 @@ def load_latest_checkpoint(settings):
     logger.info(f"Loaded compressed checkpoint from generation {checkpoint['generation']}")
     return population, checkpoint['generation']
 
-def custom_cache(func):
-    cache = {}
-    @wraps(func)
-    def wrapper(genes_tuple, trading_pairs_tuple, generation):
-        key = (genes_tuple, trading_pairs_tuple)
-        if key in cache:
-            return cache[key]
-        result = func(genes_tuple, trading_pairs_tuple, generation)
-        cache[key] = result
-        return result
-    return wrapper
-
-@custom_cache
-def cached_run_backtest(genes_tuple, trading_pairs_tuple, generation):
-    genes = list(genes_tuple)
-    trading_pairs = list(trading_pairs_tuple)
-    return run_backtest(genes, trading_pairs, generation)
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
@@ -111,33 +83,48 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
     
     # Load the latest checkpoint if it exists
     population, start_generation = load_latest_checkpoint(settings)
-    
     if population is None:
         # Create initial population if no checkpoint was found
-        population = Population.create_random(
-            settings.population_size - len(initial_individuals or []),
-            settings.parameters,
-            all_pairs,
-            settings.num_pairs
-        )
+        if not settings.fix_pairs:
+            population = Population.create_random(
+                settings.population_size - len(initial_individuals or []),
+                settings.parameters,
+                all_pairs,
+            )
+        else:
+            population = Population.create_random(
+                settings.population_size - len(initial_individuals or []),
+                settings.parameters,
+                all_pairs,
+                None,
+            )
         if initial_individuals:
             population.individuals.extend(initial_individuals)
-    
+
     best_individuals = []
 
     with multiprocessing.Pool(processes=settings.pool_processes) as pool:
         for gen in range(start_generation, settings.generations):
             logger.info(f"Generation {gen+1}")
-            
+                        
             # Evaluate fitness in parallel
-            fitnesses = pool.starmap(cached_run_backtest, 
-                [(tuple(ind.genes), tuple(ind.trading_pairs), gen+1) for ind in population.individuals])
-            for ind, fit in zip(population.individuals, fitnesses):
-                ind.fitness = fit
-
+            try:
+                fitnesses = pool.starmap(run_backtest, 
+                    [(ind.genes, ind.trading_pairs, gen+1) for ind in population.individuals])
+                
+                for ind, fit in zip(population.individuals, fitnesses):
+                    if fit is not None:
+                        ind.fitness = fit
+                    else:
+                        logger.warning(f"Invalid fitness value for individual in generation {gen+1}")
+                        ind.fitness = float('-inf')  # or some other appropriate default value
+            except Exception as e:
+                logger.error(f"Error during fitness calculation in generation {gen+1}: {str(e)}")
+                # Handle the error appropriately, maybe by skipping this generation or terminating the algorithm
+            
             # Filter out individuals with None fitness
             valid_individuals = [ind for ind in population.individuals if ind.fitness is not None]
-            
+            logger.info(f"Valid individuals in generation {gen+1}: {len(valid_individuals)}")
             if not valid_individuals:
                 logger.warning(f"No valid individuals in generation {gen+1}. Terminating early.")
                 break
@@ -148,7 +135,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             # Apply crossover and mutation
             for i in range(0, len(offspring), 2):
                 if random.random() < settings.crossover_prob:
-                    offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1])
+                    offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1], with_pair=settings.fix_pairs)                    
                     offspring[i].after_genetic_operation(settings.parameters)
                     offspring[i+1].after_genetic_operation(settings.parameters)
 
@@ -200,7 +187,6 @@ def main():
 
         # Generate dynamic template and get parameters
         _, parameters = generate_dynamic_template(settings.base_strategy_file)
-
         # Update parameters in settings
         settings.parameters = parameters
 
