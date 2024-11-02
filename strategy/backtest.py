@@ -37,8 +37,6 @@ def render_strategy(params: list, strategy_name: str) -> str:
     strategy_params = {'strategy_name': strategy_name}
     # Map the input params to the template params
 
-    logger.info(params)
-
     for i, param_info in enumerate(template_params):
         param_name = param_info['name']
         if param_info['optimize']:
@@ -51,11 +49,8 @@ def render_strategy(params: list, strategy_name: str) -> str:
                     strategy_params[param_name] = params[i]
             else:
                 logger.warning(f"Not enough parameters provided. Skipping {param_name}")
-
-    # logger.info(f"Strategy params: {strategy_params}")
-    # Render the strategy using the template
+    logger.info(strategy_params)
     rendered_strategy = strategy_template.substitute(strategy_params)
-    # logger.info(f"Rendered strategy: {rendered_strategy}")  
     return rendered_strategy
 
 def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
@@ -66,6 +61,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     
     # Render new strategy file
     logger.info(f"Rendering strategy for generation {generation}")
+
     rendered_strategy = render_strategy(genes, strategy_name)
     with open(strategy_file, 'w') as f:
         f.write(rendered_strategy)
@@ -112,7 +108,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
             f"-c {config_file_name} "
             f"--timerange {timerange} "
             f"-d {os.path.abspath(settings.data_dir)} "
-            f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m " 
+            f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m --enable-protections" 
             f"> {output_file}"
         )
         

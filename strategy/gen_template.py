@@ -132,15 +132,16 @@ def generate_dynamic_template(strategy_file_path, add_max_open_trades=True, add_
     return template, params
 
 if __name__ == "__main__":
-    strategy_file_path = './Solipsis5.py'
+    strategy_file_path = './haFbmVVRP.py'
     
     template, params = generate_dynamic_template(strategy_file_path)
         
     print("\nParsed Parameters:")
     for param in params:
-        if param['type'] == 'Categorical':
-            print(param['name'], param['options'], param['default'])
-
+        # if param['type'] == 'Categorical':
+        # print(param['name'], param['options'], param['default'])
+        print(param)
     print("\nTemplate has been generated and saved to 'generated_template.py'")
     # print(len(params))
     # print("abc")
+    print(template)
