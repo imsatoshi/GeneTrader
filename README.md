@@ -42,13 +42,81 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 
 Edit `ga.json` (or your custom config file) to configure:
 
-- Genetic algorithm parameters (population size, generations, tournament size)
-- Mutation and crossover probabilities
-- Number of trading pairs to optimize
-- Maximum open trades
-- Parallel processing options
-- File paths and directories
-- Checkpoint frequency
+### Basic Parameters
+- `population_size`: Number of individuals in each generation
+- `generations`: Total number of generations to run
+- `tournament_size`: Number of individuals in tournament selection
+- `crossover_prob`: Probability of crossover (0.0 to 1.0)
+- `mutation_prob`: Probability of mutation (0.0 to 1.0)
+
+### Trading Parameters
+- `max_open_trades`: Maximum number of trades that can be open simultaneously (default: 3)
+  - Range: 1 to 6
+  - Higher values allow more concurrent trades but require more capital
+  - Lower values reduce risk but may miss opportunities
+
+- `timeframe`: Trading interval for analysis and execution (default: "5m")
+  - Available options: "1m", "5m", "15m", "30m", "1h", "4h"
+  - Shorter timeframes (1m, 5m) provide more trading opportunities but may have higher noise
+  - Longer timeframes (1h, 4h) may provide more reliable signals but fewer opportunities
+
+### Processing Options
+- `pool_processes`: Number of parallel processes for backtesting
+- `checkpoint_frequency`: How often to save checkpoints
+- `fix_pairs`: Whether to use fixed trading pairs or allow optimization
+
+### File Paths
+- `strategy_dir`: Directory for strategy files
+- `data_dir`: Directory for historical data
+- `results_dir`: Directory for optimization results
+
+Example configuration:
+```json
+{
+    // ... other settings ...
+    "max_open_trades": 3,
+    "timeframe": "5m",
+    // ... other settings ...
+}
+```
+
+Tips for Parameter Selection:
+- For `max_open_trades`:
+  - Start with a lower value (2-3) for testing
+  - Increase gradually based on available capital and risk tolerance
+  - Consider exchange limits and liquidity
+
+- For `timeframe`:
+  - Lower timeframes (1m-5m): Suitable for scalping strategies
+  - Medium timeframes (15m-30m): Balance between opportunities and noise
+  - Higher timeframes (1h-4h): Better for trend-following strategies
+
+### Updating Trading Pairs
+
+You can dynamically update the trading pairs in your configuration using the `get_pairs.py` script:
+
+```bash
+python scripts/get_pairs.py [--mode {volume,all}]
+```
+
+Options:
+- `--mode volume`: Get top 100 pairs sorted by USDT trading volume
+- `--mode all`: Get all available USDT trading pairs (default)
+
+The script will:
+1. Fetch available trading pairs from Binance
+2. Filter out pairs based on a predefined blacklist
+3. Save the pairs to a timestamped JSON file
+4. Automatically update the pair_whitelist in your `user_data/config.json`
+
+Example usage:
+```bash
+# Get top 100 pairs by trading volume
+python scripts/get_pairs.py --mode volume
+
+# Get all available USDT pairs
+python scripts/get_pairs.py --mode all
+```
 
 ## Usage
 

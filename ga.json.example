@@ -25,7 +25,7 @@
     "checkpoint_frequency": 1,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
-    "base_strategy_file": "Solipsis5.py",
+    "base_strategy_file": "candidates/Solipsis5.py",
     "fix_pairs": true,
     "num_pairs": 1
 }
