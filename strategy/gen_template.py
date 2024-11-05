@@ -132,7 +132,7 @@ def generate_dynamic_template(strategy_file_path, add_max_open_trades=True, add_
     return template, params
 
 if __name__ == "__main__":
-    strategy_file_path = './haFbmVVRP.py'
+    strategy_file_path = './candidates/E0V1E_1105.py'
     
     template, params = generate_dynamic_template(strategy_file_path)
         
@@ -144,4 +144,4 @@ if __name__ == "__main__":
     print("\nTemplate has been generated and saved to 'generated_template.py'")
     # print(len(params))
     # print("abc")
-    print(template)
+    # print(template)

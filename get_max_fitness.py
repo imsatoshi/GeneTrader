@@ -54,7 +54,7 @@ with open('backtesting_commands.sh', 'w') as command_file:
                 strategy_name = data['strategy_name'][:-1]
                 config_file = get_config_file(strategy_name)
                 if config_file:
-                    backtesting_command = f"/Users/zhangjiawei/Projects/freqtrade/.venv/bin/freqtrade backtesting --strategy {strategy_name} -c {config_file} --timerange 20240401- --timeframe-detail 1m > generation_{gen}.txt"
+                    backtesting_command = f"/Users/zhangjiawei/Projects/freqtrade/.venv/bin/freqtrade backtesting --strategy {strategy_name} -c {config_file} --timerange 20240101- --timeframe-detail 1m > generation_{gen}.txt"
                     print(f"Backtesting command:")
                     print(backtesting_command)
                     command_file.write(backtesting_command + "\n\n")

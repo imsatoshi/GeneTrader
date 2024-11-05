@@ -17,7 +17,7 @@
     "backtest_timerange_weeks": 30,
     "tournament_size": 2,
     "pool_processes": 4,
-    "max_retries": 10,
+    "max_retries": 3,
     "retry_delay": 0.01,
     "add_max_open_trades": true,
     "add_dynamic_timeframes": false,
@@ -25,7 +25,9 @@
     "checkpoint_frequency": 1,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
-    "base_strategy_file": "candidates/sample.py",
+    "base_strategy_file": "candidates/haFbmVVRP.py",
     "fix_pairs": true,
-    "num_pairs": 1
+    "num_pairs": 1,
+    "diversity_threshold": 0.1,
+    "max_mutation_prob": 0.4
 }

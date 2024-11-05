@@ -14,7 +14,11 @@ class Individual:
         genes = []
         for param in parameters:
             if param['type'] == 'Int':
-                value = random.randint(int(param['start']), int(param['end']))
+                if param.get('name') == 'max_open_trades':
+                    min_value = max(1, int(param['start']))
+                    value = random.randint(min_value, int(param['end']))
+                else:
+                    value = random.randint(int(param['start']), int(param['end']))
             elif param['type'] == 'Decimal':
                 value = random.uniform(param['start'] + 1e-10, param['end'] - 1e-10)
                 value = round(value, param['decimal_places'])

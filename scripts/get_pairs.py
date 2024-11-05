@@ -11,12 +11,13 @@ blacklists = [
     "UNFI"
 ]
 
-def get_binance_usdt_pairs(mode='all'):
+def get_binance_usdt_pairs(mode='all', top_n=100):
     """
     获取币安所有USDT交易对的信息
     Args:
-        mode (str): 'volume' - 按交易金额返回前100个交易对
+        mode (str): 'volume' - 按交易金额返回前N个交易对
                    'all' - 返回所有符合条件的交易对
+        top_n (int): 在 volume 模式下返回的交易对数量
     """
     try:
         # 获取所有交易对信息
@@ -55,12 +56,12 @@ def get_binance_usdt_pairs(mode='all'):
                     usdt_pairs.append(pair)
         
         if mode == 'volume':
-            # 按USDT交易金额排序并获取前100个
+            # 按USDT交易金额排序并获取前N个
             sorted_pairs = sorted(usdt_pairs, key=lambda x: x[1], reverse=True)
             print("Top 10 pairs by USDT volume:")
             for pair, volume in sorted_pairs[:10]:
                 print(f"{pair}: {volume:,.2f} USDT")
-            return [pair for pair, _ in sorted_pairs[:100]]
+            return [pair for pair, _ in sorted_pairs[:top_n]]
         
         return usdt_pairs
         
@@ -88,42 +89,52 @@ def save_to_json(data, filename=None):
         print(f"保存文件时出错: {e}")
         return False
 
-def update_config_json(pairs):
+def update_config_json(pairs, output_config):
     """
-    更新 config.json 文件中的 pair_whitelist
+    更新配置文件中的 pair_whitelist
+    Args:
+        pairs: 交易对列表
+        output_config: 输出配置文件的名称
     """
     try:
+        # 首先读取原始配置文件作为模板
         with open('user_data/config.json', 'r', encoding='utf-8') as f:
             config = json.load(f)
         
         config['exchange']['pair_whitelist'] = pairs
         
-        with open('user_data/config.json', 'w', encoding='utf-8') as f:
+        # 使用指定的文件名保存到 user_data 目录
+        output_path = f'user_data/{output_config}'
+        with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
         
-        print("成功更新 config.json 中的 pair_whitelist")
+        print(f"成功将交易对列表保存到: {output_path}")
         return True
     except Exception as e:
-        print(f"更新 config.json 时出错: {e}")
+        print(f"更新配置文件时出错: {e}")
         return False
 
 def main():
     # 添加命令行参数
     parser = argparse.ArgumentParser(description='获取币安USDT交易对')
     parser.add_argument('--mode', type=str, choices=['volume', 'all'], 
-                       default='all', help='获取模式：volume-交易量前100，all-所有交易对')
+                       default='all', help='获取模式：volume-交易量前N个，all-所有交易对')
+    parser.add_argument('--top-n', type=int, default=100,
+                       help='在 volume 模式下返回的交易对数量（默认：100）')
+    parser.add_argument('--output-config', type=str, default='config_new.json',
+                       help='输出配置文件的名称 (保存在 user_data 目录下)')
     args = parser.parse_args()
     
     # 获取交易对数据
-    pairs = get_binance_usdt_pairs(mode=args.mode)
+    pairs = get_binance_usdt_pairs(mode=args.mode, top_n=args.top_n)
     
     if pairs:
         # 保存数据到JSON文件
         save_to_json(pairs)
         print(f"共获取到 {len(pairs)} 个USDT交易对")
         
-        # 更新 config.json
-        update_config_json(pairs)
+        # 更新配置文件
+        update_config_json(pairs, args.output_config)
     else:
         print("获取数据失败")
 
