@@ -36,7 +36,11 @@ class Individual:
     def constrain_genes(self, parameters):
         for i, param in enumerate(parameters):
             if param['type'] == 'Int':
-                self.genes[i] = int(max(param['start'], min(param['end'], self.genes[i])))
+                if param.get('name') == 'max_open_trades':
+                    min_value = max(1, int(param['start']))
+                    self.genes[i] = int(max(min_value, min(param['end'], self.genes[i])))
+                else:
+                    self.genes[i] = int(max(param['start'], min(param['end'], self.genes[i])))
             if param['type'] == 'Decimal':
                 self.genes[i] = round(max(param['start'], min(param['end'], self.genes[i])), param['decimal_places'])
 
