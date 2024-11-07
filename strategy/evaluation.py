@@ -10,6 +10,7 @@ sys.path.insert(0, project_root)
 import re
 from typing import Dict, Any
 from utils.logging_config import logger
+from config.config import LOG_CONFIG, PROJECT_ROOT
 
 def extract_win_rate(content: str) -> float:
     pattern = r'│\s*TOTAL\s*│.*│\s*(\d+)\s*│.*│.*│.*│.*│\s*\d+\s+\d+\s+\d+\s+([\d.]+)\s*│'
@@ -135,8 +136,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
                    f"Final Fitness: {fitness:.4f}")
 
     # Write to log file
-    log_filename = "../fitness_log.txt"
-    log_path = os.path.join(os.path.dirname(__file__), log_filename)
+    log_path = os.path.join(LOG_CONFIG['log_dir'], LOG_CONFIG['fitness_log'])
     with open(log_path, 'a') as log_file:
         log_file.write(log_message + '\n')
     

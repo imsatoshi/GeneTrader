@@ -6,6 +6,8 @@ backtesting_commands.sh
 
 ga.json
 
+logs/*
+
 checkpoints/*
 !checkpoints/.gitkeep
 

@@ -8,6 +8,7 @@ from datetime import datetime, date
 import os
 import pickle
 from config.settings import Settings
+from config.config import LOG_CONFIG
 from utils.logging_config import logger
 from utils.file_operations import create_directories
 from genetic_algorithm.individual import Individual
@@ -105,6 +106,20 @@ def calculate_population_diversity(population):
     
     return np.mean(gene_distances) if gene_distances else 0
 
+def log_diversity(generation: int, diversity: float, settings: Settings):
+    """Log population diversity to a separate file"""
+    diversity_log_path = os.path.join(LOG_CONFIG['log_dir'], LOG_CONFIG['diversity_log'])
+    
+    # Create header if file doesn't exist
+    if not os.path.exists(diversity_log_path):
+        with open(diversity_log_path, 'w') as f:
+            f.write('generation,diversity,timestamp\n')
+    
+    # Append diversity data with timestamp
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(diversity_log_path, 'a') as f:
+        f.write(f'{generation},{diversity:.6f},{timestamp}\n')
+
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
     all_pairs = load_trading_pairs(settings.config_file)
@@ -171,6 +186,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
 
             # Calculate population diversity and adjust mutation probability
             diversity = calculate_population_diversity(population)
+            log_diversity(gen + 1, diversity, settings)  # 记录多样性到日志文件
             logger.info("="*50)
             logger.info(f"🔍 POPULATION DIVERSITY: {diversity:.6f}")
             logger.info("="*50)
@@ -234,8 +250,13 @@ def main():
         # Update parameters in settings
         settings.parameters = parameters
 
-        # Create necessary directories
-        create_directories([settings.results_dir, settings.best_generations_dir, settings.checkpoint_dir])
+        # Create all necessary directories including logs
+        create_directories([
+            settings.results_dir, 
+            settings.best_generations_dir, 
+            settings.checkpoint_dir,
+            LOG_CONFIG['log_dir']  # 添加日志目录
+        ])
 
         # Download data if requested
         if args.download:
