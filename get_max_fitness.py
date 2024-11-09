@@ -22,7 +22,7 @@ def get_config_file(strategy_name):
 generations = {}
 current_gen = None
 
-with open('fitness_log.txt', 'r') as file:
+with open('logs/fitness_log.txt', 'r') as file:
     for line in file:
         gen = extract_generation(line)
         if gen is not None:

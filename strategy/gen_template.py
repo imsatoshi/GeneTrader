@@ -90,7 +90,7 @@ def replace_parameters(content, parameters):
             content = re.sub(pattern, replacement, content)
     return content
 
-def generate_dynamic_template(strategy_file_path, add_max_open_trades=True, add_dynamic_timeframes=True):
+def generate_dynamic_template(strategy_file_path, add_max_open_trades=True, add_dynamic_timeframes=False):
     # Read the strategy file
     with open(strategy_file_path, 'r') as file:
         content = file.read()

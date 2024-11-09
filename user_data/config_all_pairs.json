@@ -421,7 +421,9 @@
       "SCR/USDT",
       "BNSOL/USDT",
       "LUMIA/USDT",
-      "KAIA/USDT"
+      "KAIA/USDT",
+      "COW/USDT",
+      "CETUS/USDT"
     ]
   },
   "pairlists": [
