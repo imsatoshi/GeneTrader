@@ -117,9 +117,9 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
         profit_score * 0.2 +
         win_rate_score * 0.3 +
         risk_adjusted_score * 0.2 +
-        drawdown_penalty * 0.1 +
-        trade_frequency_score * 0.1 +
-        duration_score * 0.1
+        drawdown_penalty * 0.1
+        # trade_frequency_score * 0.1 +
+        # duration_score * 0.1
     )
 
     # Log the fitness components and final score

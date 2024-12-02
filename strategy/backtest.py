@@ -108,7 +108,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
             f"-c {config_file_name} "
             f"--timerange {timerange} "
             f"-d {os.path.abspath(settings.data_dir)} "
-            f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m --enable-protections" 
+            f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m --enable-protections --cache none" 
             f"> {output_file}"
         )
         

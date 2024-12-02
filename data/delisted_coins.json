@@ -1,0 +1,65 @@
+{
+  "delisted_coins": [
+    "CVP",
+    "EPX",
+    "GFT",
+    "GIFTO",
+    "IDRT",
+    "IRIS",
+    "KEY",
+    "LOOM",
+    "LOOMUSDT",
+    "OAX",
+    "OOKI",
+    "ORBSUSDT",
+    "REEF",
+    "REN",
+    "UNFI",
+    "VGX",
+    "XEMUSDT"
+  ],
+  "last_updated": "2024-01-10",
+  "source": "https://www.binance.com/en/support/announcement/binance-will-delist-gft-iris-key-oax-ren-on-2024-12-10-131b75b63a71490393034f36de70c92c",
+  "delisting_history": [
+    {
+      "date": "2024-12-02",
+      "coins": [
+        "GIFTO"
+      ],
+      "source": "https://www.binance.com/en/support/announcement/7ce833294cdf4eff97dd4d1cc01845f3",
+      "title": "Suspension of Gifto (GFT) Deposits and Update on the Delisting Date (2024-12-03)"
+    },
+    {
+      "date": "2024-12-02",
+      "coins": [
+        "LOOMUSDT",
+        "ORBSUSDT",
+        "XEMUSDT"
+      ],
+      "source": "https://www.binance.com/en/support/announcement/cfe97d52a8c840d3ba631835b637e9e7",
+      "title": "Binance Futures Will Delist USD\u24c8-M XEMUSDT, ORBSUSDT and LOOMUSDT Perpetual Contracts (2024-12-09)"
+    },
+    {
+      "date": "2024-12-02",
+      "coins": [
+        "IDRT",
+        "OOKI",
+        "UNFI"
+      ],
+      "source": "https://www.binance.com/en/support/announcement/043c8407bb904652a428573a50d07e07",
+      "title": "Binance Will Delist IDRT, KP3R, OOKI, UNFI on 2024-11-06"
+    },
+    {
+      "date": "2024-12-02",
+      "coins": [
+        "CVP",
+        "EPX",
+        "LOOM",
+        "REEF",
+        "VGX"
+      ],
+      "source": "https://www.binance.com/en/support/announcement/e2fcd2c945654c8d832395335429403e",
+      "title": "Binance Will Delist CVP, EPX, FOR, LOOM, REEF, VGX on 2024-08-26"
+    }
+  ]
+}

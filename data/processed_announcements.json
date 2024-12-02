@@ -1,0 +1,39 @@
+{
+  "7ce833294cdf4eff97dd4d1cc01845f3": {
+    "date": "2024-12-02",
+    "title": "Suspension of Gifto (GFT) Deposits and Update on the Delisting Date (2024-12-03)",
+    "coins": [
+      "GIFTO",
+      "GFT"
+    ]
+  },
+  "cfe97d52a8c840d3ba631835b637e9e7": {
+    "date": "2024-12-02",
+    "title": "Binance Futures Will Delist USD\u24c8-M XEMUSDT, ORBSUSDT and LOOMUSDT Perpetual Contracts (2024-12-09)",
+    "coins": [
+      "XEMUSDT",
+      "ORBSUSDT",
+      "LOOMUSDT"
+    ]
+  },
+  "043c8407bb904652a428573a50d07e07": {
+    "date": "2024-12-02",
+    "title": "Binance Will Delist IDRT, KP3R, OOKI, UNFI on 2024-11-06",
+    "coins": [
+      "IDRT",
+      "OOKI",
+      "UNFI"
+    ]
+  },
+  "e2fcd2c945654c8d832395335429403e": {
+    "date": "2024-12-02",
+    "title": "Binance Will Delist CVP, EPX, FOR, LOOM, REEF, VGX on 2024-08-26",
+    "coins": [
+      "CVP",
+      "EPX",
+      "LOOM",
+      "REEF",
+      "VGX"
+    ]
+  }
+}
