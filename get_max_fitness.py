@@ -87,4 +87,3 @@ else:
 print("\nDebug information:")
 print(f"Total generations processed: {len(generations)}")
 print(f"Found any fitness values: {'Yes' if any(gen['max_fitness'] is not None for gen in generations.values()) else 'No'}")
-print(f"\nAll backtesting commands have been written to 'backtesting_commands.sh'")
