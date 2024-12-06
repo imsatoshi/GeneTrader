@@ -17,7 +17,9 @@ LOG_CONFIG = {
 REMOTE_SERVER = {
     'hostname': settings.hostname,
     'username': settings.username,
-    'key_path': settings.key_path
+    'key_path': settings.key_path,
+    'remote_datadir': '/root/trade/user_data/',  # user_data directory for live or dry-run 
+    'remote_strategydir': '/root/trade/user_data/strategies/' #  # strategies directory for live or dry-run 
 }
 
 

@@ -1,7 +1,10 @@
 import logging
 
-def setup_logging():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    return logging.getLogger(__name__)
+# Configure the logger
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Add timestamp to the log format
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
-logger = setup_logging()
+logger = logging.getLogger(__name__)
