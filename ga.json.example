@@ -25,7 +25,7 @@
     "checkpoint_frequency": 1,
     "project_dir": "/Users/zhangjiawei/Projects/GeneTrader",
     "best_generations_dir": "bestgenerations",
-    "base_strategy_file": "candidates/haFbmVVRP.py",
+    "base_strategy_file": "candidates/E0V1E_Bull.py",
     "fix_pairs": true,
     "num_pairs": 1,
     "diversity_threshold": 0.1,
