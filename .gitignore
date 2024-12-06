@@ -37,3 +37,8 @@ candidates/*
 !candidates/.gitkeep
 
 user_data/temp_config_*.json
+
+strategies/*              # 忽略 strategies 目录及其内容
+!strategies/.gitkeep      # 保留 .gitkeep 文件
+
+daily_results/*/genera*/config.json  # 忽略所有 daily_results 目录下的 genera* 子目录中的 config.json 文件
