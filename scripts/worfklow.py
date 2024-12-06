@@ -385,7 +385,7 @@ class TradeWorkflow:
         metrics2 = self.parse_backtest_results(results_file2)
         
         if not metrics1 or not metrics2:
-            logger.error("��法比较策略：解析结果失败")
+            logger.error("比较策略：解析结果失败")
             logger.debug(f"当前策略结果: {metrics1}")
             logger.debug(f"远程策略结果: {metrics2}")
             return False
@@ -476,8 +476,6 @@ class TradeWorkflow:
             print("run backtest")
             strategy_name = strategy_file.split("/")[-1].split(".")[0]  
             current_result, remote_result = self.run_backtest(config_file, strategy_name)
-            open("curent.txt", "w").write(current_result)
-            open("remote.txt", "w").write(remote_result)
 
             # 比较当前策略和新策略
             print("compare strategies")
