@@ -1,0 +1,145 @@
+{
+  "max_open_trades": 4,
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited",
+  "tradable_balance_ratio": 0.99,
+  "timeframe": "5m",
+  "fiat_display_currency": "CNY",
+  "dry_run": true,
+  "dry_run_wallet": 100,
+  "cancel_open_orders_on_exit": false,
+  "use_exit_signal": true,
+  "exit_profit_only": false,
+  "ignore_roi_if_entry_signal": false,
+  "unfilledtimeout": {
+    "entry": 10,
+    "exit": 10,
+    "exit_timeout_count": 0,
+    "unit": "minutes"
+  },
+  "entry_pricing": {
+    "price_side": "other",
+    "use_order_book": true,
+    "order_book_top": 1,
+    "price_last_balance": 0.0,
+    "check_depth_of_market": {
+      "enabled": false,
+      "bids_to_ask_delta": 1
+    }
+  },
+  "exit_pricing": {
+    "price_side": "other",
+    "use_order_book": true,
+    "order_book_top": 1
+  },
+  "exchange": {
+    "name": "binance",
+    "key": "",
+    "secret": "",
+    "ccxt_config": {
+      "enableRateLimit": true,
+      "httpsProxy": "http://127.0.0.1:7890"
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 200
+    },
+    "pair_whitelist": [
+      "XRP/USDT",
+      "ETH/USDT",
+      "BTC/USDT",
+      "DOGE/USDT",
+      "SOL/USDT",
+      "ENS/USDT",
+      "PEPE/USDT",
+      "WLD/USDT",
+      "ACT/USDT",
+      "ADA/USDT",
+      "SHIB/USDT",
+      "XLM/USDT",
+      "THE/USDT",
+      "ALGO/USDT",
+      "PNUT/USDT",
+      "FET/USDT",
+      "FIL/USDT",
+      "THETA/USDT",
+      "DOT/USDT",
+      "SUI/USDT",
+      "CRV/USDT",
+      "HBAR/USDT",
+      "NEAR/USDT",
+      "ORDI/USDT",
+      "AVAX/USDT",
+      "FIDA/USDT",
+      "SAND/USDT",
+      "NEIRO/USDT",
+      "ARB/USDT",
+      "1000SATS/USDT",
+      "WIF/USDT",
+      "TAO/USDT",
+      "DGB/USDT",
+      "ENA/USDT",
+      "FTM/USDT",
+      "LINK/USDT",
+      "GALA/USDT",
+      "AR/USDT",
+      "XTZ/USDT",
+      "UNI/USDT",
+      "TIA/USDT",
+      "SEI/USDT",
+      "LTC/USDT",
+      "FLOKI/USDT",
+      "BONK/USDT",
+      "ETC/USDT",
+      "RUNE/USDT",
+      "ETHFI/USDT",
+      "BCH/USDT",
+      "APT/USDT",
+      "TON/USDT",
+      "OP/USDT",
+      "BOME/USDT",
+      "LUNA/USDT",
+      "AAVE/USDT",
+      "TRX/USDT",
+      "POL/USDT",
+      "ARKM/USDT",
+      "SSV/USDT",
+      "STRK/USDT",
+      "EIGEN/USDT",
+      "EOS/USDT",
+      "RENDER/USDT",
+      "ICP/USDT",
+      "IO/USDT",
+      "DOGS/USDT",
+      "TRB/USDT",
+      "OM/USDT",
+      "REN/USDT",
+      "HOT/USDT"
+    ]
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    },
+    {
+      "method": "ShuffleFilter",
+      "seed": 42
+    }
+  ],
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "0.0.0.0",
+    "listen_port": 8080,
+    "verbosity": "info",
+    "jwt_secret_key": "somethingrandom",
+    "CORS_origins": [],
+    "username": "admin",
+    "password": "passwordispassword"
+  },
+  "bot_name": "freqtrade",
+  "initial_state": "running",
+  "force_entry_enable": false,
+  "internals": {
+    "process_throttle_secs": 5
+  }
+}

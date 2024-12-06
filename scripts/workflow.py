@@ -16,7 +16,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 from utils.logging_config import logger
-from config.config import REMOTE_SERVER, BARK_KEY
+from config.config import REMOTE_SERVER, BARK_KEY, BARK_ENDPOINT
 
 class TradeWorkflow:
     def __init__(self):
@@ -25,6 +25,7 @@ class TradeWorkflow:
         self.results_dir = os.path.join(project_root, 'results')
         self.remote_server = REMOTE_SERVER
         self.bark_key = BARK_KEY
+        self.bark_endpoint = BARK_ENDPOINT
 
     def run_optimization(self):
         """运行主优化程序"""
@@ -187,8 +188,7 @@ class TradeWorkflow:
         if not self.bark_key:
             logger.warning("未配置 Bark key，跳过通知")
             return
-            
-        url = f"http://8.130.14.222:8081/{self.bark_key}/{message}"
+        url = "{}/{}/{}".format(self.bark_endpoint, self.bark_key, message)            
         try:
             response = requests.get(url)
             response.raise_for_status()
