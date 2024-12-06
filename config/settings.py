@@ -32,6 +32,11 @@ class Settings:
         self.add_dynamic_timeframes = self.config['add_dynamic_timeframes']
         self.diversity_threshold = self.config['diversity_threshold']
         self.max_mutation_prob = self.config['max_mutation_prob']
+        self.bark_endpoint = self.config["bark_endpoint"]
+        self.bark_key = self.config["bark_key"]
+        self.hostname = self.config["hostname"]
+        self.username = self.config["username"]
+        self.key_path = self.config["key_path"]
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
 

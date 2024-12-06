@@ -78,47 +78,47 @@ def load_latest_checkpoint(settings):
     logger.info(f"Loaded compressed checkpoint from generation {checkpoint['generation']}")
     return population, checkpoint['generation']
 
-def calculate_population_diversity(population):
-    # 如果没有个体，返回0
-    if not population.individuals:
-        return 0
+# def calculate_population_diversity(population):
+#     # 如果没有个体，返回0
+#     if not population.individuals:
+#         return 0
     
-    # 将所有个体的基因转换为numpy数组
-    genes_array = np.array([ind.genes for ind in population.individuals])
+#     # 将所有个体的基因转换为numpy数组
+#     genes_array = np.array([ind.genes for ind in population.individuals])
     
-    # 计算每个参数的最大值和最小值
-    genes_min = np.min(genes_array, axis=0)
-    genes_max = np.max(genes_array, axis=0)
+#     # 计算每个参数的最大值和最小值
+#     genes_min = np.min(genes_array, axis=0)
+#     genes_max = np.max(genes_array, axis=0)
     
-    # 避免除以零（当最大值等于最小值时）
-    denominator = genes_max - genes_min
-    denominator[denominator == 0] = 1  # 对于相同的参数值，设置分母为1
+#     # 避免除以零（当最大值等于最小值时）
+#     denominator = genes_max - genes_min
+#     denominator[denominator == 0] = 1  # 对于相同的参数值，设置分母为1
     
-    # 归一化基因
-    normalized_genes = (genes_array - genes_min) / denominator
+#     # 归一化基因
+#     normalized_genes = (genes_array - genes_min) / denominator
     
-    # 计算归一化后的基因距离
-    gene_distances = []
-    for i in range(len(population.individuals)):
-        for j in range(i + 1, len(population.individuals)):
-            distance = np.mean(np.abs(normalized_genes[i] - normalized_genes[j]))
-            gene_distances.append(distance)
+#     # 计算归一化后的基因距离
+#     gene_distances = []
+#     for i in range(len(population.individuals)):
+#         for j in range(i + 1, len(population.individuals)):
+#             distance = np.mean(np.abs(normalized_genes[i] - normalized_genes[j]))
+#             gene_distances.append(distance)
     
-    return np.mean(gene_distances) if gene_distances else 0
+#     return np.mean(gene_distances) if gene_distances else 0
 
-def log_diversity(generation: int, diversity: float, settings: Settings):
-    """Log population diversity to a separate file"""
-    diversity_log_path = os.path.join(LOG_CONFIG['log_dir'], LOG_CONFIG['diversity_log'])
+# def log_diversity(generation: int, diversity: float, settings: Settings):
+#     """Log population diversity to a separate file"""
+#     diversity_log_path = os.path.join(LOG_CONFIG['log_dir'], LOG_CONFIG['diversity_log'])
     
-    # Create header if file doesn't exist
-    if not os.path.exists(diversity_log_path):
-        with open(diversity_log_path, 'w') as f:
-            f.write('generation,diversity,timestamp\n')
+#     # Create header if file doesn't exist
+#     if not os.path.exists(diversity_log_path):
+#         with open(diversity_log_path, 'w') as f:
+#             f.write('generation,diversity,timestamp\n')
     
-    # Append diversity data with timestamp
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with open(diversity_log_path, 'a') as f:
-        f.write(f'{generation},{diversity:.6f},{timestamp}\n')
+#     # Append diversity data with timestamp
+#     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+#     with open(diversity_log_path, 'a') as f:
+#         f.write(f'{generation},{diversity:.6f},{timestamp}\n')
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs
@@ -185,24 +185,24 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
                     offspring[i+1].after_genetic_operation(settings.parameters)
 
             # Calculate population diversity and adjust mutation probability
-            diversity = calculate_population_diversity(population)
-            log_diversity(gen + 1, diversity, settings)  # 记录多样性到日志文件
-            logger.info("="*50)
-            logger.info(f"🔍 POPULATION DIVERSITY: {diversity:.6f}")
-            logger.info("="*50)
+            # diversity = calculate_population_diversity(population)
+            # log_diversity(gen + 1, diversity, settings)  # 记录多样性到日志文件
+            # logger.info("="*50)
+            # logger.info(f"🔍 POPULATION DIVERSITY: {diversity:.6f}")
+            # logger.info("="*50)
             
-            if diversity < settings.diversity_threshold:
-                current_mutation_prob = min(settings.mutation_prob * 2, 0.4)
-                logger.info(f"Low population diversity detected ({diversity:.4f}). Increasing mutation probability to {current_mutation_prob:.4f}")
-            else:
-                current_mutation_prob = settings.mutation_prob
-                logger.info(f"Population diversity: {diversity:.4f}, using base mutation probability: {current_mutation_prob:.4f}")
+            # if diversity < settings.diversity_threshold:
+            #     current_mutation_prob = min(settings.mutation_prob * 2, 0.4)
+            #     logger.info(f"Low population diversity detected ({diversity:.4f}). Increasing mutation probability to {current_mutation_prob:.4f}")
+            # else:
+            #     current_mutation_prob = settings.mutation_prob
+            #     logger.info(f"Population diversity: {diversity:.4f}, using base mutation probability: {current_mutation_prob:.4f}")
 
             # Use current_mutation_prob instead of settings.mutation_prob
             for ind in offspring:
-                mutate(ind, current_mutation_prob)  # 使用动态调整的突变概率
+                # mutate(ind, current_mutation_prob)  # 使用动态调整的突变概率
                 # Mutate trading pairs
-                ind.mutate_trading_pairs(all_pairs, current_mutation_prob)  # 这里也使用动态调整的突变概率
+                # ind.mutate_trading_pairs(all_pairs, current_mutation_prob)  # 这里也使用动态调整的突变概率
                 ind.after_genetic_operation(settings.parameters)
 
             # Replace the population

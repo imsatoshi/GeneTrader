@@ -29,5 +29,11 @@
     "fix_pairs": true,
     "num_pairs": 1,
     "diversity_threshold": 0.1,
-    "max_mutation_prob": 0.4
+    "max_mutation_prob": 0.4,
+    "remote_path": "/your/remote/path",
+    "hostname": "remote_ip",
+    "username": "root",
+    "key_path": "/Users/zhangjiawei/.ssh/id_rsa",
+    "bark_endpoint": "http://xxx:xxx"
+
 }

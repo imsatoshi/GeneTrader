@@ -1,0 +1,8 @@
+{
+    "date": "2024-12-03",
+    "strategy_name": "GeneTrader_gen16_1733238098_4491",
+    "generation": "gen16",
+    "fitness_info": "[2024-12-03 23:01:56] Strategy: GeneTrader_gen16_1733238098_4491, Timeframe: 5m, Generation: 16, Total Profit %: 1.3041, Profit Score: 0.9892, Win Rate: 0.9220, Win Rate Score: 0.4305, Sharpe Ratio: 46.3000, Risk-Adjusted Score: 1.0000, Max Drawdown: 0.0631, Drawdown Penalty: 0.7294, Daily Avg Trades: 4.57, Trade Frequency Score: 0.0948, Avg Trade Duration (min): 34.00, Duration Score: 0.9767, Final Fitness: 0.5999",
+    "config_file": "temp_config_1733238098_4491.json",
+    "result_file": "results/backtest_results_gen16_1733238098_4491.txt"
+}

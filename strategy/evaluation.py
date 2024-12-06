@@ -91,35 +91,44 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     win_rate = parsed_result['win_rate']
     max_drawdown = parsed_result['max_drawdown']
     sharpe_ratio = parsed_result['sharpe_ratio']
+    sortino_ratio = parsed_result['sortino_ratio']
+    profit_factor = parsed_result['profit_factor']
     daily_avg_trades = parsed_result['daily_avg_trades']
     avg_trade_duration = parsed_result['avg_trade_duration']
 
-    # 1. Profit component (non-linear transformation)
-    profit_score = math.tanh(total_profit_percent / 0.5)  # 0.5 as a scaling factor
+    # 1. Profit component (non-linear transformation with better scaling)
+    profit_score = math.tanh(total_profit_percent / 2.0)  # 放宽收益区间
 
-    # 2. Win rate component (sigmoid function)
-    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.95)))
+    # 2. Win rate component (more reasonable target)
+    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.9)))  # 降低胜率期望值到0.6
 
-    # 3. Risk-adjusted return (using Sharpe ratio)
-    risk_adjusted_score = math.tanh(sharpe_ratio / 2)  # 2 as a scaling factor
+    # 3. Risk-adjusted returns (combining multiple metrics)
+    risk_adjusted_score = (
+        math.tanh(sharpe_ratio / 2) * 0.4 +  # Sharpe ratio
+        math.tanh(sortino_ratio / 2) * 0.4 +  # Sortino ratio
+        math.tanh(profit_factor / 3) * 0.2    # Profit factor
+    )
 
-    # 4. Drawdown penalty
-    drawdown_penalty = math.exp(-5 * max_drawdown)
+    # 4. Drawdown penalty (exponential with smoother curve)
+    drawdown_penalty = math.exp(-3 * max_drawdown)  # 降低惩罚程度
 
-    # 5. Trade frequency score
-    trade_frequency_score = math.exp(-(daily_avg_trades - 1.5)**2 / 4)  # Optimal at 3 trades per day
+    # 5. Trade frequency score (prefer 2-5 trades per day)
+    trade_frequency_score = math.exp(-((daily_avg_trades - 3.5)**2) / 8)
 
-    # 6. Trade duration score
-    duration_score = math.exp(-avg_trade_duration / 1440)  # 1440 minutes = 1 day
+    # 6. Trade duration score (prefer trades between 2 hours and 2 days)
+    optimal_duration = 720  # 12 hours in minutes
+    duration_score = math.exp(-((avg_trade_duration - optimal_duration)**2) / (2 * optimal_duration**2))
 
-    # Combine all components
+    # Combine all components with balanced weights
     fitness = (
-        profit_score * 0.2 +
-        win_rate_score * 0.3 +
-        risk_adjusted_score * 0.2 +
-        drawdown_penalty * 0.1
-        # trade_frequency_score * 0.1 +
-        # duration_score * 0.1
+        profit_score * win_rate_score         # 保持较高权重因为这是主要目标
+
+        # profit_score * 0.30 +           # 保持较高权重因为这是主要目标
+        # win_rate_score * 0.15 +         # 略微降低胜率权重
+        # risk_adjusted_score * 0.25 +    # 提高风险调整后收益的权重
+        # drawdown_penalty * 0.15 +       # 保持适度的回撤惩罚
+        # trade_frequency_score * 0.10 +  # 交易频率作为次要因素
+        # duration_score * 0.05           # 持续时间作为辅助指标
     )
 
     # Log the fitness components and final score
@@ -129,7 +138,8 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
                    f"Generation: {generation}, "
                    f"Total Profit %: {total_profit_percent:.4f}, Profit Score: {profit_score:.4f}, "
                    f"Win Rate: {win_rate:.4f}, Win Rate Score: {win_rate_score:.4f}, "
-                   f"Sharpe Ratio: {sharpe_ratio:.4f}, Risk-Adjusted Score: {risk_adjusted_score:.4f}, "
+                   f"Sharpe Ratio: {sharpe_ratio:.4f}, Sortino Ratio: {sortino_ratio:.4f}, Profit Factor: {profit_factor:.4f}, "
+                   f"Risk-Adjusted Score: {risk_adjusted_score:.4f}, "
                    f"Max Drawdown: {max_drawdown:.4f}, Drawdown Penalty: {drawdown_penalty:.4f}, "
                    f"Daily Avg Trades: {daily_avg_trades:.2f}, Trade Frequency Score: {trade_frequency_score:.4f}, "
                    f"Avg Trade Duration (min): {avg_trade_duration:.2f}, Duration Score: {duration_score:.4f}, "
