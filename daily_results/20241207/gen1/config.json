@@ -157,8 +157,8 @@
     ],
     "telegram": {
         "enabled": true,
-        "token": "7168332190:AAFcCE-HphKomZH5-syzCKDCjiPY9pdIKE4",
-        "chat_id": "569834350",
+        "token": "",
+        "chat_id": "",
         "keyboard": [
             [
                 "/daily",

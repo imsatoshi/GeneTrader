@@ -50,13 +50,6 @@ class TradeWorkflow:
         self.bark_key = BARK_KEY
         self.bark_endpoint = BARK_ENDPOINT
 
-        # 设置运行时间点（24小时制）
-        self.run_times = [
-            "00:00", "06:00", "12:00", "18:00", "02:00", "01:00", "07:00", 
-            "13:00", "19:00", "03:00", "08:00", "10:00", "14:00", "20:00",
-            "04:00", "09:00", "11:00", "15:00", "21:00", "05:00", "16:00",
-            "17:00", "22:00", "23:00"
-        ]
         self.max_retries = 3    # 最大重试次数
         self.retry_interval = 5 # 重试间隔（分钟）
 
@@ -91,34 +84,15 @@ class TradeWorkflow:
             datetime: 下一次运行的时间点
         """
         now = datetime.now()
-        today = now.date()
-        tomorrow = today + timedelta(days=1)
-        
-        # 将所有运行时间点转换为今天和明天的datetime对象
-        run_datetimes = []
-        for run_time in self.run_times:
-            hour, minute = map(int, run_time.split(':'))
-            # 添加今天的时间点
-            run_datetimes.append(datetime.combine(today, datetime.min.time().replace(hour=hour, minute=minute)))
-            # 添加明天的时间点
-            run_datetimes.append(datetime.combine(tomorrow, datetime.min.time().replace(hour=hour, minute=minute)))
-        
-        # 找出下一个要运行的时间点
-        next_run = min((dt for dt in run_datetimes if dt > now), default=None)
-        
-        if next_run is None:
-            # 如果没有找到下一个时间点，使用后天的第一个时间点
-            day_after_tomorrow = tomorrow + timedelta(days=1)
-            hour, minute = map(int, self.run_times[0].split(':'))
-            next_run = datetime.combine(day_after_tomorrow, datetime.min.time().replace(hour=hour, minute=minute))
-        
+        next_run = now + timedelta(minutes=1)
         return next_run
 
     def run_optimization(self):
         """运行主优化程序"""
         logger.info("开始运行策略优化...")
-        # Calculate the start date as 35 days before today
-        start_date = (datetime.now() - timedelta(days=35)).strftime('%Y%m%d')
+        # Calculate the start date as 50 days before today
+        start_date = (datetime.now() - timedelta(days=50)).strftime('%Y%m%d')
+        # result = subprocess.run(['python', 'main.py', '--config', './ga.json', '--start-date', start_date], 
         result = subprocess.run(['python', 'main.py', '--config', './ga.json', '--start-date', start_date, '--download'], 
                               cwd=self.project_root,
                               capture_output=True,
@@ -570,7 +544,6 @@ class TradeWorkflow:
         在固定时间点持续运行工作流程
         """
         logger.info("启动定时运行模式")
-        logger.info(f"预定运行时间点: {', '.join(self.run_times)}")
         self.send_notification("交易工作流开始运行")
         
         while True:

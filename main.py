@@ -78,47 +78,6 @@ def load_latest_checkpoint(settings):
     logger.info(f"Loaded compressed checkpoint from generation {checkpoint['generation']}")
     return population, checkpoint['generation']
 
-# def calculate_population_diversity(population):
-#     # 如果没有个体，返回0
-#     if not population.individuals:
-#         return 0
-    
-#     # 将所有个体的基因转换为numpy数组
-#     genes_array = np.array([ind.genes for ind in population.individuals])
-    
-#     # 计算每个参数的最大值和最小值
-#     genes_min = np.min(genes_array, axis=0)
-#     genes_max = np.max(genes_array, axis=0)
-    
-#     # 避免除以零（当最大值等于最小值时）
-#     denominator = genes_max - genes_min
-#     denominator[denominator == 0] = 1  # 对于相同的参数值，设置分母为1
-    
-#     # 归一化基因
-#     normalized_genes = (genes_array - genes_min) / denominator
-    
-#     # 计算归一化后的基因距离
-#     gene_distances = []
-#     for i in range(len(population.individuals)):
-#         for j in range(i + 1, len(population.individuals)):
-#             distance = np.mean(np.abs(normalized_genes[i] - normalized_genes[j]))
-#             gene_distances.append(distance)
-    
-#     return np.mean(gene_distances) if gene_distances else 0
-
-# def log_diversity(generation: int, diversity: float, settings: Settings):
-#     """Log population diversity to a separate file"""
-#     diversity_log_path = os.path.join(LOG_CONFIG['log_dir'], LOG_CONFIG['diversity_log'])
-    
-#     # Create header if file doesn't exist
-#     if not os.path.exists(diversity_log_path):
-#         with open(diversity_log_path, 'w') as f:
-#             f.write('generation,diversity,timestamp\n')
-    
-#     # Append diversity data with timestamp
-#     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-#     with open(diversity_log_path, 'a') as f:
-#         f.write(f'{generation},{diversity:.6f},{timestamp}\n')
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     # Load trading pairs

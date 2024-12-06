@@ -103,7 +103,7 @@ def generate_dynamic_template(strategy_file_path, add_max_open_trades=True, add_
         params.append({
             'name': 'max_open_trades',
             'type': 'Int',
-            'start': 1.0,
+            'start': 2.0,
             'end': 10.0,
             'default': 6.0,  # You can change this default value if needed
             'space': 'buy',
