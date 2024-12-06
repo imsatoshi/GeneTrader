@@ -38,6 +38,10 @@ candidates/*
 
 user_data/temp_config_*.json
 
+user_data/config.json
+user_data/config*
+
+
 strategies/*              # 忽略 strategies 目录及其内容
 !strategies/.gitkeep      # 保留 .gitkeep 文件
 
