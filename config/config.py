@@ -15,11 +15,14 @@ LOG_CONFIG = {
 
 # 远程服务器配置
 REMOTE_SERVER = {
+    'api_url': settings.api_url,
+    'freqtrade_username': settings.freqtrade_username,
+    'freqtrade_password': settings.freqtrade_password,
     'hostname': settings.hostname,
     'username': settings.username,
     'key_path': settings.key_path,
-    'remote_datadir': '/root/trade/user_data/',  # user_data directory for live or dry-run 
-    'remote_strategydir': '/root/trade/user_data/strategies/' #  # strategies directory for live or dry-run 
+    'remote_datadir': settings.remote_datadir, 
+    'remote_strategydir': settings.remote_strategydir 
 }
 
 

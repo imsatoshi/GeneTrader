@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import sys
-import json
 import time
 import shutil
 import subprocess
@@ -10,7 +9,8 @@ from datetime import datetime, timedelta
 import requests
 import re
 import argparse
-
+import requests
+from requests.auth import HTTPBasicAuth
 import logging
 
 # Configure the logger
@@ -49,7 +49,6 @@ class TradeWorkflow:
         self.remote_server = REMOTE_SERVER
         self.bark_key = BARK_KEY
         self.bark_endpoint = BARK_ENDPOINT
-
         self.max_retries = 3    # 最大重试次数
         self.retry_interval = 5 # 重试间隔（分钟）
 
@@ -235,17 +234,40 @@ class TradeWorkflow:
             logger.error(f"上传策略到服务器失败: {str(e)}")
             return False
 
-    def restart_trading(self):
+    def restart_trading(self, is_restful=False):
         """重启交易程序"""
         if not self.remote_server:
             logger.warning("未配置远程服务器，跳过重启步骤")
             return True
+        
+        if not self.remote_server['api_url'] or not self.remote_server['freqtrade_username'] or not self.remote_server['freqtrade_password']:
+            is_restful = False
+        else:
+            is_restful = True
         try:
             # 通过 SSH 执行重启命令
-            subprocess.run(['ssh', "-i", self.remote_server['key_path'], self.remote_server['username'] + '@' + self.remote_server['hostname'], 'systemctl restart freqtrade'])
-            return True
+            if not is_restful:
+                subprocess.run(['ssh', "-i", self.remote_server['key_path'], self.remote_server['username'] + '@' + self.remote_server['hostname'], 'systemctl restart freqtrade'])
+                return True
+            else:
+                # restart freqtrade by restful api  
+                return self.restart_freqtrade(self.remote_server['api_url'], self.remote_server['username'], self.remote_server['password'])
         except Exception as e:
             logger.error(f"重启交易程序失败: {str(e)}")
+            return False
+
+
+    def restart_freqtrade(self, api_url, username, password):
+        try:
+            response = requests.post(
+                f"{api_url}/restart",
+                auth=HTTPBasicAuth(username, password)
+            )
+            response.raise_for_status()
+            logger.info("Freqtrade restarted successfully.")
+            return True
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to restart Freqtrade: {e}")
             return False
 
     def send_notification(self, message):
@@ -337,7 +359,7 @@ class TradeWorkflow:
         with open(src_path, 'w') as file:
             file.write(new_content)
         
-        print(f"Successfully renamed strategy class to {new_class_name}")
+        logger.info(f"Successfully renamed strategy class to {new_class_name}")
 
     def parse_backtest_results(self, result):
         try:
@@ -363,7 +385,7 @@ class TradeWorkflow:
                     'win_rate': win_rate
                 }
             else:
-                print("未找到包含总计的行")
+                logger.error("未找到包含总计的行")
                 return None
                 
         except Exception as e:
@@ -450,44 +472,37 @@ class TradeWorkflow:
                 return False
 
             # 5. 保存最佳策略到 daily_results 目录
-            print("save best to daily")
+            logger.info("save best to daily: {}".format(best_result_file))
             self.save_best_to_daily(generation, best_result_file, config_file, strategy_file)
 
             # 6. strategy 统一处理
-            print("rename strategy")
+            logger.info("rename strategy: {} to GeneStrategy".format(strategy_file))
             self.rename_strategy_class(strategy_file, "strategies/GeneStrategy.py")
 
             # 7. 复制 config_file 到 strategies 目录， 文件名改为config.json
-            print("copy config file")
+            logger.info("copy config file")
             shutil.copy2(config_file, 'strategies/config.json')
             
             # 8. 比较新旧策略的回测结果
             # - 从服务器获取 config.json  和策略文件
-            # - 运行回测
-            # - 比较当前策略和新策略
-            # - 发送通知
-            # 从服务器获取 config.json  和策略文件
-            print("download from server")
+            logger.info("download from server")
             if not self.download_from_server():
                 self.send_notification("下载配置文件和策略到本地失败")
                 return False
 
             # 运行回测
-            print("run backtest")
+            logger.info("run backtest")
             strategy_name = strategy_file.split("/")[-1].split(".")[0]  
             current_result, remote_result = self.run_backtest(config_file, strategy_name)
 
             # 比较当前策略和新策略
-            print("compare strategies")
+            logger.info("compare strategies")
             if not current_result or not remote_result:
                 self.send_notification("回测结果为空")
                 return False
-
             comparison = self.compare_strategies(current_result, remote_result)
-            
             if comparison:
                 self.send_notification("当前策略优于远程策略")
-
                 # 9. 上传到服务器, 策略和config 文件
                 if self.upload_to_server():
                     # 重启交易程序
@@ -575,7 +590,6 @@ class TradeWorkflow:
                 self.send_notification(f"发生未预期的错误: {str(e)}")
                 # 等待一段时间后继续
                 time.sleep(self.retry_interval * 60)
-
 
 
 if __name__ == "__main__":

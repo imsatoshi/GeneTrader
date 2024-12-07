@@ -37,6 +37,11 @@ class Settings:
         self.hostname = self.config["hostname"]
         self.username = self.config["username"]
         self.key_path = self.config["key_path"]
+        self.remote_datadir = self.config["remote_datadir"]
+        self.remote_strategydir = self.config["remote_strategydir"]
+        self.api_url = self.config["api_url"]
+        self.freqtrade_username = self.config["freqtrade_username"]
+        self.freqtrade_password = self.config["freqtrade_password"]
         for key, value in self.config['proxy'].items():
             os.environ[f'{key}_proxy'] = value
 
