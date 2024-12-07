@@ -19,9 +19,6 @@ from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
 import asyncio
 import gzip
-from functools import lru_cache
-from functools import wraps
-import numpy as np
 
 
 def load_trading_pairs(config_file):
@@ -31,6 +28,7 @@ def load_trading_pairs(config_file):
 
 def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int):
     all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
+    print(all_pairs)
     if len(all_pairs) > num_pairs:
         return random.sample(all_pairs, num_pairs)
     else:
@@ -142,26 +140,10 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
                     offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1], with_pair=settings.fix_pairs)                    
                     offspring[i].after_genetic_operation(settings.parameters)
                     offspring[i+1].after_genetic_operation(settings.parameters)
-
-            # Calculate population diversity and adjust mutation probability
-            # diversity = calculate_population_diversity(population)
-            # log_diversity(gen + 1, diversity, settings)  # 记录多样性到日志文件
-            # logger.info("="*50)
-            # logger.info(f"🔍 POPULATION DIVERSITY: {diversity:.6f}")
-            # logger.info("="*50)
             
-            # if diversity < settings.diversity_threshold:
-            #     current_mutation_prob = min(settings.mutation_prob * 2, 0.4)
-            #     logger.info(f"Low population diversity detected ({diversity:.4f}). Increasing mutation probability to {current_mutation_prob:.4f}")
-            # else:
-            #     current_mutation_prob = settings.mutation_prob
-            #     logger.info(f"Population diversity: {diversity:.4f}, using base mutation probability: {current_mutation_prob:.4f}")
-
             # Use current_mutation_prob instead of settings.mutation_prob
             for ind in offspring:
-                # mutate(ind, current_mutation_prob)  # 使用动态调整的突变概率
-                # Mutate trading pairs
-                # ind.mutate_trading_pairs(all_pairs, current_mutation_prob)  # 这里也使用动态调整的突变概率
+                mutate(ind, settings.mutation_prob)  # 使用设定的突变概率
                 ind.after_genetic_operation(settings.parameters)
 
             # Replace the population

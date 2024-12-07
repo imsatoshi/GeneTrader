@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import time
@@ -92,10 +91,12 @@ class TradeWorkflow:
         # Calculate the start date as 50 days before today
         start_date = (datetime.now() - timedelta(days=50)).strftime('%Y%m%d')
         # result = subprocess.run(['python', 'main.py', '--config', './ga.json', '--start-date', start_date], 
-        result = subprocess.run(['python', 'main.py', '--config', './ga.json', '--start-date', start_date, '--download'], 
+        result = subprocess.run(['python3', 'main.py', '--config', './ga.json', '--start-date', start_date, '--download'], 
                               cwd=self.project_root,
                               capture_output=True,
                               text=True)
+        print(result.stdout)
+        print(result.stderr)
         if result.returncode != 0:
             self.send_notification(f"策略优化失败:\n{result.stderr}")
             raise Exception("策略优化失败")
