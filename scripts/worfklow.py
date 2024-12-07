@@ -41,7 +41,8 @@ def clean_directory(path):
         logger.error(f"清空目录 {path} 时出错: {str(e)}")
 
 class TradeWorkflow:
-    def __init__(self):
+    def __init__(self, ga_config_file):
+        self.ga_config_file = ga_config_file
         self.project_root = project_root
         self.best_strategy_dir = os.path.join(project_root, 'bestgenerations')
         self.results_dir = os.path.join(project_root, 'results')
@@ -90,8 +91,7 @@ class TradeWorkflow:
         logger.info("开始运行策略优化...")
         # Calculate the start date as 50 days before today
         start_date = (datetime.now() - timedelta(days=50)).strftime('%Y%m%d')
-        # result = subprocess.run(['python', 'main.py', '--config', './ga.json', '--start-date', start_date], 
-        result = subprocess.run(['python3', 'main.py', '--config', './ga.json', '--start-date', start_date, '--download'], 
+        result = subprocess.run(['python3', 'main.py', '--config', self.ga_config_file, '--start-date', start_date, '--download'], 
                               cwd=self.project_root,
                               capture_output=True,
                               text=True)
@@ -600,11 +600,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trade Workflow Script")
     # 添加一个参数，用于立即运行优化
     parser.add_argument('--now', action='store_true', help="立即运行优化")
-
+    parser.add_argument('--config', type=str, help="配置文件路径")
     # 解析命令行参数
     args = parser.parse_args()
+    ga_config_file = ''
+    if args.config:
+        ga_config_file = args.config
+    else:
+        ga_config_file = 'ga.json' 
 
-    workflow = TradeWorkflow()
+    workflow = TradeWorkflow(ga_config_file)
 
     if args.now:
         logger.info("立即运行优化")
