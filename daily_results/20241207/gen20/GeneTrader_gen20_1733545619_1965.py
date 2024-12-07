@@ -10,7 +10,7 @@ from freqtrade.persistence import Trade
 from datetime import datetime
 
 
-class GeneStrategy(IStrategy):
+class GeneTrader_gen20_1733545619_1965(IStrategy):
     INTERFACE_VERSION = 2
 
     # Optional order type mapping.
