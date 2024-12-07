@@ -275,7 +275,9 @@ class TradeWorkflow:
         if not self.bark_key:
             logger.warning("未配置 Bark key，跳过通知")
             return
-            
+        strategy_name = settings.base_strategy_file.split("/")[-1].split(".")[0]
+        message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {strategy_name} {message}"
+        message = message.replace(" ", "%20")
         url = f"{self.bark_endpoint}/{self.bark_key}/{message}"
         try:
             response = requests.get(url)
