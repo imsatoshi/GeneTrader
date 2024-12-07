@@ -5,6 +5,7 @@ generation_*.txt
 backtesting_commands.sh
 
 ga.json
+mini.json
 
 logs/*
 
