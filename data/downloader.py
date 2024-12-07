@@ -19,8 +19,8 @@ class DataDownloader:
         self.freqtrade_path = settings.freqtrade_path
         self.timeframes = ["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
-    def download_data(self, start_date: date, end_date: date):
-        timerange = f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"
+    def download_data(self, start_date: date):
+        timerange = f"{start_date.strftime('%Y%m%d')}-"
         
         command = [
             self.freqtrade_path,
@@ -42,9 +42,9 @@ class DataDownloader:
             logger.error(f"Command output: {e.output}")
             raise
 
-def download_data(start_date: date, end_date: date):
+def download_data(start_date: date):
     downloader = DataDownloader()
-    downloader.download_data(start_date, end_date)
+    downloader.download_data(start_date)
 
 if __name__ == "__main__":
     # For testing purposes

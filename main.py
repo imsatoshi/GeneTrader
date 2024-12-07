@@ -202,9 +202,9 @@ def main():
         # Download data if requested
         if args.download:
             start_date = datetime.strptime(args.start_date, '%Y%m%d').date()
-            end_date = datetime.strptime(args.end_date, '%Y%m%d').date()
-            logger.info(f"Downloading data from {start_date} to {end_date}")
-            download_data(start_date, end_date)
+            # end_date = datetime.strptime(args.end_date, '%Y%m%d').date()
+            logger.info(f"Downloading data from {start_date}")
+            download_data(start_date)
 
         # Record start time
         start_time = time.time()
