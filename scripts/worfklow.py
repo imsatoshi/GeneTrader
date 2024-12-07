@@ -286,11 +286,12 @@ class TradeWorkflow:
         except Exception as e:
             logger.error(f"发送Bark通知失败: {e}")
 
-    def run_backtest(self, config_file, strategy_name):
+    def run_backtest(self, config_file, strategy_name, max_retries=3, retry_interval=5):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)  # 往前推7天
         timerange = f"{start_date.strftime('%Y%m%d')}-"
         logger.info(f"运行本地策略的回测: {timerange}")
+
         current_command = [
             settings.freqtrade_path,
             "backtesting",
@@ -310,7 +311,7 @@ class TradeWorkflow:
             "--cache",
             "none"
         ]
-        logger.info(f"运行远程策略的回测: {timerange}")
+
         remote_command = [
             settings.freqtrade_path,
             "backtesting",
@@ -330,10 +331,36 @@ class TradeWorkflow:
             "--cache",
             "none"
         ]
-        current_result = subprocess.run(current_command, cwd=self.project_root, capture_output=True, text=True)
-        time.sleep(10)
-        remote_result = subprocess.run(remote_command, cwd=self.project_root, capture_output=True, text=True)
-        return current_result.stdout, remote_result.stdout
+        current_result = ""
+        remote_result = ""
+
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Attempt {attempt + 1} for local backtest")
+                current_result = subprocess.run(current_command, cwd=self.project_root, capture_output=True, text=True)
+                if current_result.returncode == 0:
+                    current_result = current_result.stdout
+                    break
+                else:
+                    logger.warning(f"Local backtest failed on attempt {attempt + 1}: {current_result.stderr}")
+            except Exception as e:
+                logger.error(f"Error during local backtest attempt {attempt + 1}: {str(e)}")
+            time.sleep(retry_interval)
+
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Attempt {attempt + 1} for remote backtest")
+                remote_result = subprocess.run(remote_command, cwd=self.project_root, capture_output=True, text=True)
+                if remote_result.returncode == 0:
+                    remote_result = remote_result.stdout
+                    break
+                else:
+                    logger.warning(f"Remote backtest failed on attempt {attempt + 1}: {remote_result.stderr}")
+            except Exception as e:
+                logger.error(f"Error during remote backtest attempt {attempt + 1}: {str(e)}")
+            time.sleep(retry_interval)
+
+        return current_result, remote_result
 
     def download_from_server(self):
         if not self.remote_server:
