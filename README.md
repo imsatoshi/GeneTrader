@@ -131,8 +131,6 @@ Available options:
 - `--config CONFIG_FILE`: Specify a custom configuration file (default is 'ga.json')
 - `--download`: Download data before running the algorithm
 - `--start-date YYYYMMDD`: Start date for data download (default is '20240101')
-- `--end-date YYYYMMDD`: End date for data download (default is today's date)
-- `--resume`: Resume from the latest checkpoint
 
 Examples:
 
@@ -153,7 +151,7 @@ Examples:
 
 4. Download data for a specific date range:
    ```
-   python main.py --download --start-date 20230101 --end-date 20231231
+   python main.py --download --start-date 20230101
    ```
 
 5. Resume from the latest checkpoint:
