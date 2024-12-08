@@ -154,10 +154,6 @@ Examples:
    python main.py --download --start-date 20230101
    ```
 
-5. Resume from the latest checkpoint:
-   ```
-   python main.py --resume
-   ```
 
 ## Project Structure
 
