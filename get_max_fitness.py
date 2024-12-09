@@ -13,12 +13,14 @@ def extract_strategy_name(line):
     match = re.search(r'Strategy: (\S+)', line)
     return match.group(1) if match else None
 
+def extract_win_rate(line):
+    match = re.search(r'Win Rate: ([\d.]+)', line)
+    return float(match.group(1)) if match else None
+
 def get_config_file(strategy_name):
     last_four_digits = strategy_name[-4:]
     config_files = glob.glob(f"user_data/temp_*_{last_four_digits}.json")
     return config_files[0] if config_files else None
-
-
 
     
 
@@ -31,14 +33,21 @@ with open('logs/fitness_log.txt', 'r') as file:
         if gen is not None:
             current_gen = gen
             if current_gen not in generations:
-                generations[current_gen] = {'max_fitness': None, 'max_fitness_line': '', 'strategy_name': ''}
+                generations[current_gen] = {
+                    'max_fitness': None,
+                    'max_fitness_line': '',
+                    'strategy_name': '',
+                    'win_rate': None
+                }
         
         fitness = extract_fitness(line)
+        win_rate = extract_win_rate(line)
         if fitness is not None and current_gen is not None:
             if generations[current_gen]['max_fitness'] is None or fitness > generations[current_gen]['max_fitness']:
                 generations[current_gen]['max_fitness'] = fitness
                 generations[current_gen]['max_fitness_line'] = line.strip()
                 generations[current_gen]['strategy_name'] = extract_strategy_name(line)
+                generations[current_gen]['win_rate'] = win_rate
 
 
 if generations:
@@ -50,6 +59,7 @@ if generations:
             print(f"Generation {gen} max fitness:")
             print(data['max_fitness_line'])
             print(f"Maximum fitness: {data['max_fitness']}")
+            print(f"Win Rate: {data['win_rate']}")
             
             strategy_name = data['strategy_name'][:-1]
             config_file = get_config_file(strategy_name)

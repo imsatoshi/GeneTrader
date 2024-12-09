@@ -13,12 +13,23 @@ from utils.logging_config import logger
 from config.config import LOG_CONFIG, PROJECT_ROOT
 
 def extract_win_rate(content: str) -> float:
-    pattern = r'│\s*TOTAL\s*│.*│\s*(\d+)\s*│.*│.*│.*│.*│\s*\d+\s+\d+\s+\d+\s+([\d.]+)\s*│'
-    match = re.search(pattern, content)
-    if match:
-        total_trades = int(match.group(1))
-        win_rate = float(match.group(2)) / 100  # 将百分比转换为小数
-        return win_rate
+    # Find the line containing 'TOTAL'
+    total_line = None
+    for line in content.split('\n'):
+        if 'TOTAL' in line:
+            total_line = line
+            break
+
+    if total_line:
+        # Split the line and extract the win rate
+        parts = [p.strip() for p in total_line.split('│')]
+        try:
+            win_rate = float(parts[-2].split()[3]) / 100  # Convert percentage to decimal
+            return win_rate
+        except (IndexError, ValueError) as e:
+            logger.error(f"Error extracting win rate: {str(e)}")
+            return 0.0
+
     return 0.0
 
 
@@ -69,6 +80,8 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
                 total_minutes += int(time_parts[0]) * 60 + int(time_parts[1])
         return total_minutes
 
+    print(content)
+    
     parsed_result = {
         'total_profit_usdt': extract_value(r'Absolute profit\s*│\s*([-\d.]+)\s*USDT'),
         'total_profit_percent': extract_value(r'Total profit %\s*│\s*([\d.-]+)%') * 1.0 / 100,
@@ -110,7 +123,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     )
 
     # 4. Drawdown penalty (exponential with smoother curve)
-    drawdown_penalty = math.exp(-3 * max_drawdown)  # 降低惩罚程度
+    drawdown_penalty = math.exp(-3 * max_drawdown)  # ��低惩罚程度
 
     # 5. Trade frequency score (prefer 2-5 trades per day)
     trade_frequency_score = math.exp(-((daily_avg_trades - 3.5)**2) / 8)
@@ -168,7 +181,7 @@ def process_results_directory(directory_path: str):
 
 if __name__ == "__main__":
     # 指定文件路径
-    file_path = "/Users/zhangjiawei/Projects/GeneTrader/results/backtest_results_gen3_1726875925_4847.txt" 
+    file_path = "/Users/zhangjiawei/Projects/GeneTrader/daily_results/20241207/gen1/results.txt" 
     # 解析回测结果
     parsed_results = parse_backtest_results(file_path)
     
@@ -176,18 +189,3 @@ if __name__ == "__main__":
     for key, value in parsed_results.items():
         print(f"{key}: {value}")
     
-    # 假设我们有一个 generation 变量
-    generation = 1  # 这个值应该从你的遗传算法主循环中获取
-
-    # 计算适应度
-    fitness = fitness_function(parsed_results, generation)
-    print(f"\nFitness Score: {fitness}")
-
-    # 额外的验证
-    print("\nAdditional Validations:")
-    print(f"Win Rate: {parsed_results['win_rate']}")
-    print(f"Corrected Win Rate: {min(parsed_results['win_rate'], 1.0)}")
-    print(f"Profit/Drawdown Ratio: {parsed_results['total_profit_usdt'] / (parsed_results['max_drawdown'] + 1e-6)}")
-
-    result_dir = "/Users/zhangjiawei/Projects/GeneTrader/results"
-    process_results_directory(result_dir)

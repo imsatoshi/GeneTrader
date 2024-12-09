@@ -20,6 +20,7 @@ REMOTE_SERVER = {
     'freqtrade_password': settings.freqtrade_password,
     'hostname': settings.hostname,
     'username': settings.username,
+    'port': settings.port,
     'key_path': settings.key_path,
     'remote_datadir': settings.remote_datadir, 
     'remote_strategydir': settings.remote_strategydir 

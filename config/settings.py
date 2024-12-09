@@ -36,6 +36,7 @@ class Settings:
         self.bark_key = self.config["bark_key"]
         self.hostname = self.config["hostname"]
         self.username = self.config["username"]
+        self.port = self.config["port"]
         self.key_path = self.config["key_path"]
         self.remote_datadir = self.config["remote_datadir"]
         self.remote_strategydir = self.config["remote_strategydir"]

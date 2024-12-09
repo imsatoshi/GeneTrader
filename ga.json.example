@@ -32,6 +32,7 @@
     "max_mutation_prob": 0.4,
     "remote_path": "/your/remote/path",
     "hostname": "remote_ip",
+    "port": 22,
     "username": "root",
     "key_path": "/Users/zhangjiawei/.ssh/id_rsa",
     "bark_endpoint": "http://xxx:xxx",

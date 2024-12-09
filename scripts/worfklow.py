@@ -223,13 +223,17 @@ class TradeWorkflow:
         try:
             # 使用 -i 参数指定 SSH 私钥
             subprocess.run([
-                'scp', '-i', self.remote_server['key_path'], 
+                'scp', '-i', self.remote_server['key_path'],
+                '-P', self.remote_server['port'],
                 'strategies/config.json', 
                 f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_datadir"]}'
                 ])
             subprocess.run([
-                'scp', '-i', self.remote_server['key_path'], 'strategies/GeneStrategy.py', 
-                f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_strategydir"]}'])
+                'scp', '-i', self.remote_server['key_path'],
+                '-P', self.remote_server['port'],
+                'strategies/GeneStrategy.py', 
+                f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_strategydir"]}'
+                ])
             return True
         except Exception as e:
             logger.error(f"上传策略到服务器失败: {str(e)}")
@@ -248,7 +252,12 @@ class TradeWorkflow:
         try:
             # 通过 SSH 执行重启命令
             if not is_restful:
-                subprocess.run(['ssh', "-i", self.remote_server['key_path'], self.remote_server['username'] + '@' + self.remote_server['hostname'], 'systemctl restart freqtrade'])
+                subprocess.run([
+                    'ssh', "-i", self.remote_server['key_path'],
+                    "-p", self.remote_server['port'],
+                    self.remote_server['username'] + '@' + self.remote_server['hostname'],
+                    'systemctl restart freqtrade'
+                ])
                 return True
             else:
                 # restart freqtrade by restful api  
