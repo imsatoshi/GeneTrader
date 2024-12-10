@@ -19,6 +19,7 @@ from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
 import asyncio
 import gzip
+import gc
 
 
 def load_trading_pairs(config_file):
@@ -26,13 +27,14 @@ def load_trading_pairs(config_file):
         config = json.load(f)
     return config['exchange']['pair_whitelist']
 
+
 def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int):
     all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
-    print(all_pairs)
     if len(all_pairs) > num_pairs:
         return random.sample(all_pairs, num_pairs)
     else:
         return all_pairs
+
 
 async def save_checkpoint_async(population, generation, settings):
     checkpoint = {
@@ -54,8 +56,10 @@ async def save_checkpoint_async(population, generation, settings):
     await asyncio.get_event_loop().run_in_executor(None, save_to_file)
     logger.info(f"Saved compressed checkpoint for generation {generation}")
 
+
 def save_checkpoint(population, generation, settings):
     asyncio.run(save_checkpoint_async(population, generation, settings))
+
 
 def load_latest_checkpoint(settings):
     checkpoints = [f for f in os.listdir(settings.checkpoint_dir) if f.endswith('.pkl.gz')]
@@ -77,31 +81,26 @@ def load_latest_checkpoint(settings):
     return population, checkpoint['generation']
 
 
+def create_population(settings, all_pairs, population_size, initial_individuals=None):
+    population = Population.create_random(
+        size=population_size,
+        parameters=settings.parameters,
+        trading_pairs=all_pairs,
+        num_pairs=None if settings.fix_pairs else settings.num_pairs
+    )
+    if initial_individuals:
+        population.individuals.extend(initial_individuals)
+    return population
+
+
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
-    # Load trading pairs
     all_pairs = load_trading_pairs(settings.config_file)
     
     # Load the latest checkpoint if it exists
     population, start_generation = load_latest_checkpoint(settings)
     if population is None:
-        # Create initial population if no checkpoint was found
         population_size = settings.population_size - len(initial_individuals or [])
-        if not settings.fix_pairs:
-            population = Population.create_random(
-                size=population_size,
-                parameters=settings.parameters,
-                trading_pairs=all_pairs,
-                num_pairs=settings.num_pairs
-            )
-        else:
-            population = Population.create_random(
-                size=population_size,
-                parameters=settings.parameters,
-                trading_pairs=all_pairs,
-                num_pairs=None
-            )
-        if initial_individuals:
-            population.individuals.extend(initial_individuals)
+        population = create_population(settings, all_pairs, population_size, initial_individuals)
 
     best_individuals = []
 
@@ -115,14 +114,9 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
                     [(ind.genes, ind.trading_pairs, gen+1) for ind in population.individuals])
                 
                 for ind, fit in zip(population.individuals, fitnesses):
-                    if fit is not None:
-                        ind.fitness = fit
-                    else:
-                        logger.warning(f"Invalid fitness value for individual in generation {gen+1}")
-                        ind.fitness = float('-inf')  # or some other appropriate default value
+                    ind.fitness = fit if fit is not None else float('-inf')
             except Exception as e:
                 logger.error(f"Error during fitness calculation in generation {gen+1}: {str(e)}")
-                # Handle the error appropriately, maybe by skipping this generation or terminating the algorithm
             
             # Filter out individuals with None fitness
             valid_individuals = [ind for ind in population.individuals if ind.fitness is not None]
@@ -141,7 +135,6 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
                     offspring[i].after_genetic_operation(settings.parameters)
                     offspring[i+1].after_genetic_operation(settings.parameters)
             
-            # Use current_mutation_prob instead of settings.mutation_prob
             for ind in offspring:
                 mutate(ind, settings.mutation_prob)  # 使用设定的突变概率
                 ind.after_genetic_operation(settings.parameters)
@@ -150,16 +143,19 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             population.individuals = offspring
 
             # Find the best individual in the current generation
-            best_ind = max(valid_individuals, key=lambda ind: ind.fitness)
-            best_individuals.append((gen+1, best_ind))
+            best_individual = max(valid_individuals, key=lambda ind: ind.fitness)
+            best_individuals.append((gen+1, best_individual))
 
-            logger.info(f"Best individual in generation {gen+1}: Fitness: {best_ind.fitness}")
+            logger.info(f"Best individual in generation {gen+1}: Fitness: {best_individual.fitness}")
 
             # Save checkpoint every N generations
             if (gen + 1) % settings.checkpoint_frequency == 0:
                 save_checkpoint(population, gen + 1, settings)
 
+            gc.collect()  # Clean up memory at the end of each generation
+
     return best_individuals
+
 
 def save_best_individual(individual: Individual, generation: int, settings: Settings):
     filename = f"{settings.best_generations_dir}/best_individual_gen{generation}.json"
@@ -172,6 +168,7 @@ def save_best_individual(individual: Individual, generation: int, settings: Sett
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
     logger.info(f"Saved best individual from generation {generation} to {filename}")
+
 
 def main():
     parser = argparse.ArgumentParser(description='Run genetic algorithm for trading strategy optimization')
@@ -188,7 +185,6 @@ def main():
 
         # Generate dynamic template and get parameters
         _, parameters = generate_dynamic_template(settings.base_strategy_file)
-        # Update parameters in settings
         settings.parameters = parameters
 
         # Create all necessary directories including logs
@@ -196,46 +192,30 @@ def main():
             settings.results_dir, 
             settings.best_generations_dir, 
             settings.checkpoint_dir,
-            LOG_CONFIG['log_dir']  # 添加日志目录
+            LOG_CONFIG['log_dir']
         ])
 
         # Download data if requested
         if args.download:
             start_date = datetime.strptime(args.start_date, '%Y%m%d').date()
-            # end_date = datetime.strptime(args.end_date, '%Y%m%d').date()
             logger.info(f"Downloading data from {start_date}")
             download_data(start_date)
 
-        # Record start time
-        start_time = time.time()
-
         # Run genetic algorithm
-        all_pairs = load_trading_pairs(settings.config_file)
-        initial_individuals = []
-
-        if args.resume:
-            logger.info("Resuming from the latest checkpoint")
-            best_individuals = genetic_algorithm(settings)
-        else:
-            logger.info("Starting a new genetic algorithm run")
-            best_individuals = genetic_algorithm(settings, initial_individuals)
+        best_individuals = genetic_algorithm(settings)
 
         # Save best individuals
         for gen, ind in best_individuals:
             save_best_individual(ind, gen, settings)
 
-        # Record end time and calculate duration
-        end_time = time.time()
-        duration = end_time - start_time
-
         # Log overall best individual
         overall_best = max(best_individuals, key=lambda x: x[1].fitness)
         logger.info(f"Overall best individual: Generation {overall_best[0]}, Fitness: {overall_best[1].fitness}")
         logger.info(f"Best trading pairs: {overall_best[1].trading_pairs}")
-        logger.info(f"Genetic algorithm completed successfully in {duration:.2f} seconds")
-
+    
     except Exception as e:
-        logger.exception(f"An error occurred during the execution of the genetic algorithm: {str(e)}")
+        logger.exception(f"An error occurred: {str(e)}")
+
 
 if __name__ == "__main__":
     main()
