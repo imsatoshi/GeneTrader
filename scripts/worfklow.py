@@ -130,7 +130,7 @@ class TradeWorkflow:
                             if strategy_name:
                                 generations[current_gen]['strategy_name'] = strategy_name
 
-            # 找出���有代中的最佳策略
+            # 找出所有代中的最佳策略
             for gen, data in generations.items():
                 if data['max_fitness'] is not None and data['max_fitness'] > max_fitness:
                     max_fitness = data['max_fitness']
