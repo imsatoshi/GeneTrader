@@ -130,7 +130,7 @@ class TradeWorkflow:
                             if strategy_name:
                                 generations[current_gen]['strategy_name'] = strategy_name
 
-            # 找出所有代中的最佳策略
+            # 找出���有代中的最佳策略
             for gen, data in generations.items():
                 if data['max_fitness'] is not None and data['max_fitness'] > max_fitness:
                     max_fitness = data['max_fitness']
@@ -219,18 +219,21 @@ class TradeWorkflow:
         if not self.remote_server:
             logger.warning("未配置远程服务器，跳过上传步骤")
             return True
-            
+
         try:
+            # 将端口号转换为字符串
+            port = str(self.remote_server['port'])
+            
             # 使用 -i 参数指定 SSH 私钥
             subprocess.run([
                 'scp', '-i', self.remote_server['key_path'],
-                '-P', self.remote_server['port'],
+                '-P', port,  # 使用转换后的字符串
                 'strategies/config.json', 
                 f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_datadir"]}'
                 ])
             subprocess.run([
                 'scp', '-i', self.remote_server['key_path'],
-                '-P', self.remote_server['port'],
+                '-P', port,  # 使用转换后的字符串
                 'strategies/GeneStrategy.py', 
                 f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_strategydir"]}'
                 ])
