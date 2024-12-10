@@ -255,9 +255,10 @@ class TradeWorkflow:
         try:
             # 通过 SSH 执行重启命令
             if not is_restful:
+                port = str(self.remote_server['port'])
                 subprocess.run([
                     'ssh', "-i", self.remote_server['key_path'],
-                    "-p", self.remote_server['port'],
+                    "-p", port,
                     self.remote_server['username'] + '@' + self.remote_server['hostname'],
                     'systemctl restart freqtrade'
                 ])
