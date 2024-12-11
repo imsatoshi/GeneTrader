@@ -95,8 +95,8 @@ class TradeWorkflow:
     def run_optimization(self):
         """运行主优化程序"""
         logger.info("开始运行策略优化...")
-        # Calculate the start date as 50 days before today
-        start_date = (datetime.now() - timedelta(days=50)).strftime('%Y%m%d')
+        # Calculate the start date as 30 days before today
+        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
         result = subprocess.run(['python3', 'main.py', '--config', self.ga_config_file, '--start-date', start_date, '--download'], 
                               cwd=self.project_root,
                               capture_output=True,
