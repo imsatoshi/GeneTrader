@@ -395,7 +395,7 @@ class TradeWorkflow:
             logger.error(f"下载策略到本地失败: {str(e)}")
             return False
 
-    def rename_strategy_class(self, file_path, src_path="user_data/strategies/GeneStrategy.py", new_class_name="GeneStrategy"):
+    def rename_strategy_class(self, file_path, src_path, new_class_name="GeneStrategy"):
         # 读取文件内容
         with open(file_path, 'r') as file:
             content = file.read()

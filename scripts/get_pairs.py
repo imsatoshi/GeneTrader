@@ -12,7 +12,8 @@ MANUAL_BLACKLIST = [
     "KP3R",
     "OOKI",
     "UNFI",
-    "SNT",
+    # "SNT",
+    "EUR",
     "BNB"
 ]
 
