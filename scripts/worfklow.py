@@ -305,81 +305,76 @@ class TradeWorkflow:
         except Exception as e:
             logger.error(f"发送Bark通知失败: {e}")
 
-    def run_backtest(self, config_file, strategy_name, max_retries=3, retry_interval=5):
+    def exec_backtest(self, config_file, strategy_name, max_retries=3, retry_interval=5):
+        """
+        执行回测命令并重试
+        Args:
+            config_file (str): 配置文件路径
+            strategy_name (str): 策略名称
+            max_retries (int): 最大重试次数
+            retry_interval (int): 重试间隔（分钟）
+        Returns:
+            str: 回测结果
+        """
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)  # 往前推7天
         timerange = f"{start_date.strftime('%Y%m%d')}-"
-        logger.info(f"运行本地策略的回测: {timerange}")
+        logger.info(f"运行回测: {timerange}")
 
-        current_command = [
+        # 构建回测命令
+        command = [
             settings.freqtrade_path,
             "backtesting",
-            "--strategy", 
+            "--strategy",
             strategy_name,
             "-c",
             config_file,
-            "--timerange", 
-            timerange,
-            "-d", 
-            settings.project_dir + "/" + settings.data_dir,  # "/Users/zhangjiawei/Project/GeneTrader/user_data/data/binance"
-            "--userdir",
-            settings.project_dir + "/" + settings.user_dir,  # "/Users/zhangjiawei/Project/GeneTrader/user_data"
-            "--timeframe-detail",
-            "1m",
-            "--enable-protections",
-            "--cache",
-            "none"
-        ]
-
-        remote_command = [
-            settings.freqtrade_path,
-            "backtesting",
-            "--strategy", 
-            "GeneStrategy",
-            "-c", 
-            "user_data/config.json",
             "--timerange",
             timerange,
-            "-d", 
-            settings.project_dir + "/" + settings.data_dir,  # "/Users/zhangjiawei/Project/GeneTrader/user_data/data/binance"
+            "-d",
+            settings.project_dir + "/" + settings.data_dir,
             "--userdir",
-            settings.project_dir + "/" + settings.user_dir,  # "/Users/zhangjiawei/Project/GeneTrader/user_data"
+            settings.project_dir + "/" + settings.user_dir,
             "--timeframe-detail",
             "1m",
             "--enable-protections",
             "--cache",
             "none"
         ]
-        current_result = ""
-        remote_result = ""
 
+        result = ""
         for attempt in range(max_retries):
             try:
-                logger.info(f"Attempt {attempt + 1} for local backtest")
-                current_result = subprocess.run(current_command, cwd=self.project_root, capture_output=True, text=True)
-                if current_result.returncode == 0:
-                    current_result = current_result.stdout
+                logger.info(f"Attempt {attempt + 1} for backtest with strategy: {strategy_name}")
+                process_result = subprocess.run(command, cwd=self.project_root, capture_output=True, text=True)
+                if process_result.returncode == 0:
+                    result = process_result.stdout
                     break
                 else:
-                    logger.warning(f"Local backtest failed on attempt {attempt + 1}: {current_result.stderr}")
+                    logger.warning(f"Backtest failed on attempt {attempt + 1}: {process_result.stderr}")
             except Exception as e:
-                logger.error(f"Error during local backtest attempt {attempt + 1}: {str(e)}")
-            time.sleep(retry_interval)
+                logger.error(f"Error during backtest attempt {attempt + 1}: {str(e)}")
+            time.sleep(retry_interval * 60)  # Convert retry_interval to seconds
+        return result
 
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"Attempt {attempt + 1} for remote backtest")
-                remote_result = subprocess.run(remote_command, cwd=self.project_root, capture_output=True, text=True)
-                if remote_result.returncode == 0:
-                    remote_result = remote_result.stdout
-                    break
-                else:
-                    logger.warning(f"Remote backtest failed on attempt {attempt + 1}: {remote_result.stderr}")
-            except Exception as e:
-                logger.error(f"Error during remote backtest attempt {attempt + 1}: {str(e)}")
-            time.sleep(retry_interval)
+    def run_backtest(self, config_file, strategy_name, max_retries=3, retry_interval=5):
+        """
+        执行本地和远程回测
+        Args:
+            config_file (str): 配置文件路径
+            strategy_name (str): 本地策略名称
+            max_retries (int): 最大重试次数
+            retry_interval (int): 重试间隔（分钟）
+        Returns:
+            tuple: 本地和远程回测结果
+        """
+        # 执行本地回测
+        local_result = self.exec_backtest(config_file, strategy_name, max_retries, retry_interval)
 
-        return current_result, remote_result
+        # 执行远程回测
+        remote_result = self.exec_backtest("user_data/config.json", "GeneStrategy", max_retries, retry_interval)
+
+        return local_result, remote_result
 
     def download_from_server(self):
         if not self.remote_server:
@@ -645,8 +640,11 @@ if __name__ == "__main__":
     # 创建一个解析器
     parser = argparse.ArgumentParser(description="Trade Workflow Script")
     # 添加一个参数，用于立即运行优化
+    parser.add_argument('--optimize', type=str, help="optimize")
     parser.add_argument('--now', action='store_true', help="立即运行优化")
     parser.add_argument('--config', type=str, help="配置文件路径")
+    parser.add_argument('--backtest', nargs=4, metavar=('CONFIG1', 'STRATEGY1', 'CONFIG2', 'STRATEGY2'), help="运行两个策略的回测并比较")
+    
     # 解析命令行参数
     args = parser.parse_args()
     ga_config_file = ''
@@ -657,18 +655,49 @@ if __name__ == "__main__":
 
     workflow = TradeWorkflow(ga_config_file)
 
-    if args.now:
-        logger.info("立即运行优化")
-        try:
-            workflow.run_forever(start_immediately=True)  # Pass True to start immediately
-        except Exception as e:
-            logger.error(f"优化运行失败: {str(e)}")
+    # 如果传入了两个策略文件运行回测并比较
+    if args.backtest:
+        config1, strategy1, config2, strategy2 = args.backtest
+        logger.info(f"开始对两个策略文件运行回测：{strategy1} 和 {strategy2}")
+        
+        # 运行第一个策略的回测
+        logger.info(f"运行策略 1：{strategy1}")
+        result1 = workflow.exec_backtest(config1, strategy1)
+        if not result1:  # 检查回测结果是否为空
+            logger.error(f"策略 {strategy1} 回测失败")
+            print(f"策略 {strategy1} 回测失败")
             sys.exit(1)
-    else:
-        try:
-            workflow.run_forever()
-        except KeyboardInterrupt:
-            logger.info("程序已终止")
-            sys.exit(0)
 
+        # 运行第二个策略的回测
+        logger.info(f"运行策略 2：{strategy2}")
+        result2 = workflow.exec_backtest(config2, strategy2)
+        if not result2:  # 检查回测结果是否为空
+            logger.error(f"策略 {strategy2} 回测失败")
+            print(f"策略 {strategy2} 回测失败")
+            sys.exit(1)
 
+        # 比较两个回测结果
+        logger.info("比较两个策略的回测结果")
+        comparison_result = workflow.compare_strategies(result1, result2)
+        if comparison_result:
+            logger.info("策略 1 优于 策略 2")
+            print("策略 1 优于 策略 2")
+        else:
+            logger.info("策略 2 优于 策略 1")
+            print("策略 2 优于 策略 1")
+        sys.exit(0)
+
+    if args.optimize:
+        if args.now:
+            logger.info("立即运行优化")
+            try:
+                workflow.run_forever(start_immediately=True)  # Pass True to start immediately
+            except Exception as e:
+                logger.error(f"优化运行失败: {str(e)}")
+                sys.exit(1)
+        else:
+            try:
+                workflow.run_forever()
+            except KeyboardInterrupt:
+                logger.info("程序已终止")
+                sys.exit(0)
