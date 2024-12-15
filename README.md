@@ -13,6 +13,7 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 - Configurable optimization parameters
 - Optional data downloading before running the algorithm
 - Checkpointing and ability to resume from the latest checkpoint
+- Offline Optimization and Automatic Strategy Replacement: Supports offline optimization of trading strategies, automatically comparing with the currently running online strategy, and replacing the online strategy with the best offline strategy if it performs better
 
 ## Prerequisites
 
