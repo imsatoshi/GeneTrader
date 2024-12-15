@@ -1,3 +1,12 @@
+## Background and Objective  
+Automated trading strategies face challenges in optimizing performance due to chaotic and non-stationary market dynamics. This project implements a Genetic Algorithm (GA) to optimize trading strategy parameters and trading pair selection, offering a more robust and adaptive solution compared to conventional methods. By integrating GA with the Freqtrade framework, I aim to:  
+
+- Enhance trading performance through hyperparameter optimization.  
+- Automate strategy evaluation and replacement with the best-performing strategies.  
+- Provide an efficient and configurable optimization workflow for traders.  
+
+This project leverage GA to explore parameter spaces and improve profitability.
+
 # Genetic Algorithm for Trading Strategy Optimization
 
 This project implements a genetic algorithm to optimize trading strategy parameters and trading pair selection. It supports multi-process parallel computation, dynamic generation of strategies, and saving the best strategy from each generation.
