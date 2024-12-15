@@ -23,8 +23,8 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/your-repo-name.git
-   cd your-repo-name
+   git clone https://github.com/imsatoshi/GeneTrader.git
+   cd GeneTrader
    ```
 
 2. Install dependencies:
