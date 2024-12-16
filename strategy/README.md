@@ -4,6 +4,9 @@ Strategy 模板使用教程
 
 1. 准备工作
 确保你的环境中已经安装了所有必要的依赖项。gen_template.py 依赖于 Python 的标准库，因此不需要额外安装第三方包。
+
+
+
 2. gen_template.py 文件简介
 该脚本的主要功能是从给定的策略文件（例如 E0V1E.py）中解析参数，并自动生成一个新的策略模板。你可以使用这个模板来创建新的策略，或者定制现有的策略。
 parse_parameters：解析策略文件中的参数定义（例如 IntParameter, BooleanParameter 等）。
@@ -12,8 +15,14 @@ generate_template：生成包含参数占位符的模板文件。
 generate_dynamic_template：从指定的策略文件生成完整的模板，支持动态添加 max_open_trades 和 dynamic_timeframes 参数。
 
 3. 如何使用脚本
+
+
 3.1 运行 gen_template.py 来生成模板
+
+
 你只需执行 gen_template.py 脚本，它会读取指定的策略文件并根据文件内容自动生成一个新的模板文件。
+
+
 3.2 使用方法
 python strategy/gen_template.py
 在脚本中，默认会读取位于 ./candidates/E0V1E.py 的策略文件。你可以通过修改 strategy_file_path 变量来指定你自己的策略文件路径。
@@ -24,6 +33,9 @@ add_max_open_trades：默认值为 True，表示在生成的模板中添加 max_
 add_dynamic_timeframes：默认值为 False，表示是否在模板中添加 dynamic_timeframes 参数。
 如果你希望在模板中添加这些参数，可以按以下方式调用：
 template, params = generate_dynamic_template(strategy_file_path, add_max_open_trades=True, add_dynamic_timeframes=True)
+
+
+
 3.4 输出结果
 脚本执行后，生成的模板将输出在终端，并保存为 generated_template.py 文件。所有解析出的参数将以字典的形式打印出来，并展示给用户。
 
