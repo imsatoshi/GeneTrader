@@ -33,12 +33,15 @@
     "remote_path": "/your/remote/path",
     "hostname": "remote_ip",
     "port": 22,
+    "hostname": "1.2.4.5",
     "username": "root",
-    "key_path": "/Users/zhangjiawei/.ssh/id_rsa",
-    "bark_endpoint": "http://xxx:xxx",
+    "port": 22,
+    "key_path": "/Users/xx/.ssh/id_rsa",
+    "bark_endpoint": "http://3.1.4.2:8081",
+    "bark_key": "xxxx",
     "remote_datadir": "/root/trade/user_data/",
     "remote_strategydir": "/root/trade/user_data/strategies/",
-    "api_url": "http://localhost:8080",
-    "freqtrade_username": "username",
-    "freqtrade_password": "password"
+    "api_url": "",
+    "freqtrade_username": "",
+    "freqtrade_password": ""
 }
