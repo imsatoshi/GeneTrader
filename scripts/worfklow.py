@@ -34,6 +34,8 @@ sys.path.insert(0, project_root)
 from utils.logging_config import logger
 from config.config import REMOTE_SERVER, BARK_KEY, BARK_ENDPOINT
 from config.config import settings
+from data.downloader import download_data  
+
 
 def clean_directory(path):
     """清空目录中的所有文件，但保留目录本身。"""
@@ -101,8 +103,8 @@ class TradeWorkflow:
                               cwd=self.project_root,
                               capture_output=True,
                               text=True)
-        print(result.stdout)
-        print(result.stderr)
+        # print(result.stdout)
+        # print(result.stderr)
         if result.returncode != 0:
             self.send_notification(f"策略优化失败:\n{result.stderr}")
             raise Exception("策略优化失败")
@@ -535,7 +537,10 @@ class TradeWorkflow:
             if not self.download_from_server():
                 self.send_notification("下载配置文件和策略到本地失败")
                 return False
-
+            
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+            download_data(start_date=start_date)
+            
             # 运行回测
             logger.info("run backtest")
             strategy_name = strategy_file.split("/")[-1].split(".")[0]  
