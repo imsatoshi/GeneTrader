@@ -276,7 +276,6 @@ class TradeWorkflow:
             logger.error(f"重启交易程序失败: {str(e)}")
             return False
 
-
     def restart_freqtrade(self, api_url, username, password):
         try:
             response = requests.post(
@@ -394,11 +393,14 @@ class TradeWorkflow:
         # 读取文件内容
         with open(file_path, 'r') as file:
             content = file.read()
-        
+
+        timestring = '"' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '"'
+
+
         # 使用正则表达式替换类名
-        pattern = r'class GeneTrader_gen\d+_\d+_\d+\(IStrategy\)'
-        new_content = re.sub(pattern, f'class {new_class_name}(IStrategy)', content)
-        
+        pattern = r'class GeneTrader_gen\d+_\d+_\d+\(IStrategy\):'
+        # new_content = re.sub(pattern, f'class {new_class_name}(IStrategy)', content)
+        new_content = re.sub(pattern, f'class {new_class_name}(IStrategy):\n    def version(self) -> str:\n        return {timestring}\n', content)
         # 写回文件
         with open(src_path, 'w') as file:
             file.write(new_content)
