@@ -538,7 +538,7 @@ class TradeWorkflow:
                 self.send_notification("下载配置文件和策略到本地失败")
                 return False
             
-            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+            start_date = datetime.now() - timedelta(days=3)
             download_data(start_date=start_date)
             
             # 运行回测
