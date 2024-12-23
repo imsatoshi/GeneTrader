@@ -61,26 +61,51 @@ Edit `ga.json` (or your custom config file) to configure:
 - `crossover_prob`: Probability of crossover (0.0 to 1.0)
 - `mutation_prob`: Probability of mutation (0.0 to 1.0)
 
-### Trading Parameters
-- `max_open_trades`: Maximum number of trades that can be open simultaneously (default: 3)
-  - Range: 1 to 6
-  - Higher values allow more concurrent trades but require more capital
-  - Lower values reduce risk but may miss opportunities
+### Parameters for ga optimization
 
-- `timeframe`: Trading interval for analysis and execution (default: "5m")
-  - Available options: "1m", "5m", "15m", "30m", "1h", "4h"
-  - Shorter timeframes (1m, 5m) provide more trading opportunities but may have higher noise
-  - Longer timeframes (1h, 4h) may provide more reliable signals but fewer opportunities
+| Parameter Name           | Description                                                            |
+|--------------------------|------------------------------------------------------------------------|
+| `proxy`                  | Proxy settings, including addresses for HTTP and SOCKS5 proxies.       |
+| `freqtrade_path`         | Path to the `freqtrade` executable.                                    |
+| `strategy_dir`           | Directory where strategy files are located.                            |
+| `user_dir`               | User data directory.                                                   |
+| `data_dir`               | Data storage directory, typically used for market data.                |
+| `results_dir`            | Results storage directory, used for storing backtest results, etc.     |
+| `config_file`            | Path to the configuration file.                                        |
+| `population_size`        | Size of the population in the genetic algorithm.                       |
+| `generations`            | Number of generations in the genetic algorithm.                        |
+| `crossover_prob`         | Probability of crossover in the genetic algorithm.                     |
+| `mutation_prob`          | Probability of mutation in the genetic algorithm.                      |
+| `backtest_timerange_weeks`| Time range for backtesting, in weeks.                                 |
+| `tournament_size`        | Size of the tournament selection in the genetic algorithm.             |
+| `pool_processes`         | Number of processes for parallel processing.                           |
+| `max_retries`            | Maximum number of retries.                                             |
+| `retry_delay`            | Delay time between retries.                                            |
+| `add_max_open_trades`    | Whether to add a limit on the maximum number of open trades.           |
+| `add_dynamic_timeframes` | Whether to add dynamic timeframes.                                     |
+| `checkpoint_dir`         | Directory for storing checkpoints.                                     |
+| `checkpoint_frequency`   | Frequency of saving checkpoints.                                       |
+| `project_dir`            | Project directory.                                                     |
+| `best_generations_dir`   | Directory for storing the best generations.                            |
+| `base_strategy_file`     | Path to the base strategy file.                                        |
+| `fix_pairs`              | Whether to fix trading pairs.                                          |
+| `num_pairs`              | Number of trading pairs.                                               |
+| `diversity_threshold`    | Diversity threshold for controlling population diversity.              |
+| `max_mutation_prob`      | Maximum mutation probability.                                          |
+| `local_file`             | Name of the local configuration file.                                  |
+| `hostname`               | Hostname or IP address of the remote server.                           |
+| `username`               | Username for the remote server.                                        |
+| `port`                   | SSH port of the remote server.                                         |
+| `key_path`               | Path to the SSH key file.                                              |
+| `bark_endpoint`          | Endpoint URL for the Bark service.                                     |
+| `bark_key`               | Key for the Bark service.                                              |
+| `remote_datadir`         | Data directory on the remote server.                                   |
+| `remote_strategydir`     | Strategy directory on the remote server.                               |
+| `api_url`                | URL of the API.                                                        |
+| `freqtrade_username`     | Username for Freqtrade.                                                |
+| `freqtrade_password`     | Password for Freqtrade.                                                |
 
-### Processing Options
-- `pool_processes`: Number of parallel processes for backtesting
-- `checkpoint_frequency`: How often to save checkpoints
-- `fix_pairs`: Whether to use fixed trading pairs or allow optimization
-
-### File Paths
-- `strategy_dir`: Directory for strategy files
-- `data_dir`: Directory for historical data
-- `results_dir`: Directory for optimization results
+Note: The `proxy` setting is used when configuring a VPN. Ensure that the proxy settings include the necessary addresses for HTTP and SOCKS5 proxies to route traffic through the VPN.
 
 Example configuration:
 ```json
