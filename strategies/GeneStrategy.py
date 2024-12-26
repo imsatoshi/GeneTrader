@@ -151,9 +151,9 @@ class GeneStrategy(IStrategy):
     order_types = {
         'entry': 'market',
         'exit': 'market',
-        'emergencyexit': 'market',
-        'forceentry': "market",
-        'forceexit': 'market',
+        'emergenc_yexit': 'market',
+        'force_entry': "market",
+        'force_exit': 'market',
         'stoploss': 'market',
         'stoploss_on_exchange': False,
 
