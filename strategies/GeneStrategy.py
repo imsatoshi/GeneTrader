@@ -151,9 +151,9 @@ class GeneStrategy(IStrategy):
     order_types = {
         'entry': 'market',
         'exit': 'market',
-        'emergencyexit': 'market',
-        'forceentry': "market",
-        'forceexit': 'market',
+        'emergency_exit': 'market',
+        'force_entry': "market",
+        'force_exit': 'market',
         'stoploss': 'market',
         'stoploss_on_exchange': False,
 
@@ -192,73 +192,73 @@ class GeneStrategy(IStrategy):
     buy_ema_open_mult_7 = 0.030
     buy_cti_7 = -0.89
     
-    buy_rmi = IntParameter(30.0, 50.0, default=45, space='buy', optimize=True)
-    buy_cci = IntParameter(-135.0, -90.0, default=-126, space='buy', optimize=True)
-    buy_srsi_fk = IntParameter(30.0, 50.0, default=42, space='buy', optimize=True)
-    buy_cci_length = IntParameter(25.0, 45.0, default=42, space='buy', optimize=True)
-    buy_rmi_length = IntParameter(8.0, 20.0, default=11, space='buy', optimize=True)
+    buy_rmi = IntParameter(30.0, 50.0, default=45, space='entry', optimize=True)
+    buy_cci = IntParameter(-135.0, -90.0, default=-126, space='entry', optimize=True)
+    buy_srsi_fk = IntParameter(30.0, 50.0, default=42, space='entry', optimize=True)
+    buy_cci_length = IntParameter(25.0, 45.0, default=42, space='entry', optimize=True)
+    buy_rmi_length = IntParameter(8.0, 20.0, default=11, space='entry', optimize=True)
 
-    buy_bb_width = DecimalParameter(0.065, 0.135, default=0.097, space='buy', optimize=True)
-    buy_bb_delta = DecimalParameter(0.018, 0.035, default=0.028, space='buy', optimize=True)
+    buy_bb_width = DecimalParameter(0.065, 0.135, default=0.097, space='entry', optimize=True)
+    buy_bb_delta = DecimalParameter(0.018, 0.035, default=0.028, space='entry', optimize=True)
     
-    buy_roc_1h = IntParameter(-25.0, 200.0, default=13, space='buy', optimize=True)
-    buy_bb_width_1h = DecimalParameter(0.3, 2.0, default=1.3, space='buy', optimize=True)
+    buy_roc_1h = IntParameter(-25.0, 200.0, default=13, space='entry', optimize=True)
+    buy_bb_width_1h = DecimalParameter(0.3, 2.0, default=1.3, space='entry', optimize=True)
 
     #ClucHA
     is_optimize_clucha = False
-    buy_clucha_bbdelta_close = DecimalParameter(0.0005, 0.02, default=0.001, space='buy', optimize=True)
-    buy_clucha_bbdelta_tail = DecimalParameter(0.7, 1.0, default=1.0, space='buy', optimize=True)
-    buy_clucha_close_bblower = DecimalParameter(0.0005, 0.02, default=0.008, space='buy', optimize=True)
-    buy_clucha_closedelta_close = DecimalParameter(0.0005, 0.02, default=0.014, space='buy', optimize=True)
-    buy_clucha_rocr_1h = DecimalParameter(0.5, 1.0, default=0.51, space='buy', optimize=True)
+    buy_clucha_bbdelta_close = DecimalParameter(0.0005, 0.02, default=0.001, space='entry', optimize=True)
+    buy_clucha_bbdelta_tail = DecimalParameter(0.7, 1.0, default=1.0, space='entry', optimize=True)
+    buy_clucha_close_bblower = DecimalParameter(0.0005, 0.02, default=0.008, space='entry', optimize=True)
+    buy_clucha_closedelta_close = DecimalParameter(0.0005, 0.02, default=0.014, space='entry', optimize=True)
+    buy_clucha_rocr_1h = DecimalParameter(0.5, 1.0, default=0.51, space='entry', optimize=True)
     
     #Local_Uptrend    
-    buy_ema_diff = DecimalParameter(0.022, 0.027, default=0.026, space='buy', optimize=True)
-    buy_bb_factor = DecimalParameter(0.99, 0.999, default=0.995, space='buy', optimize=True)
-    buy_closedelta = DecimalParameter(12.0, 18.0, default=13.1, space='buy', optimize=True)
+    buy_ema_diff = DecimalParameter(0.022, 0.027, default=0.026, space='entry', optimize=True)
+    buy_bb_factor = DecimalParameter(0.99, 0.999, default=0.995, space='entry', optimize=True)
+    buy_closedelta = DecimalParameter(12.0, 18.0, default=13.1, space='entry', optimize=True)
     
     # buy params
-    rocr_1h = DecimalParameter(0.5, 1.0, default=0.51, space='buy', optimize=True)
-    rocr1_1h = DecimalParameter(0.5, 1.0, default=0.59, space='buy', optimize=True)
-    bbdelta_close = DecimalParameter(0.0005, 0.02, default=0.001, space='buy', optimize=True)
-    closedelta_close = DecimalParameter(0.0005, 0.02, default=0.014, space='buy', optimize=True)
-    bbdelta_tail = DecimalParameter(0.7, 1.0, default=1.0, space='buy', optimize=True)
-    close_bblower = DecimalParameter(0.0005, 0.02, default=0.008, space='buy', optimize=True)
+    rocr_1h = DecimalParameter(0.5, 1.0, default=0.51, space='entry', optimize=True)
+    rocr1_1h = DecimalParameter(0.5, 1.0, default=0.59, space='entry', optimize=True)
+    bbdelta_close = DecimalParameter(0.0005, 0.02, default=0.001, space='entry', optimize=True)
+    closedelta_close = DecimalParameter(0.0005, 0.02, default=0.014, space='entry', optimize=True)
+    bbdelta_tail = DecimalParameter(0.7, 1.0, default=1.0, space='entry', optimize=True)
+    close_bblower = DecimalParameter(0.0005, 0.02, default=0.008, space='entry', optimize=True)
 
     # sell params
-    sell_fisher = DecimalParameter(0.1, 0.5, default=0.5, space='sell', optimize=True)
-    sell_bbmiddle_close = DecimalParameter(0.97, 1.1, default=1.067, space='sell', optimize=True)
+    sell_fisher = DecimalParameter(0.1, 0.5, default=0.5, space='exit', optimize=True)
+    sell_bbmiddle_close = DecimalParameter(0.97, 1.1, default=1.067, space='exit', optimize=True)
     
     #Deadfish
-    sell_deadfish_bb_width = DecimalParameter(0.03, 0.75, default=0.06, space='sell', optimize=True)
-    sell_deadfish_profit = DecimalParameter(-0.15, -0.05, default=-0.1, space='sell', optimize=True)
-    sell_deadfish_bb_factor = DecimalParameter(0.9, 1.2, default=1.2, space='sell', optimize=True)
-    sell_deadfish_volume_factor = DecimalParameter(1.0, 2.5, default=1.9, space='sell', optimize=True)
+    sell_deadfish_bb_width = DecimalParameter(0.03, 0.75, default=0.06, space='exit', optimize=True)
+    sell_deadfish_profit = DecimalParameter(-0.15, -0.05, default=-0.1, space='exit', optimize=True)
+    sell_deadfish_bb_factor = DecimalParameter(0.9, 1.2, default=1.2, space='exit', optimize=True)
+    sell_deadfish_volume_factor = DecimalParameter(1.0, 2.5, default=1.9, space='exit', optimize=True)
     
     # SMAOffset
-    base_nb_candles_buy = IntParameter(8.0, 20.0, default=13, space='buy', optimize=True)
-    base_nb_candles_sell = IntParameter(8.0, 50.0, default=44, space='sell', optimize=True)
-    low_offset = DecimalParameter(0.985, 0.995, default=0.991, space='buy', optimize=True)
-    high_offset = DecimalParameter(1.005, 1.015, default=1.007, space='sell', optimize=True)
-    high_offset_2 = DecimalParameter(1.01, 1.02, default=1.01, space='sell', optimize=True)
+    base_nb_candles_buy = IntParameter(8.0, 20.0, default=13, space='entry', optimize=True)
+    base_nb_candles_sell = IntParameter(8.0, 50.0, default=44, space='exit', optimize=True)
+    low_offset = DecimalParameter(0.985, 0.995, default=0.991, space='entry', optimize=True)
+    high_offset = DecimalParameter(1.005, 1.015, default=1.007, space='exit', optimize=True)
+    high_offset_2 = DecimalParameter(1.01, 1.02, default=1.01, space='exit', optimize=True)
     
-    sell_trail_profit_min_1 = DecimalParameter(0.1, 0.25, default=0.25, space='sell', optimize=True)
-    sell_trail_profit_max_1 = DecimalParameter(0.3, 0.5, default=0.5, space='sell', optimize=True)
-    sell_trail_down_1 = DecimalParameter(0.04, 0.1, default=0.08, space='sell', optimize=True)
+    sell_trail_profit_min_1 = DecimalParameter(0.1, 0.25, default=0.25, space='exit', optimize=True)
+    sell_trail_profit_max_1 = DecimalParameter(0.3, 0.5, default=0.5, space='exit', optimize=True)
+    sell_trail_down_1 = DecimalParameter(0.04, 0.1, default=0.08, space='exit', optimize=True)
 
-    sell_trail_profit_min_2 = DecimalParameter(0.04, 0.1, default=0.04, space='sell', optimize=True)
-    sell_trail_profit_max_2 = DecimalParameter(0.08, 0.25, default=0.08, space='sell', optimize=True)
-    sell_trail_down_2 = DecimalParameter(0.04, 0.2, default=0.07, space='sell', optimize=True)
+    sell_trail_profit_min_2 = DecimalParameter(0.04, 0.1, default=0.04, space='exit', optimize=True)
+    sell_trail_profit_max_2 = DecimalParameter(0.08, 0.25, default=0.08, space='exit', optimize=True)
+    sell_trail_down_2 = DecimalParameter(0.04, 0.2, default=0.07, space='exit', optimize=True)
 
     # hard stoploss profit
-    pHSL = DecimalParameter(-0.5, -0.04, default=-0.163, space='sell', optimize=True)
+    pHSL = DecimalParameter(-0.5, -0.04, default=-0.163, space='exit', optimize=True)
     # profit threshold 1, trigger point, SL_1 is used
-    pPF_1 = DecimalParameter(0.008, 0.02, default=0.01, space='sell', optimize=True)
-    pSL_1 = DecimalParameter(0.008, 0.02, default=0.008, space='sell', optimize=True)
+    pPF_1 = DecimalParameter(0.008, 0.02, default=0.01, space='exit', optimize=True)
+    pSL_1 = DecimalParameter(0.008, 0.02, default=0.008, space='exit', optimize=True)
 
     # profit threshold 2, SL_2 is used
-    pPF_2 = DecimalParameter(0.04, 0.1, default=0.072, space='sell', optimize=True)
-    pSL_2 = DecimalParameter(0.02, 0.07, default=0.054, space='sell', optimize=True)
+    pPF_2 = DecimalParameter(0.04, 0.1, default=0.072, space='exit', optimize=True)
+    pSL_2 = DecimalParameter(0.02, 0.07, default=0.054, space='exit', optimize=True)
     
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
@@ -271,7 +271,7 @@ class GeneStrategy(IStrategy):
     def custom_sell(self, pair: str, trade: 'Trade', current_time: 'datetime', current_rate: float, current_profit: float, **kwargs):
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         last_candle = dataframe.iloc[-1].squeeze()
-        filled_buys = trade.select_filled_orders('buy')
+        filled_buys = trade.select_filled_orders('entry')
         count_of_buys = len(filled_buys)
 
         #previous_candle_1 = dataframe.iloc[-1].squeeze()
@@ -758,7 +758,7 @@ class GeneStrategy(IStrategy):
             (dataframe['ema_fast'] > dataframe['ha_close']) &
             ((dataframe['ha_close'] * self.sell_bbmiddle_close.value) > dataframe['bb_middleband']) &
             (dataframe['volume'] > 0),
-            'sell'
+            'exit'
         ] = 0
 
         return dataframe
@@ -810,7 +810,7 @@ class GeneStrategy(IStrategy):
         #if last_candle['close'] / previous_candle['close'] < 1.02 :
         #if last_candle['close'] < previous_candle['close']:
 
-        filled_buys = trade.select_filled_orders('buy')
+        filled_buys = trade.select_filled_orders('entry')
         count_of_buys = len(filled_buys)
         if count_of_buys == 1 and (last_candle['tpct_change_0'] > 0.018) and (last_candle['close'] < last_candle['open']) :
             
@@ -851,7 +851,7 @@ class GeneStrategy(IStrategy):
 
         #count_of_buys = 0
         #for order in trade.orders:
-        #    if order.ft_is_open or order.ft_order_side != 'buy':
+        #    if order.ft_is_open or order.ft_order_side != 'entry':
         #        continue
         #    if order.status == "closed":
         #        count_of_buys += 1
