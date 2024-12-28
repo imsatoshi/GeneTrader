@@ -23,7 +23,6 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 - Saving of best individuals from each generation
 - Configurable optimization parameters
 - Optional data downloading before running the algorithm
-- Checkpointing and ability to resume from the latest checkpoint
 - Offline Optimization and Automatic Strategy Replacement: Supports offline optimization of trading strategies, automatically comparing with the currently running online strategy, and replacing the online strategy with the best offline strategy if it performs better
 
 ## Prerequisites
@@ -83,7 +82,7 @@ Edit `ga.json` (or your custom config file) to configure:
 | `retry_delay`            | Delay time between retries.                                            |
 | `add_max_open_trades`    | Whether to add a limit on the maximum number of open trades.           |
 | `add_dynamic_timeframes` | Whether to add dynamic timeframes.                                     |
-| `checkpoint_dir`         | Directory for storing checkpoints.                                     |
+|          |                                      |
 | `checkpoint_frequency`   | Frequency of saving checkpoints.                                       |
 | `project_dir`            | Project directory.                                                     |
 | `best_generations_dir`   | Directory for storing the best generations.                            |
@@ -215,10 +214,6 @@ Examples:
    - A checkpoint is saved at regular intervals.
 6. After all generations, the overall best strategy is reported.
 
-## Checkpointing
-
-The algorithm saves checkpoints at regular intervals (configurable in the settings). These checkpoints allow you to resume the optimization process from where it left off in case of interruption. Use the `--resume` option to start from the latest checkpoint.
-
 ## Contributing
 
 Contributions are welcome! Please submit issues or pull requests.
@@ -239,12 +234,9 @@ For questions or suggestions, please open an issue on GitHub.
 
 Stay updated and engage with our community:
 
-- [GeneTrader Telegram Channel](https://t.me/gene_trader) - For updates and announcements
 - [GeneTrader Algorithm Group](https://t.me/gaalgo_trader) - For discussions and support
 
-## Disclaimer
 
-This project is for educational and research purposes only. It does not constitute investment advice. Users are responsible for any risks associated with using this project for actual trading.
 
 ## Optimization Summary
 
