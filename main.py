@@ -35,52 +35,6 @@ def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs:
     else:
         return all_pairs
 
-
-async def save_checkpoint_async(population, generation, settings):
-    checkpoint = {
-        'generation': generation,
-        'individuals': [
-            {
-                'genes': ind.genes,
-                'trading_pairs': ind.trading_pairs,
-                'fitness': ind.fitness
-            } for ind in population.individuals
-        ]
-    }
-    filename = f"{settings.checkpoint_dir}/checkpoint_gen{generation}.pkl.gz"
-    
-    def save_to_file():
-        with gzip.open(filename, 'wb') as f:
-            pickle.dump(checkpoint, f)
-    
-    await asyncio.get_event_loop().run_in_executor(None, save_to_file)
-    logger.info(f"Saved compressed checkpoint for generation {generation}")
-
-
-def save_checkpoint(population, generation, settings):
-    asyncio.run(save_checkpoint_async(population, generation, settings))
-
-
-def load_latest_checkpoint(settings):
-    checkpoints = [f for f in os.listdir(settings.checkpoint_dir) if f.endswith('.pkl.gz')]
-    if not checkpoints:
-        return None, 0
-    latest_checkpoint = max(checkpoints, key=lambda x: int(x.split('gen')[1].split('.')[0]))
-    filename = f"{settings.checkpoint_dir}/{latest_checkpoint}"
-    
-    with gzip.open(filename, 'rb') as f:
-        checkpoint = pickle.load(f)
-    
-    population = Population([])
-    for ind_data in checkpoint['individuals']:
-        individual = Individual(ind_data['genes'], ind_data['trading_pairs'])
-        individual.fitness = ind_data['fitness']
-        population.individuals.append(individual)
-    
-    logger.info(f"Loaded compressed checkpoint from generation {checkpoint['generation']}")
-    return population, checkpoint['generation']
-
-
 def create_population(settings, all_pairs, population_size, initial_individuals=None):
     population = Population.create_random(
         size=population_size,
@@ -97,15 +51,13 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
     all_pairs = load_trading_pairs(settings.config_file)
     
     # Load the latest checkpoint if it exists
-    population, start_generation = load_latest_checkpoint(settings)
-    if population is None:
-        population_size = settings.population_size - len(initial_individuals or [])
-        population = create_population(settings, all_pairs, population_size, initial_individuals)
+    population_size = settings.population_size - len(initial_individuals or [])
+    population = create_population(settings, all_pairs, population_size, initial_individuals)
 
     best_individuals = []
 
     with multiprocessing.Pool(processes=settings.pool_processes) as pool:
-        for gen in range(start_generation, settings.generations):
+        for gen in range(settings.generations):
             logger.info(f"Generation {gen+1}")
                         
             # Evaluate fitness in parallel
@@ -147,10 +99,6 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             best_individuals.append((gen+1, best_individual))
 
             logger.info(f"Best individual in generation {gen+1}: Fitness: {best_individual.fitness}")
-
-            # Save checkpoint every N generations
-            if (gen + 1) % settings.checkpoint_frequency == 0:
-                save_checkpoint(population, gen + 1, settings)
 
             gc.collect()  # Clean up memory at the end of each generation
 
