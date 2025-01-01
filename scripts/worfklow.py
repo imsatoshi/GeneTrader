@@ -539,7 +539,21 @@ class TradeWorkflow:
                 return False
             
             start_date = datetime.now() - timedelta(days=3)
-            download_data(start_date=start_date)
+            max_retries = 3
+            retry_interval = 5  # 重试间隔(分钟)
+            
+            for attempt in range(max_retries):
+                try:
+                    download_data(start_date=start_date)
+                    break  # 如果下载成功,跳出重试循环
+                except Exception as e:
+                    logger.warning(f"数据下载失败(尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                    if attempt < max_retries - 1:
+                        logger.info(f"等待 {retry_interval} 分钟后重试...")
+                        time.sleep(retry_interval * 60)  # 转换为秒
+                    else:
+                        logger.error("达到最大重试次数,数据下载失败")
+                        raise  # 如果达到最大重试次数还是失败,抛出异常
             
             # 运行回测
             logger.info("run backtest")
@@ -578,7 +592,6 @@ class TradeWorkflow:
             logger.error(f"工作流程执行失败: {str(e)}")
             self.send_notification(f"工作流程执行失败: {str(e)}")
             return False
-
 
     def run_with_retry(self):
         """
