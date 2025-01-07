@@ -80,7 +80,7 @@ def parse_backtest_results(file_path: str) -> Dict[str, Any]:
                 total_minutes += int(time_parts[0]) * 60 + int(time_parts[1])
         return total_minutes
 
-    print(content)
+    # print(content)
     
     parsed_result = {
         'total_profit_usdt': extract_value(r'Absolute profit\s*│\s*([-\d.]+)\s*USDT'),
@@ -113,7 +113,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     profit_score = math.tanh(total_profit_percent / 2.0)  # 放宽收益区间
 
     # 2. Win rate component (more reasonable target)
-    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.9)))  # 降低胜率期望值到0.6
+    win_rate_score = 1 / (1 + math.exp(-10 * (win_rate - 0.9)))  
 
     # 3. Risk-adjusted returns (combining multiple metrics)
     risk_adjusted_score = (
@@ -123,7 +123,7 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int, strategy_na
     )
 
     # 4. Drawdown penalty (exponential with smoother curve)
-    drawdown_penalty = math.exp(-3 * max_drawdown)  # ��低惩罚程度
+    drawdown_penalty = math.exp(-3 * max_drawdown)  # 低惩罚程度
 
     # 5. Trade frequency score (prefer 2-5 trades per day)
     trade_frequency_score = math.exp(-((daily_avg_trades - 3.5)**2) / 8)
