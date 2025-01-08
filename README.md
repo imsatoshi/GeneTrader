@@ -232,8 +232,6 @@ For questions or suggestions, please open an issue on GitHub.
 
 ## Community
 
-- [GeneTrader Algorithm Group](https://t.me/gaalgo_trader) - For discussions and support
-
 ![WeChat Group QR Code](data/WechatIMG319.jpg)
 
 
