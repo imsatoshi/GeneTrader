@@ -27,7 +27,6 @@ def load_trading_pairs(config_file):
         config = json.load(f)
     return config['exchange']['pair_whitelist']
 
-
 def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int):
     all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
     if len(all_pairs) > num_pairs:
@@ -45,7 +44,6 @@ def create_population(settings, all_pairs, population_size, initial_individuals=
     if initial_individuals:
         population.individuals.extend(initial_individuals)
     return population
-
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
     all_pairs = load_trading_pairs(settings.config_file)
@@ -104,7 +102,6 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
 
     return best_individuals
 
-
 def save_best_individual(individual: Individual, generation: int, settings: Settings):
     filename = f"{settings.best_generations_dir}/best_individual_gen{generation}.json"
     data = {
@@ -116,7 +113,6 @@ def save_best_individual(individual: Individual, generation: int, settings: Sett
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
     logger.info(f"Saved best individual from generation {generation} to {filename}")
-
 
 def main():
     parser = argparse.ArgumentParser(description='Run genetic algorithm for trading strategy optimization')
