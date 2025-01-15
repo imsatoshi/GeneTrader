@@ -55,6 +55,7 @@ def render_strategy(params: list, strategy_name: str) -> str:
 
 def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     timestamp = int(time.time())
+    print(trading_pairs)
     random_id = random.randint(1000, 9999)
     strategy_name = f"GeneTrader_gen{generation}_{timestamp}_{random_id}"
     strategy_file = f"{settings.strategy_dir}/{strategy_name}.py"
@@ -88,10 +89,12 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
         config['max_open_trades'] = max_open_trades
     if settings.add_dynamic_timeframes:
         config['timeframe'] = dynamic_timeframe
+    
     config["exchange"]["pair_whitelist"] = trading_pairs
     config_file_name = os.path.join(settings.user_dir, f'temp_config_{timestamp}_{random_id}.json')
     with open(config_file_name, 'w') as f:
         json.dump(config, f, indent=4)
+
 
     timeframe = config['timeframe']
     logger.info(f"Running backtest for generation {generation}")

@@ -7,6 +7,7 @@ import random
 from datetime import datetime, date
 import os
 import pickle
+import numpy as np
 from config.settings import Settings
 from config.config import LOG_CONFIG
 from utils.logging_config import logger
@@ -27,12 +28,6 @@ def load_trading_pairs(config_file):
         config = json.load(f)
     return config['exchange']['pair_whitelist']
 
-def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int):
-    all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
-    if len(all_pairs) > num_pairs:
-        return random.sample(all_pairs, num_pairs)
-    else:
-        return all_pairs
 
 def create_population(settings, all_pairs, population_size, initial_individuals=None):
     population = Population.create_random(
@@ -51,9 +46,10 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
     # Load the latest checkpoint if it exists
     population_size = settings.population_size - len(initial_individuals or [])
     population = create_population(settings, all_pairs, population_size, initial_individuals)
-
+    
     best_individuals = []
-
+    # print(all_pairs)
+    all_pairs_array = np.array(all_pairs)
     with multiprocessing.Pool(processes=settings.pool_processes) as pool:
         for gen in range(settings.generations):
             logger.info(f"Generation {gen+1}")
@@ -61,7 +57,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
             # Evaluate fitness in parallel
             try:
                 fitnesses = pool.starmap(run_backtest, 
-                    [(ind.genes, ind.trading_pairs, gen+1) for ind in population.individuals])
+                    [(ind.genes, all_pairs_array[ind.trading_pairs_index].tolist(), gen+1) for ind in population.individuals])
                 
                 for ind, fit in zip(population.individuals, fitnesses):
                     ind.fitness = fit if fit is not None else float('-inf')
@@ -86,7 +82,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
                     offspring[i+1].after_genetic_operation(settings.parameters)
             
             for ind in offspring:
-                mutate(ind, settings.mutation_prob)  # 使用设定的突变概率
+                mutate(ind, settings.mutation_prob, all_pairs)  # 使用设定的突变概率
                 ind.after_genetic_operation(settings.parameters)
 
             # Replace the population

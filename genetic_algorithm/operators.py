@@ -9,18 +9,14 @@ def crossover(parent1: Individual, parent2: Individual, with_pair=True) -> Tuple
     child2_genes = parent2.genes[:point] + parent1.genes[point:]
     
     # Crossover trading pairs
-    if with_pair:
-        all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
-        random.shuffle(all_pairs)
-        
-        child1_pairs = all_pairs[:len(parent1.trading_pairs)]
-        child2_pairs = all_pairs[:len(parent2.trading_pairs)]
+    if not with_pair:
+        child1_pairs_index, child2_pairs_index = parent1.crossover_trading_pairs(parent2)
 
-        return Individual(child1_genes, child1_pairs, parent1.param_types), Individual(child2_genes, child2_pairs, parent2.param_types)
+        return Individual(child1_genes, child1_pairs_index, parent1.param_types), Individual(child2_genes, child2_pairs_index, parent2.param_types)
     else:
-        return Individual(child1_genes, parent1.trading_pairs, parent1.param_types), Individual(child2_genes, parent2.trading_pairs, parent2.param_types)
+        return Individual(child1_genes, parent1.trading_pairs_index, parent1.param_types), Individual(child2_genes, parent2.trading_pairs_index, parent2.param_types)
 
-def mutate(individual: Individual, mutation_rate: float):
+def mutate(individual: Individual, mutation_rate: float, all_pairs=None):
     for i in range(len(individual.genes)):
         if random.random() < mutation_rate:
             param_type = individual.param_types[i]
@@ -65,6 +61,9 @@ def mutate(individual: Individual, mutation_rate: float):
             elif isinstance(individual.genes[i], list):
                 # 列表类型：随机修改列表中的一个元素
                 individual.genes[i] = random.choice(param_type['options'])
+        individual.mutate_trading_pairs(all_pairs, mutation_rate)
+
+        individual.after_genetic_operation(individual.param_types)
 
 def select_tournament(population: List[Individual], tournament_size: int) -> Individual:
     tournament = random.sample(population, tournament_size)

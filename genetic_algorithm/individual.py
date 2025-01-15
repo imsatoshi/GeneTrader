@@ -3,11 +3,12 @@ import random
 import copy
 
 class Individual:
-    def __init__(self, genes: List[float], trading_pairs: List[str], param_types: List[dict]):
+    def __init__(self, genes: List[float], trading_pairs_index: List[str], param_types: List[dict]):
         self.genes = genes
-        self.trading_pairs = trading_pairs
+        # self.trading_pairs = trading_pairs
+        self.trading_pairs_index = trading_pairs_index
         self.fitness = None
-        self.param_types = param_types  # 添加参数类型信息
+        self.param_types = param_types
 
     @classmethod
     def create_random(cls, parameters, all_pairs, num_pairs):
@@ -28,10 +29,10 @@ class Individual:
                 value = random.choice([True, False])
             genes.append(value)
         if num_pairs is not None:
-            trading_pairs = random.sample(all_pairs, num_pairs)
+            trading_pairs_index = random.sample(range(len(all_pairs)), num_pairs)
         else:
-            trading_pairs = all_pairs
-        return cls(genes, trading_pairs, parameters)  # 传入 parameters
+            trading_pairs_index = range(len(all_pairs))
+        return cls(genes, trading_pairs_index, parameters)
 
     def constrain_genes(self, parameters):
         for i, param in enumerate(parameters):
@@ -44,8 +45,6 @@ class Individual:
             if param['type'] == 'Decimal':
                 self.genes[i] = round(max(param['start'], min(param['end'], self.genes[i])), param['decimal_places'])
 
-
-    # 在交叉和变异操作后调用此方法
     def after_genetic_operation(self, parameters):
         self.constrain_genes(parameters)
 
@@ -53,29 +52,87 @@ class Individual:
         return copy.deepcopy(self)
 
     def mutate_trading_pairs(self, all_pairs, mutation_rate):
-        # 创建一个集合来存储当前的交易对
-        if self.trading_pairs is None:
+        if self.trading_pairs_index is None:
             return
-        current_pairs = set(self.trading_pairs)
         
-        for i in range(len(self.trading_pairs)):
+        all_pairs_index = range(len(all_pairs)) 
+        
+        current_pairs = set(self.trading_pairs_index)
+        
+        for i in range(len(self.trading_pairs_index)):
             if random.random() < mutation_rate:
-                # 创建一个可选择的交易对列表，排除当前已有的交易对
-                available_pairs = [pair for pair in all_pairs if pair not in current_pairs]
+                available_pairs = [pair for pair in all_pairs_index if pair not in current_pairs]
                 
                 if available_pairs:
-                    # 从可用的交易对中随机选择一个
                     new_pair = random.choice(available_pairs)
                     
-                    # 从当前集合中移除旧的交易对
-                    current_pairs.remove(self.trading_pairs[i])
+                    current_pairs.remove(self.trading_pairs_index[i])
                     
-                    # 添加新的交易对到集合和列表中
                     current_pairs.add(new_pair)
-                    self.trading_pairs[i] = new_pair
-                else:
-                    # 如果没有可用的新交易对，保持原样
-                    pass
 
-        # 更新 self.trading_pairs 为新的列表（可选，因为我们是直接修改的列表）
-        self.trading_pairs = list(current_pairs)
+        self.trading_pairs_index = list(current_pairs)
+
+    def crossover_trading_pairs(self, other_individual, crossover_rate=0.5):
+        """
+        Perform crossover operation on trading pair indices between two individuals
+        """
+        # Create copies for children
+        child1 = self.copy()
+        child2 = other_individual.copy()
+        
+        if random.random() < crossover_rate and self.trading_pairs_index is not None:
+            pairs_length = len(self.trading_pairs_index)
+            if pairs_length != len(other_individual.trading_pairs_index):
+                raise ValueError("Trading pairs index length mismatch")
+                    
+            crossover_point = random.randint(1, pairs_length - 1)
+            
+            # Perform crossover
+            new_pairs_1 = list(dict.fromkeys(
+                self.trading_pairs_index[:crossover_point] + 
+                other_individual.trading_pairs_index[crossover_point:]
+            ))
+            new_pairs_2 = list(dict.fromkeys(
+                other_individual.trading_pairs_index[:crossover_point] + 
+                self.trading_pairs_index[crossover_point:]
+            ))
+            
+            # Ensure both children have the correct number of pairs
+            while len(new_pairs_1) < pairs_length:
+                available_pairs = [p for p in self.trading_pairs_index + other_individual.trading_pairs_index 
+                                 if p not in new_pairs_1]
+                if available_pairs:
+                    new_pairs_1.append(random.choice(available_pairs))
+                else:
+                    break
+                
+            while len(new_pairs_2) < pairs_length:
+                available_pairs = [p for p in self.trading_pairs_index + other_individual.trading_pairs_index 
+                                 if p not in new_pairs_2]
+                if available_pairs:
+                    new_pairs_2.append(random.choice(available_pairs))
+                else:
+                    break
+            
+            # If still not enough pairs, randomly select from all possible indices
+            all_possible_indices = list(range(max(max(self.trading_pairs_index), 
+                                                max(other_individual.trading_pairs_index)) + 1))
+            
+            while len(new_pairs_1) < pairs_length:
+                available = [i for i in all_possible_indices if i not in new_pairs_1]
+                if available:
+                    new_pairs_1.append(random.choice(available))
+            
+            while len(new_pairs_2) < pairs_length:
+                available = [i for i in all_possible_indices if i not in new_pairs_2]
+                if available:
+                    new_pairs_2.append(random.choice(available))
+            
+            # Trim if necessary
+            new_pairs_1 = new_pairs_1[:pairs_length]
+            new_pairs_2 = new_pairs_2[:pairs_length]
+            
+            child1.trading_pairs_index = new_pairs_1
+            child2.trading_pairs_index = new_pairs_2
+            
+        return child1.trading_pairs_index, child2.trading_pairs_index
