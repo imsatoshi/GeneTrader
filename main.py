@@ -98,13 +98,13 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
 
     return best_individuals
 
-def save_best_individual(individual: Individual, generation: int, settings: Settings):
+def save_best_individual(individual: Individual, generation: int, settings: Settings, all_pairs_array: np.array):
     filename = f"{settings.best_generations_dir}/best_individual_gen{generation}.json"
     data = {
         'generation': generation,
         'fitness': individual.fitness,
         'genes': individual.genes,
-        'trading_pairs': individual.trading_pairs
+        'trading_pairs': all_pairs_array[individual.trading_pairs_index].tolist()
     }
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
@@ -119,9 +119,13 @@ def main():
     parser.add_argument('--resume', action='store_true', help='Resume from the latest checkpoint')
     args = parser.parse_args()
 
+    settings = Settings(args.config)
+
     try:
+        all_pairs = load_trading_pairs(settings.config_file)
+        all_pairs_array = np.array(all_pairs)
+
         # Initialize settings
-        settings = Settings(args.config)
 
         # Generate dynamic template and get parameters
         _, parameters = generate_dynamic_template(settings.base_strategy_file)
@@ -146,12 +150,11 @@ def main():
 
         # Save best individuals
         for gen, ind in best_individuals:
-            save_best_individual(ind, gen, settings)
+            save_best_individual(ind, gen, settings, all_pairs_array)
 
         # Log overall best individual
         overall_best = max(best_individuals, key=lambda x: x[1].fitness)
         logger.info(f"Overall best individual: Generation {overall_best[0]}, Fitness: {overall_best[1].fitness}")
-        logger.info(f"Best trading pairs: {overall_best[1].trading_pairs}")
     
     except Exception as e:
         logger.exception(f"An error occurred: {str(e)}")
