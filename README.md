@@ -232,7 +232,7 @@ For questions or suggestions, please open an issue on GitHub.
 
 ## Community
 
-![WeChat Group QR Code](data/WechatIMG319.jpg)
+![WeChat Group QR Code](data/20250301203301.jpg)
 
 
 ## Optimization Summary
