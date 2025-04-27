@@ -1,5 +1,7 @@
 # Genetic Algorithm for Trading Strategy Optimization
 
+https://deepwiki.com/imsatoshi/GeneTrader/5-automated-workflow
+
 
 ## Background and Objective  
 Automated trading strategies face challenges in optimizing performance due to chaotic and non-stationary market dynamics. This project implements a Genetic Algorithm (GA) to optimize trading strategy parameters and trading pair selection, offering a more robust and adaptive solution compared to conventional methods. By integrating GA with the Freqtrade framework, I aim to:  
