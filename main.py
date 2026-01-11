@@ -18,7 +18,12 @@ from strategy.backtest import run_backtest
 from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
 from optimization.genetic_optimizer import GeneticOptimizer
-from optimization.optuna_optimizer import OptunaOptimizer
+try:
+    from optimization.optuna_optimizer import OptunaOptimizer
+    OPTUNA_AVAILABLE = True
+except ImportError:
+    OptunaOptimizer = None
+    OPTUNA_AVAILABLE = False
 import asyncio
 import gzip
 import gc
@@ -81,12 +86,17 @@ def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
     all_pairs = load_trading_pairs(settings.config_file)
 
     if optimizer_type == 'optuna':
-        logger.info("Using Optuna optimizer")
-        optimizer = OptunaOptimizer(settings, settings.parameters, all_pairs)
-    else:
-        logger.info("Using Genetic Algorithm optimizer")
-        optimizer = GeneticOptimizer(settings, settings.parameters, all_pairs)
+        if not OPTUNA_AVAILABLE:
+            logger.warning("Optuna not installed. Falling back to genetic algorithm. "
+                          "Install optuna with: pip install optuna")
+            optimizer_type = 'genetic'
+        else:
+            logger.info("Using Optuna optimizer")
+            optimizer = OptunaOptimizer(settings, settings.parameters, all_pairs)
+            return optimizer.optimize(initial_individuals)
 
+    logger.info("Using Genetic Algorithm optimizer")
+    optimizer = GeneticOptimizer(settings, settings.parameters, all_pairs)
     return optimizer.optimize(initial_individuals)
 
 

@@ -1,7 +1,10 @@
 import json
 import os
 
+
 class Settings:
+    """Configuration settings loaded from JSON file."""
+
     def __init__(self, config_file='ga.json'):
         with open(config_file, 'r') as f:
             self.config = json.load(f)
@@ -57,4 +60,23 @@ class Settings:
             os.environ[f'{key}_proxy'] = value
 
 
-settings = Settings()
+class _SettingsProxy:
+    """Lazy loading proxy for settings to avoid import-time errors."""
+
+    _instance = None
+
+    def __getattr__(self, name):
+        if _SettingsProxy._instance is None:
+            config_file = os.environ.get('GENETRADER_CONFIG', 'ga.json')
+            if os.path.exists(config_file):
+                _SettingsProxy._instance = Settings(config_file)
+            else:
+                raise RuntimeError(
+                    f"Configuration file '{config_file}' not found. "
+                    "Please create it from ga.json.example or set GENETRADER_CONFIG environment variable."
+                )
+        return getattr(_SettingsProxy._instance, name)
+
+
+# Use lazy loading proxy to avoid import-time errors when config file doesn't exist
+settings = _SettingsProxy()

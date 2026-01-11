@@ -7,15 +7,16 @@ class TestBacktest(unittest.TestCase):
     @patch('strategy.backtest.generate_dynamic_template')
     def test_render_strategy(self, mock_generate_dynamic_template):
         # 模拟 generate_dynamic_template 的返回值
+        # Note: params should be a list of dicts, not a dict
         mock_template = """
         class ${strategy_name}(IStrategy):
             buy_param = ${buy_param}
             sell_param = ${sell_param}
         """
-        mock_params = {
-            'buy_param': {'type': 'DecimalParameter', 'optimize': True, 'decimal_places': 1},
-            'sell_param': {'type': 'IntParameter', 'optimize': True}
-        }
+        mock_params = [
+            {'name': 'buy_param', 'type': 'Decimal', 'optimize': True, 'decimal_places': 1, 'start': 0.0, 'end': 100.0},
+            {'name': 'sell_param', 'type': 'Int', 'optimize': True, 'start': 0, 'end': 100}
+        ]
         mock_generate_dynamic_template.return_value = (mock_template, mock_params)
 
         print("Mock template:", mock_template)

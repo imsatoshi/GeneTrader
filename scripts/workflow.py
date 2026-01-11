@@ -231,20 +231,28 @@ class TradeWorkflow:
         try:
             # 将端口号转换为字符串
             port = str(self.remote_server['port'])
-            
+
             # 使用 -i 参数指定 SSH 私钥
-            subprocess.run([
+            result1 = subprocess.run([
                 'scp', '-i', self.remote_server['key_path'],
                 '-P', port,  # 使用转换后的字符串
-                'strategies/config.json', 
+                'strategies/config.json',
                 f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_datadir"]}'
                 ])
-            subprocess.run([
+            if result1.returncode != 0:
+                logger.error("上传 config.json 到服务器失败")
+                return False
+
+            result2 = subprocess.run([
                 'scp', '-i', self.remote_server['key_path'],
                 '-P', port,  # 使用转换后的字符串
-                'strategies/GeneStrategy.py', 
+                'strategies/GeneStrategy.py',
                 f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:{self.remote_server["remote_strategydir"]}'
                 ])
+            if result2.returncode != 0:
+                logger.error("上传 GeneStrategy.py 到服务器失败")
+                return False
+
             return True
         except Exception as e:
             logger.error(f"上传策略到服务器失败: {str(e)}")
