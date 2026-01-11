@@ -21,7 +21,7 @@ class Settings:
         self.crossover_prob = self.config['crossover_prob']
         self.mutation_prob = self.config['mutation_prob']
         self.tournament_size = self.config['tournament_size']
-        self.data_dir = self.config['data_dir']  # Add this line
+        self.data_dir = self.config['data_dir']
         self.base_strategy_file = self.config['base_strategy_file']
         self.backtest_timerange_weeks = self.config['backtest_timerange_weeks']
         self.num_pairs = self.config['num_pairs']
@@ -43,7 +43,17 @@ class Settings:
         self.api_url = self.config["api_url"]
         self.freqtrade_username = self.config["freqtrade_username"]
         self.freqtrade_password = self.config["freqtrade_password"]
-        for key, value in self.config['proxy'].items():
+
+        # Optuna optimizer settings (Issue #13)
+        self.optimizer_type = self.config.get('optimizer_type', 'genetic')
+        self.optuna_n_trials = self.config.get('optuna_n_trials', self.generations * self.population_size)
+        self.optuna_sampler = self.config.get('optuna_sampler', 'tpe')
+        self.optuna_n_startup_trials = self.config.get('optuna_n_startup_trials', 10)
+        self.optuna_pruning = self.config.get('optuna_pruning', False)
+        self.optuna_n_jobs = self.config.get('optuna_n_jobs', 1)
+
+        # Set proxy environment variables
+        for key, value in self.config.get('proxy', {}).items():
             os.environ[f'{key}_proxy'] = value
 
 

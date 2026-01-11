@@ -15,8 +15,10 @@ from genetic_algorithm.individual import Individual
 from genetic_algorithm.population import Population
 from genetic_algorithm.operators import crossover, mutate, select_tournament
 from strategy.backtest import run_backtest
-from data.downloader import download_data  
+from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
+from optimization.genetic_optimizer import GeneticOptimizer
+from optimization.optuna_optimizer import OptunaOptimizer
 import asyncio
 import gzip
 import gc
@@ -48,61 +50,44 @@ def create_population(settings, all_pairs, population_size, initial_individuals=
 
 
 def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
+    """
+    Legacy genetic algorithm function - now wraps GeneticOptimizer.
+
+    Args:
+        settings: Settings object
+        initial_individuals: Optional list of initial individuals
+
+    Returns:
+        List of (generation, best_individual) tuples
+    """
     all_pairs = load_trading_pairs(settings.config_file)
-    
-    # Load the latest checkpoint if it exists
-    population_size = settings.population_size - len(initial_individuals or [])
-    population = create_population(settings, all_pairs, population_size, initial_individuals)
+    optimizer = GeneticOptimizer(settings, settings.parameters, all_pairs)
+    return optimizer.optimize(initial_individuals)
 
-    best_individuals = []
 
-    with multiprocessing.Pool(processes=settings.pool_processes) as pool:
-        for gen in range(settings.generations):
-            logger.info(f"Generation {gen+1}")
-                        
-            # Evaluate fitness in parallel
-            try:
-                fitnesses = pool.starmap(run_backtest, 
-                    [(ind.genes, ind.trading_pairs, gen+1) for ind in population.individuals])
-                
-                for ind, fit in zip(population.individuals, fitnesses):
-                    ind.fitness = fit if fit is not None else float('-inf')
-            except Exception as e:
-                logger.error(f"Error during fitness calculation in generation {gen+1}: {str(e)}")
-            
-            # Filter out individuals with None fitness
-            valid_individuals = [ind for ind in population.individuals if ind.fitness is not None]
-            logger.info(f"Valid individuals in generation {gen+1}: {len(valid_individuals)}")
-            if not valid_individuals:
-                logger.warning(f"No valid individuals in generation {gen+1}. Terminating early.")
-                break
+def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
+                     initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
+    """
+    Run optimization using the specified optimizer.
 
-            # Select individuals for the next generation
-            offspring = [select_tournament(valid_individuals, settings.tournament_size) for _ in range(settings.population_size)]
+    Args:
+        settings: Settings object containing optimization configuration
+        optimizer_type: Type of optimizer to use ('genetic' or 'optuna')
+        initial_individuals: Optional list of initial individuals
 
-            # Apply crossover and mutation
-            for i in range(0, len(offspring), 2):
-                if random.random() < settings.crossover_prob:
-                    offspring[i], offspring[i+1] = crossover(offspring[i], offspring[i+1], with_pair=settings.fix_pairs)                    
-                    offspring[i].after_genetic_operation(settings.parameters)
-                    offspring[i+1].after_genetic_operation(settings.parameters)
-            
-            for ind in offspring:
-                mutate(ind, settings.mutation_prob)  # 使用设定的突变概率
-                ind.after_genetic_operation(settings.parameters)
+    Returns:
+        List of (generation/trial, best_individual) tuples
+    """
+    all_pairs = load_trading_pairs(settings.config_file)
 
-            # Replace the population
-            population.individuals = offspring
+    if optimizer_type == 'optuna':
+        logger.info("Using Optuna optimizer")
+        optimizer = OptunaOptimizer(settings, settings.parameters, all_pairs)
+    else:
+        logger.info("Using Genetic Algorithm optimizer")
+        optimizer = GeneticOptimizer(settings, settings.parameters, all_pairs)
 
-            # Find the best individual in the current generation
-            best_individual = max(valid_individuals, key=lambda ind: ind.fitness)
-            best_individuals.append((gen+1, best_individual))
-
-            logger.info(f"Best individual in generation {gen+1}: Fitness: {best_individual.fitness}")
-
-            gc.collect()  # Clean up memory at the end of each generation
-
-    return best_individuals
+    return optimizer.optimize(initial_individuals)
 
 
 def save_best_individual(individual: Individual, generation: int, settings: Settings):
@@ -119,12 +104,14 @@ def save_best_individual(individual: Individual, generation: int, settings: Sett
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run genetic algorithm for trading strategy optimization')
+    parser = argparse.ArgumentParser(description='Run optimization for trading strategy')
     parser.add_argument('--config', type=str, default='ga.json', help='Path to the configuration file')
     parser.add_argument('--download', action='store_true', help='Download data before running the algorithm')
     parser.add_argument('--start-date', type=str, default='20240101', help='Start date for data download (YYYYMMDD)')
     parser.add_argument('--end-date', type=str, default=date.today().strftime('%Y%m%d'), help='End date for data download (YYYYMMDD)')
     parser.add_argument('--resume', action='store_true', help='Resume from the latest checkpoint')
+    parser.add_argument('--optimizer', type=str, default='genetic', choices=['genetic', 'optuna'],
+                        help='Optimizer to use: genetic (default) or optuna')
     args = parser.parse_args()
 
     try:
@@ -137,8 +124,8 @@ def main():
 
         # Create all necessary directories including logs
         create_directories([
-            settings.results_dir, 
-            settings.best_generations_dir, 
+            settings.results_dir,
+            settings.best_generations_dir,
             settings.checkpoint_dir,
             LOG_CONFIG['log_dir']
         ])
@@ -149,18 +136,27 @@ def main():
             logger.info(f"Downloading data from {start_date}")
             download_data(start_date)
 
-        # Run genetic algorithm
-        best_individuals = genetic_algorithm(settings)
+        # Determine optimizer type (command line takes precedence over config)
+        optimizer_type = args.optimizer
+        if hasattr(settings, 'optimizer_type') and args.optimizer == 'genetic':
+            optimizer_type = settings.optimizer_type
+
+        # Run optimization
+        logger.info(f"Starting optimization with {optimizer_type} optimizer")
+        best_individuals = run_optimization(settings, optimizer_type)
 
         # Save best individuals
         for gen, ind in best_individuals:
             save_best_individual(ind, gen, settings)
 
         # Log overall best individual
-        overall_best = max(best_individuals, key=lambda x: x[1].fitness)
-        logger.info(f"Overall best individual: Generation {overall_best[0]}, Fitness: {overall_best[1].fitness}")
-        logger.info(f"Best trading pairs: {overall_best[1].trading_pairs}")
-    
+        if best_individuals:
+            overall_best = max(best_individuals, key=lambda x: x[1].fitness if x[1].fitness is not None else float('-inf'))
+            logger.info(f"Overall best individual: Generation {overall_best[0]}, Fitness: {overall_best[1].fitness}")
+            logger.info(f"Best trading pairs: {overall_best[1].trading_pairs}")
+        else:
+            logger.warning("No valid individuals found during optimization")
+
     except Exception as e:
         logger.exception(f"An error occurred: {str(e)}")
 

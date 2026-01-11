@@ -1,31 +1,37 @@
 # Configuration management
-python-dotenv==1.0.0
+python-dotenv>=1.0.0
 
 # Data manipulation and analysis
-numpy==1.24.3
-pandas==2.0.1
+# Updated for Python 3.12 compatibility (Issue #12)
+numpy>=1.26.0
+pandas>=2.1.0
 
-# Trading framework (if still used)
-freqtrade==2023.5
+# Trading framework
+# Note: freqtrade version should match your freqtrade installation
+# freqtrade>=2024.1
 
-# Logging (if custom logging is implemented)
-loguru>=0.6.0
+# Logging
+loguru>=0.7.0
 
 # Genetic algorithm
-deap==1.3.3
+deap>=1.4.1
+
+# Optimization - Optuna support (Issue #13)
+optuna>=3.5.0
 
 # Optional: for improved performance
-numba==0.57.0
+# Updated for Python 3.12 compatibility
+numba>=0.59.0
 
 # Optional: for data visualization
-matplotlib==3.7.1
-seaborn==0.12.2
+matplotlib>=3.8.0
+seaborn>=0.13.0
 
 # Development tools
-pytest==7.3.1
-flake8==6.0.0
-black==23.3.0
+pytest>=8.0.0
+flake8>=7.0.0
+black>=24.1.0
 
 # Delisting monitor
-beautifulsoup4>=4.9.3
-requests>=2.25.1
+beautifulsoup4>=4.12.0
+requests>=2.31.0
