@@ -1,48 +1,45 @@
 import argparse
 import json
-import time
-from typing import List
-import multiprocessing
 import random
+from typing import List, Optional, Tuple
 from datetime import datetime, date
-import os
-import pickle
+
 from config.settings import Settings
 from config.config import LOG_CONFIG
 from utils.logging_config import logger
 from utils.file_operations import create_directories
 from genetic_algorithm.individual import Individual
 from genetic_algorithm.population import Population
-from genetic_algorithm.operators import crossover, mutate, select_tournament
-from strategy.backtest import run_backtest
 from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
 from optimization.genetic_optimizer import GeneticOptimizer
+
 try:
     from optimization.optuna_optimizer import OptunaOptimizer
     OPTUNA_AVAILABLE = True
 except ImportError:
     OptunaOptimizer = None
     OPTUNA_AVAILABLE = False
-import asyncio
-import gzip
-import gc
 
 
-def load_trading_pairs(config_file):
+def load_trading_pairs(config_file: str) -> List[str]:
+    """Load trading pairs from config file."""
     with open(config_file, 'r') as f:
         config = json.load(f)
     return config['exchange']['pair_whitelist']
 
 
-def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int):
+def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int) -> List[str]:
+    """Crossover trading pairs from two parents."""
     all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
     if len(all_pairs) > num_pairs:
         return random.sample(all_pairs, num_pairs)
-    else:
-        return all_pairs
+    return all_pairs
 
-def create_population(settings, all_pairs, population_size, initial_individuals=None):
+
+def create_population(settings: Settings, all_pairs: List[str], population_size: int,
+                      initial_individuals: Optional[List[Individual]] = None) -> Population:
+    """Create initial population for genetic algorithm."""
     population = Population.create_random(
         size=population_size,
         parameters=settings.parameters,
@@ -54,7 +51,8 @@ def create_population(settings, all_pairs, population_size, initial_individuals=
     return population
 
 
-def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
+def genetic_algorithm(settings: Settings,
+                      initial_individuals: Optional[List[Individual]] = None) -> List[Tuple[int, Individual]]:
     """
     Legacy genetic algorithm function - now wraps GeneticOptimizer.
 
@@ -71,7 +69,7 @@ def genetic_algorithm(settings: Settings, initial_individuals: List[Individual] 
 
 
 def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
-                     initial_individuals: List[Individual] = None) -> List[tuple[int, Individual]]:
+                     initial_individuals: Optional[List[Individual]] = None) -> List[Tuple[int, Individual]]:
     """
     Run optimization using the specified optimizer.
 

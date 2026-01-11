@@ -3,8 +3,9 @@ import json
 import os
 import time
 import random
+import subprocess
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Dict, List, Optional
 from config.settings import settings
 from utils.logging_config import logger
 from strategy.evaluation import parse_backtest_results, fitness_function
@@ -12,7 +13,7 @@ from strategy.gen_template import generate_dynamic_template
 from string import Template
 
 
-int2timeframe = {
+TIMEFRAME_MAP = {
     0: "5m",
     1: "15m",
     2: "30m",
@@ -71,7 +72,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     dynamic_timeframe = "5m" # default
     
     if settings.add_dynamic_timeframes:
-        dynamic_timeframe = int2timeframe[int(strategy_gene.pop())]
+        dynamic_timeframe = TIMEFRAME_MAP.get(int(strategy_gene.pop()), "5m")
         logger.info(f"Setting dynamic_timeframe to {dynamic_timeframe}")
 
     if settings.add_max_open_trades:
@@ -101,26 +102,44 @@ def run_backtest(genes: list, trading_pairs: list, generation: int) -> float:
     start_date = end_date - timedelta(weeks=settings.backtest_timerange_weeks)
     timerange = f"{start_date.strftime('%Y%m%d')}-"
     output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{timestamp}_{random_id}.txt"
+    # Build command as list for safer subprocess execution
+    cmd_args = [
+        settings.freqtrade_path, "backtesting",
+        "--strategy", strategy_name,
+        "-c", config_file_name,
+        "--timerange", timerange,
+        "-d", os.path.abspath(settings.data_dir),
+        "--userdir", os.path.abspath(settings.user_dir),
+        "--timeframe-detail", "1m",
+        "--enable-protections",
+        "--cache", "none"
+    ]
+
     for attempt in range(settings.max_retries):
-        command = (
-            f"{settings.freqtrade_path} backtesting "
-            f"--strategy {strategy_name} "
-            f"-c {config_file_name} "
-            f"--timerange {timerange} "
-            f"-d {os.path.abspath(settings.data_dir)} "
-            f"--userdir {os.path.abspath(settings.user_dir)} --timeframe-detail 1m --enable-protections --cache none" 
-            f"> {output_file}"
-        )
-        
-        logger.info(f"Running command: {command}")
-        out = os.system(command)
-        
-        if out == 0:
-            logger.info(f"Backtesting successful for generation {generation}")
-            break
-        else:
+        logger.info(f"Running backtest command (attempt {attempt + 1}/{settings.max_retries})")
+        try:
+            with open(output_file, 'w') as outf:
+                result = subprocess.run(
+                    cmd_args,
+                    stdout=outf,
+                    stderr=subprocess.STDOUT,
+                    timeout=600  # 10 minute timeout
+                )
+
+            if result.returncode == 0:
+                logger.info(f"Backtesting successful for generation {generation}")
+                break
+            else:
+                if attempt < settings.max_retries - 1:
+                    logger.warning(f"Backtesting failed for generation {generation}. Retrying...")
+                    time.sleep(settings.retry_delay)
+        except subprocess.TimeoutExpired:
+            logger.error(f"Backtesting timed out for generation {generation}")
             if attempt < settings.max_retries - 1:
-                logger.warning(f"Backtesting failed for generation {generation}. Retrying in {settings.retry_delay} seconds...")
+                time.sleep(settings.retry_delay)
+        except Exception as e:
+            logger.error(f"Error running backtest: {e}")
+            if attempt < settings.max_retries - 1:
                 time.sleep(settings.retry_delay)
     
     parsed_result = parse_backtest_results(output_file)
