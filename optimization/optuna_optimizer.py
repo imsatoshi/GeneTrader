@@ -98,6 +98,8 @@ class OptunaOptimizer(BaseOptimizer):
         """
         Suggest trading pairs for a trial.
 
+        Uses O(1) set lookups instead of O(n) list filtering for efficiency.
+
         Args:
             trial: Optuna trial object
 
@@ -109,13 +111,16 @@ class OptunaOptimizer(BaseOptimizer):
 
         # For dynamic pair selection, use categorical suggestions
         num_pairs = self.settings.num_pairs
-        selected_pairs = []
+        selected_pairs: List[str] = []
+        selected_set: set = set()  # O(1) lookup instead of O(n) list filtering
 
         for i in range(num_pairs):
-            available = [p for p in self.all_pairs if p not in selected_pairs]
+            # Use set difference for O(1) membership check
+            available = [p for p in self.all_pairs if p not in selected_set]
             if available:
                 pair = trial.suggest_categorical(f'pair_{i}', available)
                 selected_pairs.append(pair)
+                selected_set.add(pair)
 
         return selected_pairs if selected_pairs else self.all_pairs[:num_pairs]
 

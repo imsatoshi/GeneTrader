@@ -1,37 +1,18 @@
 #!/usr/bin/env python3
-"""Script to analyze fitness log and find best performing strategies."""
+"""Script to analyze fitness log and find best performing strategies.
+
+This module uses the centralized fitness_helpers module for all
+log parsing operations to avoid code duplication.
+"""
 import glob
-import re
 from typing import Optional
 
 from utils.fitness_helpers import (
-    extract_fitness as base_extract_fitness,
+    extract_final_fitness as extract_fitness,
     extract_generation,
-    extract_strategy_name
+    extract_strategy_name,
+    extract_win_rate
 )
-
-
-def extract_fitness(line: str) -> Optional[float]:
-    """Extract final fitness value from a log line."""
-    match = re.search(r'Final Fitness: ([-\d.]+)$', line)
-    if match:
-        try:
-            return float(match.group(1))
-        except ValueError:
-            return None
-    # Fallback to base extraction
-    return base_extract_fitness(line)
-
-
-def extract_win_rate(line: str) -> Optional[float]:
-    """Extract win rate from a log line."""
-    match = re.search(r'Win Rate: ([\d.]+)', line)
-    if match:
-        try:
-            return float(match.group(1))
-        except ValueError:
-            return None
-    return None
 
 
 def get_config_file(strategy_name: str) -> Optional[str]:

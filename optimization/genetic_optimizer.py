@@ -90,8 +90,18 @@ class GeneticOptimizer(BaseOptimizer):
                     for ind, fit in zip(population.individuals, fitnesses):
                         ind.fitness = fit if fit is not None else float('-inf')
 
+                except (OSError, multiprocessing.TimeoutError) as e:
+                    logger.error(f"Process error in generation {gen+1}: {str(e)}")
+                    # Mark all as invalid for this generation
+                    for ind in population.individuals:
+                        ind.fitness = float('-inf')
+                except ValueError as e:
+                    logger.error(f"Value error in generation {gen+1}: {str(e)}")
+                    for ind in population.individuals:
+                        if ind.fitness is None:
+                            ind.fitness = float('-inf')
                 except Exception as e:
-                    logger.error(f"Error during fitness calculation in generation {gen+1}: {str(e)}")
+                    logger.error(f"Unexpected error in generation {gen+1}: {type(e).__name__}: {str(e)}")
 
                 # Filter out individuals with None fitness
                 valid_individuals = [ind for ind in population.individuals if ind.fitness is not None]

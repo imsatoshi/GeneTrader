@@ -2,9 +2,18 @@
 
 This module consolidates duplicated fitness extraction functions
 that were previously in get_max_fitness.py and scripts/workflow.py.
+
+All regex patterns are pre-compiled at module level for performance.
 """
 import re
-from typing import Optional
+from typing import Optional, Dict, Any
+
+# Pre-compiled regex patterns for performance
+_PATTERN_FITNESS = re.compile(r'Fitness:\s*([-\d.]+)')
+_PATTERN_FINAL_FITNESS = re.compile(r'Final Fitness:\s*([-\d.]+)$')
+_PATTERN_GENERATION = re.compile(r'Generation\s*(\d+)')
+_PATTERN_STRATEGY_NAME = re.compile(r'Strategy:\s*(\S+)')
+_PATTERN_WIN_RATE = re.compile(r'Win Rate:\s*([\d.]+)')
 
 
 def extract_fitness(line: str) -> Optional[float]:
@@ -16,13 +25,32 @@ def extract_fitness(line: str) -> Optional[float]:
     Returns:
         Fitness value as float, or None if not found
     """
-    match = re.search(r'Fitness:\s*([-\d.]+)', line)
+    match = _PATTERN_FITNESS.search(line)
     if match:
         try:
             return float(match.group(1))
         except ValueError:
             return None
     return None
+
+
+def extract_final_fitness(line: str) -> Optional[float]:
+    """Extract final fitness value from a log line.
+
+    Args:
+        line: Log line that may contain final fitness information
+
+    Returns:
+        Final fitness value as float, or None if not found
+    """
+    match = _PATTERN_FINAL_FITNESS.search(line)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    # Fallback to regular fitness extraction
+    return extract_fitness(line)
 
 
 def extract_generation(line: str) -> Optional[int]:
@@ -34,7 +62,7 @@ def extract_generation(line: str) -> Optional[int]:
     Returns:
         Generation number as int, or None if not found
     """
-    match = re.search(r'Generation\s*(\d+)', line)
+    match = _PATTERN_GENERATION.search(line)
     if match:
         try:
             return int(match.group(1))
@@ -52,9 +80,27 @@ def extract_strategy_name(line: str) -> Optional[str]:
     Returns:
         Strategy name as string, or None if not found
     """
-    match = re.search(r'Strategy:\s*(\S+)', line)
+    match = _PATTERN_STRATEGY_NAME.search(line)
     if match:
         return match.group(1)
+    return None
+
+
+def extract_win_rate(line: str) -> Optional[float]:
+    """Extract win rate from a log line.
+
+    Args:
+        line: Log line that may contain win rate
+
+    Returns:
+        Win rate as float, or None if not found
+    """
+    match = _PATTERN_WIN_RATE.search(line)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
     return None
 
 
