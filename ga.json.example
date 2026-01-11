@@ -30,6 +30,17 @@
     "num_pairs": 1,
     "diversity_threshold": 0.1,
     "max_mutation_prob": 0.4,
+
+    "_comment_optimizer": "Optimizer settings - choose 'genetic' or 'optuna'",
+    "optimizer_type": "genetic",
+
+    "_comment_optuna": "Optuna optimizer settings (Issue #13 - more efficient for large search spaces)",
+    "optuna_n_trials": 900,
+    "optuna_sampler": "tpe",
+    "optuna_n_startup_trials": 10,
+    "optuna_pruning": false,
+    "optuna_n_jobs": 1,
+
     "remote_path": "/your/remote/path",
     "hostname": "remote_ip",
     "port": 22,

@@ -1,81 +1,93 @@
-from typing import List
+from typing import List, Dict, Any, Optional
 import random
 import copy
 
+
 class Individual:
-    def __init__(self, genes: List[float], trading_pairs: List[str], param_types: List[dict]):
+    """Represents an individual in the genetic algorithm population."""
+
+    def __init__(self, genes: List[Any], trading_pairs: List[str], param_types: List[Dict[str, Any]]):
         self.genes = genes
         self.trading_pairs = trading_pairs
-        self.fitness = None
-        self.param_types = param_types  # 添加参数类型信息
+        self.fitness: Optional[float] = None
+        self.param_types = param_types
 
     @classmethod
-    def create_random(cls, parameters, all_pairs, num_pairs):
+    def create_random(cls, parameters: List[Dict[str, Any]], all_pairs: List[str],
+                      num_pairs: Optional[int]) -> 'Individual':
+        """Create a random individual with random genes and trading pairs."""
         genes = []
         for param in parameters:
-            if param['type'] == 'Int':
+            param_type = param['type']
+            if param_type == 'Int':
                 if param.get('name') == 'max_open_trades':
                     min_value = max(1, int(param['start']))
                     value = random.randint(min_value, int(param['end']))
                 else:
                     value = random.randint(int(param['start']), int(param['end']))
-            elif param['type'] == 'Decimal':
+            elif param_type == 'Decimal':
                 value = random.uniform(param['start'] + 1e-10, param['end'] - 1e-10)
                 value = round(value, param['decimal_places'])
-            if param['type'] == 'Categorical':
+            elif param_type == 'Categorical':
                 value = random.choice(param['options'])
-            if param['type'] == 'Boolean':
+            elif param_type == 'Boolean':
                 value = random.choice([True, False])
+            else:
+                raise ValueError(f"Unknown parameter type: {param_type}")
             genes.append(value)
-        if num_pairs is not None:
-            trading_pairs = random.sample(all_pairs, num_pairs)
-        else:
-            trading_pairs = all_pairs
-        return cls(genes, trading_pairs, parameters)  # 传入 parameters
 
-    def constrain_genes(self, parameters):
+        if num_pairs is not None:
+            trading_pairs = random.sample(all_pairs, min(num_pairs, len(all_pairs)))
+        else:
+            trading_pairs = all_pairs.copy()
+        return cls(genes, trading_pairs, parameters)
+
+    def constrain_genes(self, parameters: List[Dict[str, Any]]) -> None:
+        """Constrain gene values to their valid ranges."""
         for i, param in enumerate(parameters):
-            if param['type'] == 'Int':
+            if i >= len(self.genes):
+                break
+            param_type = param['type']
+            if param_type == 'Int':
                 if param.get('name') == 'max_open_trades':
                     min_value = max(1, int(param['start']))
                     self.genes[i] = int(max(min_value, min(param['end'], self.genes[i])))
                 else:
                     self.genes[i] = int(max(param['start'], min(param['end'], self.genes[i])))
-            if param['type'] == 'Decimal':
+            elif param_type == 'Decimal':
                 self.genes[i] = round(max(param['start'], min(param['end'], self.genes[i])), param['decimal_places'])
 
 
-    # 在交叉和变异操作后调用此方法
-    def after_genetic_operation(self, parameters):
+    def after_genetic_operation(self, parameters: List[Dict[str, Any]]) -> None:
+        """Apply constraints after crossover or mutation operations."""
         self.constrain_genes(parameters)
 
-    def copy(self):
+    def copy(self) -> 'Individual':
+        """Create a deep copy of this individual."""
         return copy.deepcopy(self)
 
-    def mutate_trading_pairs(self, all_pairs, mutation_rate):
-        # 创建一个集合来存储当前的交易对
-        if self.trading_pairs is None:
+    def mutate_trading_pairs(self, all_pairs: List[str], mutation_rate: float) -> None:
+        """Mutate trading pairs with given mutation rate using efficient set operations."""
+        if not self.trading_pairs:
             return
-        current_pairs = set(self.trading_pairs)
-        
-        for i in range(len(self.trading_pairs)):
-            if random.random() < mutation_rate:
-                # 创建一个可选择的交易对列表，排除当前已有的交易对
-                available_pairs = [pair for pair in all_pairs if pair not in current_pairs]
-                
-                if available_pairs:
-                    # 从可用的交易对中随机选择一个
-                    new_pair = random.choice(available_pairs)
-                    
-                    # 从当前集合中移除旧的交易对
-                    current_pairs.remove(self.trading_pairs[i])
-                    
-                    # 添加新的交易对到集合和列表中
-                    current_pairs.add(new_pair)
-                    self.trading_pairs[i] = new_pair
-                else:
-                    # 如果没有可用的新交易对，保持原样
-                    pass
 
-        # 更新 self.trading_pairs 为新的列表（可选，因为我们是直接修改的列表）
+        current_pairs = set(self.trading_pairs)
+        all_pairs_set = set(all_pairs)
+        # Pre-compute available pairs once (O(n) instead of O(n*m))
+        available_pairs = list(all_pairs_set - current_pairs)
+
+        for i in range(len(self.trading_pairs)):
+            if random.random() < mutation_rate and available_pairs:
+                old_pair = self.trading_pairs[i]
+                new_pair = random.choice(available_pairs)
+
+                # Update sets efficiently
+                current_pairs.discard(old_pair)
+                current_pairs.add(new_pair)
+                available_pairs.remove(new_pair)
+                available_pairs.append(old_pair)
+
+                self.trading_pairs[i] = new_pair
+
+        # Preserve order by only updating changed pairs
         self.trading_pairs = list(current_pairs)
