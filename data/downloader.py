@@ -50,5 +50,4 @@ if __name__ == "__main__":
     # For testing purposes
     from datetime import datetime
     start = datetime(2024, 1, 1).date()
-    end = date.today()
-    download_data(start, end)
+    download_data(start)

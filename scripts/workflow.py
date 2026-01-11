@@ -1,39 +1,24 @@
+"""Trade workflow automation for GeneTrader."""
 import os
-
-# proxy setting
-os.environ['https_proxy'] = 'http://127.0.0.1:7890'
-os.environ['http_proxy'] = 'http://127.0.0.1:7890'
-os.environ['all_proxy'] = 'socks5://127.0.0.1:7890'
-
 import sys
+import re
 import time
 import shutil
 import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
-import requests
-import re
-import argparse
+from typing import Optional, Dict, Any
+
 import requests
 from requests.auth import HTTPBasicAuth
-import logging
 
-# Configure the logger
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Add timestamp to the log format
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
-logger = logging.getLogger(__name__)
-
-# 将项目根目录添加到 Python 路径
+# Add project root to Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 from utils.logging_config import logger
+from utils.fitness_helpers import extract_fitness, extract_generation, extract_strategy_name
 from config.config import REMOTE_SERVER, BARK_KEY, BARK_ENDPOINT
-from config.config import settings
 from data.downloader import download_data  
 
 
@@ -123,18 +108,18 @@ class TradeWorkflow:
         try:
             with open(os.path.join(self.project_root, 'logs/fitness_log.txt'), 'r') as file:
                 for line in file:
-                    gen = self.extract_generation(line)
+                    gen = extract_generation(line)
                     if gen is not None:
                         current_gen = gen
                         if current_gen not in generations:
                             generations[current_gen] = {'max_fitness': None, 'max_fitness_line': '', 'strategy_name': ''}
-                    
-                    fitness = self.extract_fitness(line)
+
+                    fitness = extract_fitness(line)
                     if fitness is not None and current_gen is not None:
                         if generations[current_gen]['max_fitness'] is None or fitness > generations[current_gen]['max_fitness']:
                             generations[current_gen]['max_fitness'] = fitness
                             generations[current_gen]['max_fitness_line'] = line.strip()
-                            strategy_name = self.extract_strategy_name(line)
+                            strategy_name = extract_strategy_name(line)
                             if strategy_name:
                                 generations[current_gen]['strategy_name'] = strategy_name
 
@@ -163,21 +148,6 @@ class TradeWorkflow:
         except Exception as e:
             logger.error(f"读取fitness日志出错: {str(e)}")
             return None, None
-
-    def extract_fitness(self, line):
-        """从日志行提取fitness值"""
-        match = re.search(r'Final Fitness: ([-\d.]+)$', line)
-        return float(match.group(1)) if match else None
-
-    def extract_generation(self, line):
-        """从日志行提取代数"""
-        match = re.search(r'Generation: (\d+)', line)
-        return int(match.group(1)) if match else None
-
-    def extract_strategy_name(self, line):
-        """从日志行提取策略名称"""
-        match = re.search(r'Strategy: (\S+)', line)
-        return match.group(1) if match else None
 
     def create_daily_directory(self):
         """
