@@ -1,156 +1,198 @@
+"""Utility for fetching Binance USDT trading pairs with blacklist filtering.
+
+This module provides functions to fetch trading pairs from Binance API,
+filter them based on blacklists (manual and delisted coins), and save
+the results to configuration files.
+"""
 import requests
 import json
 from datetime import datetime
 import argparse
 import os
+from typing import List, Optional, Dict, Any, Set, Tuple, Union
 from loguru import logger
 
-# 配置文件路径
+# Request timeout in seconds
+REQUEST_TIMEOUT = 30
+
+# Configuration file path
 DELISTED_COINS_FILE = "data/delisted_coins.json"
-MANUAL_BLACKLIST = [
+MANUAL_BLACKLIST: Set[str] = {
     "IDRT",
     "KP3R",
     "OOKI",
     "UNFI",
-    # "SNT",
     "EUR",
     "BNB"
-]
+}
 
-def setup_logger():
-    """设置日志记录器"""
+
+def setup_logger() -> None:
+    """Set up the logger with file rotation."""
     log_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "get_pairs.log")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     logger.add(log_file, rotation="10 MB", encoding="utf8")
 
-def load_blacklist():
-    """加载黑名单，包括手动黑名单和已下架币种"""
-    # 手动黑名单
-    blacklist = set(MANUAL_BLACKLIST)
-    
-    # 加载已下架币种
+def load_blacklist() -> Set[str]:
+    """Load blacklist including manual blacklist and delisted coins.
+
+    Returns:
+        Set of blacklisted coin symbols
+    """
+    blacklist = MANUAL_BLACKLIST.copy()
+
+    # Load delisted coins
     try:
         delisted_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), DELISTED_COINS_FILE)
         if os.path.exists(delisted_file):
-            with open(delisted_file, 'r') as f:
+            with open(delisted_file, 'r', encoding='utf-8') as f:
                 delisted_data = json.load(f)
                 delisted_coins = set(delisted_data.get('delisted_coins', []))
-                
-                # 记录最近下架的币种
+
+                # Log recently delisted coins
                 history = delisted_data.get('delisting_history', [])
                 if history:
                     latest_delisted = history[-1]
-                    logger.info(f"最近下架的币种 ({latest_delisted['date']}): {', '.join(latest_delisted['coins'])}")
-                    logger.info(f"下架公告: {latest_delisted['title']}")
-                
-                blacklist.update(delisted_coins)
-                logger.info(f"从 {DELISTED_COINS_FILE} 加载了 {len(delisted_coins)} 个下架币种")
-    except Exception as e:
-        logger.warning(f"无法加载已下架币种列表: {e}")
-    
-    logger.info(f"黑名单总计 {len(blacklist)} 个币种")
-    return list(blacklist)
+                    logger.info(f"Recently delisted ({latest_delisted['date']}): {', '.join(latest_delisted['coins'])}")
+                    logger.info(f"Delisting notice: {latest_delisted['title']}")
 
-def get_binance_usdt_pairs(mode='all', top_n=100):
-    """获取币安所有USDT交易对的信息"""
+                blacklist.update(delisted_coins)
+                logger.info(f"Loaded {len(delisted_coins)} delisted coins from {DELISTED_COINS_FILE}")
+    except (json.JSONDecodeError, IOError) as e:
+        logger.warning(f"Could not load delisted coins list: {e}")
+
+    logger.info(f"Total blacklisted coins: {len(blacklist)}")
+    return blacklist
+
+def get_binance_usdt_pairs(mode: str = 'all', top_n: int = 100) -> Optional[List[str]]:
+    """Fetch Binance USDT trading pairs with optional volume filtering.
+
+    Args:
+        mode: 'volume' for top N by volume, 'all' for all pairs
+        top_n: Number of pairs to return in volume mode
+
+    Returns:
+        List of trading pair strings, or None on error
+    """
     try:
-        # 获取所有交易对信息
+        # Fetch exchange info
         exchange_info_url = "https://api.binance.com/api/v3/exchangeInfo"
-        exchange_info = requests.get(exchange_info_url).json()
-        
+        exchange_info = requests.get(exchange_info_url, timeout=REQUEST_TIMEOUT).json()
+
+        volume_dict: Dict[str, float] = {}
         if mode == 'volume':
-            # 获取24小时交易量数据
+            # Fetch 24h volume data
             ticker_url = "https://api.binance.com/api/v3/ticker/24hr"
-            ticker_data = requests.get(ticker_url).json()
-            # 使用 quoteVolume (USDT交易量) 作为排序依据
+            ticker_data = requests.get(ticker_url, timeout=REQUEST_TIMEOUT).json()
             volume_dict = {item['symbol']: float(item['quoteVolume']) for item in ticker_data}
-        
-        # 获取黑名单
-        blacklists = load_blacklist()
-        
-        # 过滤交易对
-        usdt_pairs = []
-        skipped_pairs = []  # 记录被过滤掉的交易对
-        
+
+        # Get blacklist as a set for O(1) lookup
+        blacklist_set = load_blacklist()
+
+        # Filter trading pairs
+        usdt_pairs: List[Union[str, Tuple[str, float]]] = []
+        skipped_pairs: List[str] = []
+
         for symbol in exchange_info['symbols']:
-            # 跳过黑名单中的币种
-            skip = False
             base_asset = symbol['baseAsset']
-            for blacklist in blacklists:
-                if blacklist in base_asset:
-                    skip = True
-                    skipped_pairs.append(f"{base_asset}/USDT")
-                    break
-            if skip:
+
+            # Skip blacklisted coins - O(1) set lookup
+            if base_asset in blacklist_set:
+                skipped_pairs.append(f"{base_asset}/USDT")
                 continue
-            
-            # 只获取USDT交易对，排除包含USD的币种
-            if (symbol['quoteAsset'] == 'USDT' and 
-                symbol['status'] == 'TRADING' and 
+
+            # Only get USDT pairs, exclude USD-containing assets
+            if (symbol['quoteAsset'] == 'USDT' and
+                symbol['status'] == 'TRADING' and
                 'USD' not in base_asset):
                 pair = f"{base_asset}/USDT"
-                
+
                 if mode == 'volume':
                     quote_volume = volume_dict.get(symbol['symbol'], 0)
                     usdt_pairs.append((pair, quote_volume))
                 else:
                     usdt_pairs.append(pair)
-        
+
         if skipped_pairs:
-            logger.info(f"已过滤掉以下交易对: {', '.join(skipped_pairs)}")
-        
+            logger.info(f"Filtered out pairs: {', '.join(skipped_pairs)}")
+
         if mode == 'volume':
-            # 按USDT交易金额排序并获取前N个
+            # Sort by USDT volume and get top N
             sorted_pairs = sorted(usdt_pairs, key=lambda x: x[1], reverse=True)
             logger.info("Top 10 pairs by USDT volume:")
             for pair, volume in sorted_pairs[:10]:
                 logger.info(f"{pair}: {volume:,.2f} USDT")
             return [pair for pair, _ in sorted_pairs[:top_n]]
-        
+
         return usdt_pairs
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"请求出错: {e}")
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Request timed out after {REQUEST_TIMEOUT} seconds")
         return None
-    except Exception as e:
-        logger.error(f"处理数据时出错: {e}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error: {e}")
+        return None
+    except (KeyError, ValueError) as e:
+        logger.error(f"Data processing error: {e}")
         return None
 
-def save_to_json(data, filename=None):
-    """将数据保存为JSON文件"""
+def save_to_json(data: List[str], filename: Optional[str] = None) -> bool:
+    """Save trading pairs data to a JSON file.
+
+    Args:
+        data: List of trading pair strings
+        filename: Output filename (defaults to timestamped filename)
+
+    Returns:
+        True if successful, False otherwise
+    """
     if filename is None:
-        # 使用当前时间作为文件名
         filename = f"binance_usdt_pairs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    
+
     try:
         filepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), filename)
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        logger.info(f"数据已保存到: {filename}")
+        logger.info(f"Data saved to: {filename}")
         return True
-    except Exception as e:
-        logger.error(f"保存文件时出错: {e}")
+    except (IOError, OSError) as e:
+        logger.error(f"Error saving file: {e}")
         return False
 
-def update_config_json(pairs, output_config):
-    """更新配置文件中的 pair_whitelist"""
+
+def update_config_json(pairs: List[str], output_config: str) -> bool:
+    """Update the pair_whitelist in a configuration file.
+
+    Args:
+        pairs: List of trading pair strings
+        output_config: Output config filename (saved in user_data directory)
+
+    Returns:
+        True if successful, False otherwise
+    """
     try:
-        # 首先读取原始配置文件作为模板
+        # Read original config as template
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'user_data/config.json')
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        
+
         config['exchange']['pair_whitelist'] = pairs
-        
-        # 使用指定的文件名保存到 user_data 目录
+
+        # Save to specified filename in user_data directory
         output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'user_data', output_config)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f"成功将交易对列表保存到: {output_path}")
+
+        logger.info(f"Successfully saved trading pairs to: {output_path}")
         return True
-    except Exception as e:
-        logger.error(f"更新配置文件时出错: {e}")
+    except FileNotFoundError:
+        logger.error(f"Config template not found: {config_path}")
+        return False
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error updating config file: {e}")
         return False
 
 def main():
