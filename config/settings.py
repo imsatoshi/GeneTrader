@@ -30,9 +30,13 @@ class Settings:
         'mutation_prob': {'min': 0.0, 'max': 1.0, 'type': float},
         'tournament_size': {'min': 1, 'type': int},
         'max_retries': {'min': 1, 'type': int},
+        'retry_delay': {'min': 0, 'type': (int, float)},  # Delay in seconds
         'pool_processes': {'min': 1, 'type': int},
         'num_pairs': {'min': 1, 'type': int},
         'backtest_timerange_weeks': {'min': 1, 'type': int},
+        'diversity_threshold': {'min': 0.0, 'max': 1.0, 'type': float},
+        'max_mutation_prob': {'min': 0.0, 'max': 1.0, 'type': float},
+        'checkpoint_frequency': {'min': 1, 'type': int},
     }
 
     def __init__(self, config_file: str = 'ga.json'):

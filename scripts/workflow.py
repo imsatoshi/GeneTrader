@@ -4,6 +4,7 @@ import sys
 import re
 import time
 import shutil
+import argparse
 import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -19,6 +20,7 @@ sys.path.insert(0, project_root)
 from utils.logging_config import logger
 from utils.fitness_helpers import extract_fitness, extract_generation, extract_strategy_name
 from config.config import REMOTE_SERVER, BARK_KEY, BARK_ENDPOINT
+from config.settings import settings
 from data.downloader import download_data  
 
 
@@ -311,9 +313,9 @@ class TradeWorkflow:
             "--timerange",
             timerange,
             "-d",
-            settings.project_dir + "/" + settings.data_dir,
+            os.path.join(settings.project_dir, settings.data_dir),
             "--userdir",
-            settings.project_dir + "/" + settings.user_dir,
+            os.path.join(settings.project_dir, settings.user_dir),
             "--timeframe-detail",
             "1m",
             "--enable-protections",

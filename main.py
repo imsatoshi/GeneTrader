@@ -1,6 +1,5 @@
 import argparse
 import json
-import random
 from typing import List, Optional, Tuple
 from datetime import datetime, date
 
@@ -9,7 +8,6 @@ from config.config import LOG_CONFIG
 from utils.logging_config import logger
 from utils.file_operations import create_directories
 from genetic_algorithm.individual import Individual
-from genetic_algorithm.population import Population
 from data.downloader import download_data
 from strategy.gen_template import generate_dynamic_template
 from optimization.genetic_optimizer import GeneticOptimizer
@@ -27,45 +25,6 @@ def load_trading_pairs(config_file: str) -> List[str]:
     with open(config_file, 'r') as f:
         config = json.load(f)
     return config['exchange']['pair_whitelist']
-
-
-def crossover_trading_pairs(parent1: Individual, parent2: Individual, num_pairs: int) -> List[str]:
-    """Crossover trading pairs from two parents."""
-    all_pairs = list(set(parent1.trading_pairs + parent2.trading_pairs))
-    if len(all_pairs) > num_pairs:
-        return random.sample(all_pairs, num_pairs)
-    return all_pairs
-
-
-def create_population(settings: Settings, all_pairs: List[str], population_size: int,
-                      initial_individuals: Optional[List[Individual]] = None) -> Population:
-    """Create initial population for genetic algorithm."""
-    population = Population.create_random(
-        size=population_size,
-        parameters=settings.parameters,
-        trading_pairs=all_pairs,
-        num_pairs=None if settings.fix_pairs else settings.num_pairs
-    )
-    if initial_individuals:
-        population.individuals.extend(initial_individuals)
-    return population
-
-
-def genetic_algorithm(settings: Settings,
-                      initial_individuals: Optional[List[Individual]] = None) -> List[Tuple[int, Individual]]:
-    """
-    Legacy genetic algorithm function - now wraps GeneticOptimizer.
-
-    Args:
-        settings: Settings object
-        initial_individuals: Optional list of initial individuals
-
-    Returns:
-        List of (generation, best_individual) tuples
-    """
-    all_pairs = load_trading_pairs(settings.config_file)
-    optimizer = GeneticOptimizer(settings, settings.parameters, all_pairs)
-    return optimizer.optimize(initial_individuals)
 
 
 def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
