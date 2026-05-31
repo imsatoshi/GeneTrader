@@ -193,6 +193,9 @@ Examples:
    python main.py --download --start-date 20230101
    ```
 
+For safe Bollinger Evolver mock-first runner usage, see
+`docs/bollinger_evolver_runner_runbook.md`.
+
 
 ## Project Structure
 
