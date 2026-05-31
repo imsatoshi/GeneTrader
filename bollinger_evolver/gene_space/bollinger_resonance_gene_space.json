@@ -1,0 +1,36 @@
+{
+  "schema_name": "bollinger_resonance_gene_space",
+  "version": 1,
+  "genes": {
+    "bb_period_15m": { "type": "int", "min": 10, "max": 80 },
+    "bb_std_15m": { "type": "float", "min": 1.2, "max": 3.5 },
+    "bb_period_1h": { "type": "int", "min": 10, "max": 80 },
+    "bb_std_1h": { "type": "float", "min": 1.2, "max": 3.5 },
+    "bb_period_4h": { "type": "int", "min": 10, "max": 80 },
+    "bb_std_4h": { "type": "float", "min": 1.2, "max": 3.5 },
+    "w_4h": { "type": "float", "min": 0.0, "max": 1.0 },
+    "w_1h": { "type": "float", "min": 0.0, "max": 1.0 },
+    "w_15m": { "type": "float", "min": 0.0, "max": 1.0 },
+    "w_btc": { "type": "float", "min": 0.0, "max": 1.0 },
+    "w_volatility": { "type": "float", "min": 0.0, "max": 1.0 },
+    "w_momentum": { "type": "float", "min": 0.0, "max": 1.0 },
+    "min_long_score": { "type": "float", "min": 0.0, "max": 100.0 },
+    "min_short_score": { "type": "float", "min": 0.0, "max": 100.0 },
+    "mode": {
+      "type": "choice",
+      "choice": ["mean_reversion", "breakout", "hybrid"]
+    },
+    "risk_low_score": { "type": "float", "min": 0.0, "max": 1.0 },
+    "risk_mid_score": { "type": "float", "min": 0.0, "max": 1.0 },
+    "risk_high_score": { "type": "float", "min": 0.0, "max": 1.0 },
+    "max_position_risk": { "type": "float", "min": 0.001, "max": 0.05 },
+    "max_dca_orders": { "type": "int", "min": 0, "max": 8 },
+    "dca_score_min": { "type": "float", "min": 0.0, "max": 100.0 },
+    "atr_stop_mult": { "type": "float", "min": 0.5, "max": 5.0 },
+    "dca_drawdown_trigger_1": { "type": "float", "min": -0.5, "max": 0.0 },
+    "dca_drawdown_trigger_2": { "type": "float", "min": -0.5, "max": 0.0 },
+    "dca_size_mult_1": { "type": "float", "min": 0.0, "max": 3.0 },
+    "dca_size_mult_2": { "type": "float", "min": 0.0, "max": 3.0 },
+    "max_strategy_leverage": { "type": "float", "min": 1.0, "max": 10.0 }
+  }
+}

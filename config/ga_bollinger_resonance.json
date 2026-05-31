@@ -1,0 +1,17 @@
+{
+  "base_timeframe": "15m",
+  "informative_timeframes": ["1h", "4h"],
+  "market_filter_pair": "BTC/USDT",
+  "population_size": 30,
+  "generations": 20,
+  "crossover_prob": 0.8,
+  "mutation_prob": 0.2,
+  "pool_processes": 4,
+  "enable_walk_forward": true,
+  "walk_forward_train_weeks": 26,
+  "walk_forward_test_weeks": 4,
+  "min_trades_per_week": 0.5,
+  "max_drawdown_limit": 0.35,
+  "min_profit_factor": 1.0,
+  "random_seed": 42
+}
