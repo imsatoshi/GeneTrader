@@ -29,6 +29,14 @@ TIMEFRAME_MAP = {
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
+
+def _remove_file_quietly(path: str) -> None:
+    try:
+        if path and os.path.exists(path):
+            os.remove(path)
+    except OSError as exc:
+        logger.warning(f"Failed to remove temporary config {path}: {exc}")
+
 def render_strategy(params: list, strategy_name: str) -> str:
     # Generate the dynamic template
     template_content, template_params = generate_dynamic_template(settings.base_strategy_file, add_max_open_trades=settings.add_max_open_trades, add_dynamic_timeframes=settings.add_dynamic_timeframes)
@@ -105,84 +113,87 @@ def run_backtest(genes: list, trading_pairs: list, generation: int,
         config['timeframe'] = dynamic_timeframe
     config["exchange"]["pair_whitelist"] = trading_pairs
     config_file_name = os.path.join(settings.user_dir, f'temp_config_{timestamp}_{random_id}.json')
-    with open(config_file_name, 'w') as f:
-        json.dump(config, f, indent=4)
+    try:
+        with open(config_file_name, 'w') as f:
+            json.dump(config, f, indent=4)
 
-    timeframe = config['timeframe']
-    logger.info(f"Running backtest for generation {generation}")
+        timeframe = config['timeframe']
+        logger.info(f"Running backtest for generation {generation}")
 
-    # Use custom timerange if provided (for walk-forward validation)
-    if custom_timerange:
-        timerange = custom_timerange
-        logger.info(f"Using custom timerange: {timerange}")
-    else:
-        # Calculate the start_date for the timerange
-        end_date = datetime.now()
-        start_date = end_date - timedelta(weeks=settings.backtest_timerange_weeks)
-        timerange = f"{start_date.strftime('%Y%m%d')}-"
-    output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{timestamp}_{random_id}.txt"
-    # Build command as list for safer subprocess execution
-    cmd_args = [
-        settings.freqtrade_path, "backtesting",
-        "--strategy", strategy_name,
-        "-c", config_file_name,
-        "--timerange", timerange,
-        "-d", os.path.abspath(settings.data_dir),
-        "--userdir", os.path.abspath(settings.user_dir),
-        "--timeframe-detail", "1m",
-        "--enable-protections",
-        "--cache", "none"
-    ]
+        # Use custom timerange if provided (for walk-forward validation)
+        if custom_timerange:
+            timerange = custom_timerange
+            logger.info(f"Using custom timerange: {timerange}")
+        else:
+            # Calculate the start_date for the timerange
+            end_date = datetime.now()
+            start_date = end_date - timedelta(weeks=settings.backtest_timerange_weeks)
+            timerange = f"{start_date.strftime('%Y%m%d')}-"
+        output_file = f"{settings.results_dir}/backtest_results_gen{generation}_{timestamp}_{random_id}.txt"
+        # Build command as list for safer subprocess execution
+        cmd_args = [
+            settings.freqtrade_path, "backtesting",
+            "--strategy", strategy_name,
+            "-c", config_file_name,
+            "--timerange", timerange,
+            "-d", os.path.abspath(settings.data_dir),
+            "--userdir", os.path.abspath(settings.user_dir),
+            "--timeframe-detail", "1m",
+            "--enable-protections",
+            "--cache", "none"
+        ]
 
-    for attempt in range(settings.max_retries):
-        logger.info(f"Running backtest command (attempt {attempt + 1}/{settings.max_retries})")
-        try:
-            with open(output_file, 'w') as outf:
-                result = subprocess.run(
-                    cmd_args,
-                    stdout=outf,
-                    stderr=subprocess.STDOUT,
-                    timeout=600  # 10 minute timeout
-                )
+        for attempt in range(settings.max_retries):
+            logger.info(f"Running backtest command (attempt {attempt + 1}/{settings.max_retries})")
+            try:
+                with open(output_file, 'w') as outf:
+                    result = subprocess.run(
+                        cmd_args,
+                        stdout=outf,
+                        stderr=subprocess.STDOUT,
+                        timeout=600  # 10 minute timeout
+                    )
 
-            if result.returncode == 0:
-                logger.info(f"Backtesting successful for generation {generation}")
-                break
-            else:
+                if result.returncode == 0:
+                    logger.info(f"Backtesting successful for generation {generation}")
+                    break
+                else:
+                    if attempt < settings.max_retries - 1:
+                        logger.warning(f"Backtesting failed for generation {generation}. Retrying...")
+                        time.sleep(settings.retry_delay)
+            except subprocess.TimeoutExpired:
+                logger.error(f"Backtesting timed out for generation {generation}")
                 if attempt < settings.max_retries - 1:
-                    logger.warning(f"Backtesting failed for generation {generation}. Retrying...")
                     time.sleep(settings.retry_delay)
-        except subprocess.TimeoutExpired:
-            logger.error(f"Backtesting timed out for generation {generation}")
-            if attempt < settings.max_retries - 1:
-                time.sleep(settings.retry_delay)
-        except Exception as e:
-            logger.error(f"Error running backtest: {e}")
-            if attempt < settings.max_retries - 1:
-                time.sleep(settings.retry_delay)
-    
-    parsed_result = parse_backtest_results(output_file)
+            except Exception as e:
+                logger.error(f"Error running backtest: {e}")
+                if attempt < settings.max_retries - 1:
+                    time.sleep(settings.retry_delay)
 
-    if parsed_result['total_trades'] == 0:
-        return float('-inf')  # Heavily penalize strategies that don't trade
+        parsed_result = parse_backtest_results(output_file)
 
-    # Calculate backtest weeks for fitness function
-    backtest_weeks = settings.backtest_timerange_weeks
-    if custom_timerange and '-' in custom_timerange:
-        # Parse custom timerange to calculate weeks
-        try:
-            parts = custom_timerange.split('-')
-            if len(parts) >= 2 and parts[0] and parts[1]:
-                start = datetime.strptime(parts[0], '%Y%m%d')
-                end = datetime.strptime(parts[1], '%Y%m%d')
-                backtest_weeks = max(1, (end - start).days // 7)
-        except (ValueError, IndexError):
-            pass  # Use default if parsing fails
+        if parsed_result['total_trades'] == 0:
+            return float('-inf')  # Heavily penalize strategies that don't trade
 
-    return fitness_function(
-        parsed_result, generation, strategy_name, timeframe,
-        num_parameters=num_parameters, backtest_weeks=backtest_weeks
-    )
+        # Calculate backtest weeks for fitness function
+        backtest_weeks = settings.backtest_timerange_weeks
+        if custom_timerange and '-' in custom_timerange:
+            # Parse custom timerange to calculate weeks
+            try:
+                parts = custom_timerange.split('-')
+                if len(parts) >= 2 and parts[0] and parts[1]:
+                    start = datetime.strptime(parts[0], '%Y%m%d')
+                    end = datetime.strptime(parts[1], '%Y%m%d')
+                    backtest_weeks = max(1, (end - start).days // 7)
+            except (ValueError, IndexError):
+                pass  # Use default if parsing fails
+
+        return fitness_function(
+            parsed_result, generation, strategy_name, timeframe,
+            num_parameters=num_parameters, backtest_weeks=backtest_weeks
+        )
+    finally:
+        _remove_file_quietly(config_file_name)
 
 if __name__ == "__main__":
     # 测试 render_strategy 函数

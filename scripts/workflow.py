@@ -1,4 +1,5 @@
 """Trade workflow automation for GeneTrader."""
+import json
 import os
 import sys
 import re
@@ -22,6 +23,43 @@ from utils.fitness_helpers import extract_fitness, extract_generation, extract_s
 from config.config import REMOTE_SERVER, BARK_KEY, BARK_ENDPOINT
 from config.settings import settings
 from data.downloader import download_data  
+
+
+SENSITIVE_CONFIG_KEYS = {
+    "api_key",
+    "api_secret",
+    "agent_api_key",
+    "jwt_secret_key",
+    "key",
+    "password",
+    "private_key",
+    "secret",
+    "token",
+}
+
+
+def redact_sensitive_config(value):
+    """Return a JSON-safe copy with secret-bearing config values redacted."""
+    if isinstance(value, dict):
+        redacted = {}
+        for key, nested_value in value.items():
+            if key.lower() in SENSITIVE_CONFIG_KEYS:
+                redacted[key] = "__REDACTED__"
+            else:
+                redacted[key] = redact_sensitive_config(nested_value)
+        return redacted
+    if isinstance(value, list):
+        return [redact_sensitive_config(item) for item in value]
+    return value
+
+
+def copy_redacted_config(source_path, destination_path):
+    """Copy a config JSON without leaking exchange/API credentials."""
+    with open(source_path, "r", encoding="utf-8") as source:
+        config = json.load(source)
+    redacted = redact_sensitive_config(config)
+    with open(destination_path, "w", encoding="utf-8") as destination:
+        json.dump(redacted, destination, indent=4)
 
 
 def clean_directory(path):
@@ -176,7 +214,7 @@ class TradeWorkflow:
 
         # 复制配置文件
         if os.path.exists(config_file):
-            shutil.copy2(config_file, os.path.join(results_dir, "config.json"))
+            copy_redacted_config(config_file, os.path.join(results_dir, "config.json"))
         else:
             logger.warning(f"配置文件不存在：{config_file}")
             return False
@@ -253,7 +291,11 @@ class TradeWorkflow:
                 return True
             else:
                 # restart freqtrade by restful api  
-                return self.restart_freqtrade(self.remote_server['api_url'], self.remote_server['username'], self.remote_server['password'])
+                return self.restart_freqtrade(
+                    self.remote_server['api_url'],
+                    self.remote_server['freqtrade_username'],
+                    self.remote_server['freqtrade_password'],
+                )
         except Exception as e:
             logger.error(f"重启交易程序失败: {str(e)}")
             return False

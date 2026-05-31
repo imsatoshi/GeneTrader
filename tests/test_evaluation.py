@@ -199,6 +199,7 @@ class TestFitnessFunction(unittest.TestCase):
             'sharpe_ratio': 2.0,
             'sortino_ratio': 2.5,
             'profit_factor': 2.0,
+            'total_trades': 105,
             'daily_avg_trades': 3.5,
             'avg_trade_duration': 720  # 12 hours
         }
@@ -209,6 +210,7 @@ class TestFitnessFunction(unittest.TestCase):
             'sharpe_ratio': 0.5,
             'sortino_ratio': 0.5,
             'profit_factor': 0.5,
+            'total_trades': 5,
             'daily_avg_trades': 0.5,
             'avg_trade_duration': 10000  # Too long
         }

@@ -196,10 +196,10 @@
         "listen_ip_address": "0.0.0.0",
         "listen_port": 8080,
         "verbosity": "info",
-        "jwt_secret_key": "somethingrandom",
+        "jwt_secret_key": "CHANGE_ME_JWT_SECRET_PLACEHOLDER",
         "CORS_origins": [],
-        "username": "jwz",
-        "password": "zhangjiawei"
+        "username": "CHANGE_ME_USERNAME_PLACEHOLDER",
+        "password": "CHANGE_ME_PASSWORD_PLACEHOLDER"
     },
     "bot_name": "freqtrade",
     "initial_state": "running",
