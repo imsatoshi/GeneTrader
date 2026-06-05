@@ -5,6 +5,8 @@ It provides placeholders for future Bollinger-specific evolution logic,
 configuration loading, reporting, and test coverage.
 """
 
+from typing import Any
+
 from .config_loader import (
     BollingerConfigError,
     REQUIRED_FIELDS,
@@ -60,12 +62,33 @@ from .ga import (
     write_generation_summary,
 )
 
+
+def run_offline_data_gate(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    from .data_gate import run_offline_data_gate as _run_offline_data_gate
+
+    return _run_offline_data_gate(*args, **kwargs)
+
+
+def build_offline_data_manifest(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    from .data_manifest import build_offline_data_manifest as _build_offline_data_manifest
+
+    return _build_offline_data_manifest(*args, **kwargs)
+
+
+def run_backtest_preflight(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    from .preflight import run_backtest_preflight as _run_backtest_preflight
+
+    return _run_backtest_preflight(*args, **kwargs)
+
 __all__ = [
     "BollingerConfigError",
     "REQUIRED_FIELDS",
     "load_bollinger_config",
     "validate_bollinger_config",
+    "run_offline_data_gate",
+    "build_offline_data_manifest",
     "evaluate_data_coverage_gate",
+    "run_backtest_preflight",
     "DEFAULT_EVALUATION_DIR",
     "FitnessConfig",
     "FitnessResult",
