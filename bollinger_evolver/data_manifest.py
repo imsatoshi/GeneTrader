@@ -587,3 +587,111 @@ def build_offline_data_manifest(
         manifest["markdown_path"] = str(markdown_path)
 
     return sanitize_mapping(manifest)
+
+
+def build_manifest_from_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
+    """Build a manifest-like payload from metadata-only offline inventory."""
+
+    if not isinstance(inventory, dict):
+        raise ValueError("inventory must be a dict")
+    if "files" not in inventory or not isinstance(inventory["files"], list):
+        raise ValueError("inventory.files must be a list")
+
+    datasets: list[dict[str, Any]] = []
+    for item in inventory["files"]:
+        if not isinstance(item, Mapping):
+            raise ValueError("inventory.files entries must be mappings")
+        datasets.append(
+            {
+                "path": item.get("path"),
+                "format": item.get("format"),
+                "size_bytes": item.get("size_bytes"),
+                "pair": item.get("pair"),
+                "timeframe": item.get("timeframe"),
+            }
+        )
+
+    return sanitize_mapping(
+        {
+            "source": "offline_inventory",
+            "root": inventory.get("root"),
+            "datasets": datasets,
+        }
+    )
+
+
+def save_offline_data_manifest(manifest: Mapping[str, Any], path: str | Path) -> str:
+    """Write a sanitized offline data manifest JSON to an explicit path."""
+
+    if not isinstance(manifest, Mapping):
+        raise ValueError("manifest_must_be_object")
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(sanitize_mapping(manifest), ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return str(output_path)
+
+
+def load_offline_data_manifest(path: str | Path) -> dict[str, Any]:
+    """Load an offline data manifest JSON object from an explicit path."""
+
+    manifest_path = Path(path)
+    if not manifest_path.exists():
+        raise FileNotFoundError(manifest_path)
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("manifest_json_invalid") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("manifest_json_must_be_object")
+    return sanitize_mapping(payload)
+
+
+def summarize_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a compact summary for inventory or coverage manifest payloads."""
+
+    if not isinstance(manifest, Mapping):
+        return {
+            "dataset_count": 0,
+            "pairs": [],
+            "timeframes": [],
+            "missing_pair_timeframe_count": 0,
+            "valid": False,
+        }
+    datasets = manifest.get("datasets")
+    if not isinstance(datasets, list):
+        datasets = manifest.get("pair_timeframes")
+    if not isinstance(datasets, list):
+        datasets = []
+    pairs = sorted(
+        {
+            str(item.get("pair"))
+            for item in datasets
+            if isinstance(item, Mapping) and item.get("pair") not in (None, "unknown")
+        }
+    )
+    timeframes = sorted(
+        {
+            str(item.get("timeframe"))
+            for item in datasets
+            if isinstance(item, Mapping) and item.get("timeframe") not in (None, "unknown")
+        }
+    )
+    coverage_summary = manifest.get("coverage_summary")
+    missing = []
+    if isinstance(coverage_summary, Mapping) and isinstance(
+        coverage_summary.get("missing_pair_timeframes"),
+        list,
+    ):
+        missing = coverage_summary["missing_pair_timeframes"]
+    return sanitize_mapping(
+        {
+            "dataset_count": len(datasets),
+            "pairs": pairs,
+            "timeframes": timeframes,
+            "missing_pair_timeframe_count": len(missing),
+            "valid": True,
+        }
+    )

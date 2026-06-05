@@ -8,6 +8,7 @@ import io
 import json
 import sys
 from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -16,6 +17,7 @@ from bollinger_evolver.data_quality import evaluate_data_coverage_gate
 from bollinger_evolver.evaluators import sanitize_mapping
 from bollinger_evolver.ga.backtest_evaluation_adapter import BacktestEvaluationAdapter
 from bollinger_evolver.ga.runner_cli import main as runner_cli_main
+from bollinger_evolver.offline_paths import normalize_offline_relative_path, offline_path_sort_key
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +61,412 @@ RUNNER_FORBIDDEN_ARGS = (
     "--api-key",
     "--secret",
 )
+OFFLINE_DATA_PREFLIGHT_REPORT_SCHEMA_NAME = "offline_data_preflight_report"
+OFFLINE_DATA_PREFLIGHT_REPORT_SCHEMA_VERSION = "1.0"
+OFFLINE_DATA_PREFLIGHT_REPORT_GENERATED_BY = "bollinger_evolver"
+OFFLINE_DATA_PREFLIGHT_REPORT_REQUIRED_KEYS = {
+    "ok",
+    "root",
+    "scanned_files",
+    "accepted_files",
+    "rejected_files",
+    "total_size_bytes",
+    "summary",
+    "datasets",
+    "issues",
+    "warnings",
+    "metadata",
+}
+OFFLINE_DATA_PREFLIGHT_ISSUE_SEVERITIES = {"error", "warning"}
+
+
+@dataclass(frozen=True)
+class OfflineDataPreflightIssue:
+    code: str
+    message: str
+    path: str | None = None
+    severity: str = "error"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "code": self.code,
+            "message": self.message,
+            "path": self.path,
+            "severity": self.severity,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "OfflineDataPreflightIssue":
+        return cls(
+            code=str(payload.get("code", "")),
+            message=str(payload.get("message", "")),
+            path=payload.get("path") if payload.get("path") is None else str(payload.get("path")),
+            severity=str(payload.get("severity", "error")),
+        )
+
+
+@dataclass(frozen=True)
+class OfflineDataPreflightSummary:
+    scanned_files: int
+    accepted_files: int
+    rejected_files: int
+    total_size_bytes: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "scanned_files": self.scanned_files,
+            "accepted_files": self.accepted_files,
+            "rejected_files": self.rejected_files,
+            "total_size_bytes": self.total_size_bytes,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "OfflineDataPreflightSummary":
+        return cls(
+            scanned_files=int(payload.get("scanned_files", 0) or 0),
+            accepted_files=int(payload.get("accepted_files", 0) or 0),
+            rejected_files=int(payload.get("rejected_files", 0) or 0),
+            total_size_bytes=int(payload.get("total_size_bytes", 0) or 0),
+        )
+
+
+@dataclass(frozen=True)
+class OfflineDataPreflightReport:
+    ok: bool
+    root: str
+    scanned_files: int
+    accepted_files: int
+    rejected_files: int
+    total_size_bytes: int
+    schema_name: str = OFFLINE_DATA_PREFLIGHT_REPORT_SCHEMA_NAME
+    schema_version: str = OFFLINE_DATA_PREFLIGHT_REPORT_SCHEMA_VERSION
+    generated_by: str = OFFLINE_DATA_PREFLIGHT_REPORT_GENERATED_BY
+    datasets: list[dict[str, Any]] = field(default_factory=list)
+    issues: list[OfflineDataPreflightIssue] = field(default_factory=list)
+    warnings: list[OfflineDataPreflightIssue] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        metadata = sanitize_mapping(self.metadata)
+        metadata.setdefault("contract_version", self.schema_version)
+        summary = OfflineDataPreflightSummary(
+            scanned_files=self.scanned_files,
+            accepted_files=self.accepted_files,
+            rejected_files=self.rejected_files,
+            total_size_bytes=self.total_size_bytes,
+        ).to_dict()
+        return {
+            "schema_name": self.schema_name,
+            "schema_version": self.schema_version,
+            "generated_by": self.generated_by,
+            "ok": self.ok,
+            "root": self.root,
+            "scanned_files": self.scanned_files,
+            "accepted_files": self.accepted_files,
+            "rejected_files": self.rejected_files,
+            "total_size_bytes": self.total_size_bytes,
+            "summary": summary,
+            "datasets": [dict(item) for item in self.datasets],
+            "issues": [issue.to_dict() for issue in self.issues],
+            "warnings": [warning.to_dict() for warning in self.warnings],
+            "metadata": metadata,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "OfflineDataPreflightReport":
+        return cls(
+            ok=bool(payload.get("ok")),
+            root=str(payload.get("root", "")),
+            scanned_files=int(payload.get("scanned_files", 0) or 0),
+            accepted_files=int(payload.get("accepted_files", 0) or 0),
+            rejected_files=int(payload.get("rejected_files", 0) or 0),
+            total_size_bytes=int(payload.get("total_size_bytes", 0) or 0),
+            schema_name=str(payload.get("schema_name", OFFLINE_DATA_PREFLIGHT_REPORT_SCHEMA_NAME)),
+            schema_version=str(
+                payload.get("schema_version", OFFLINE_DATA_PREFLIGHT_REPORT_SCHEMA_VERSION)
+            ),
+            generated_by=str(payload.get("generated_by", OFFLINE_DATA_PREFLIGHT_REPORT_GENERATED_BY)),
+            datasets=[dict(item) for item in payload.get("datasets", []) if isinstance(item, Mapping)],
+            issues=[
+                OfflineDataPreflightIssue.from_dict(item)
+                for item in payload.get("issues", [])
+                if isinstance(item, Mapping)
+            ],
+            warnings=[
+                OfflineDataPreflightIssue.from_dict(item)
+                for item in payload.get("warnings", [])
+                if isinstance(item, Mapping)
+            ],
+            metadata=dict(payload.get("metadata", {}) or {}),
+        )
+
+    def write_json_report(self, path: str | Path) -> None:
+        Path(path).write_text(self.to_json() + "\n", encoding="utf-8")
+
+
+def validate_offline_data_preflight_report_dict(
+    data: Mapping[str, Any],
+) -> list[OfflineDataPreflightIssue]:
+    """Validate the lightweight offline preflight report contract."""
+
+    issues: list[OfflineDataPreflightIssue] = []
+    missing_keys = sorted(OFFLINE_DATA_PREFLIGHT_REPORT_REQUIRED_KEYS - set(data.keys()))
+    for key in missing_keys:
+        issues.append(
+            OfflineDataPreflightIssue(
+                code="missing_required_key",
+                message=f"missing required report key: {key}",
+                path=key,
+            )
+        )
+
+    if "ok" in data and not isinstance(data.get("ok"), bool):
+        issues.append(OfflineDataPreflightIssue(code="invalid_ok", message="ok must be bool", path="ok"))
+
+    for key in ("scanned_files", "accepted_files", "rejected_files", "total_size_bytes"):
+        if key in data and not isinstance(data.get(key), int):
+            issues.append(
+                OfflineDataPreflightIssue(
+                    code="invalid_counter",
+                    message=f"{key} must be int",
+                    path=key,
+                )
+            )
+
+    summary = data.get("summary")
+    if "summary" in data:
+        if not isinstance(summary, Mapping):
+            issues.append(
+                OfflineDataPreflightIssue(
+                    code="invalid_summary",
+                    message="summary must be mapping",
+                    path="summary",
+                )
+            )
+        else:
+            for key in ("scanned_files", "accepted_files", "rejected_files", "total_size_bytes"):
+                if not isinstance(summary.get(key), int):
+                    issues.append(
+                        OfflineDataPreflightIssue(
+                            code="invalid_summary_counter",
+                            message=f"summary.{key} must be int",
+                            path=f"summary.{key}",
+                        )
+                    )
+
+    for key in ("datasets", "issues", "warnings"):
+        if key in data and not isinstance(data.get(key), list):
+            issues.append(
+                OfflineDataPreflightIssue(
+                    code="invalid_list_field",
+                    message=f"{key} must be list",
+                    path=key,
+                )
+            )
+
+    for collection_name in ("issues", "warnings"):
+        collection = data.get(collection_name)
+        if not isinstance(collection, list):
+            continue
+        for index, item in enumerate(collection):
+            if not isinstance(item, Mapping):
+                issues.append(
+                    OfflineDataPreflightIssue(
+                        code="invalid_issue_shape",
+                        message=f"{collection_name}[{index}] must be mapping",
+                        path=f"{collection_name}[{index}]",
+                    )
+                )
+                continue
+            severity = item.get("severity")
+            if severity not in OFFLINE_DATA_PREFLIGHT_ISSUE_SEVERITIES:
+                issues.append(
+                    OfflineDataPreflightIssue(
+                        code="invalid_issue_severity",
+                        message="issue severity must be error or warning",
+                        path=f"{collection_name}[{index}].severity",
+                    )
+                )
+
+    datasets = data.get("datasets")
+    if isinstance(datasets, list):
+        for index, dataset in enumerate(datasets):
+            if not isinstance(dataset, Mapping):
+                issues.append(
+                    OfflineDataPreflightIssue(
+                        code="invalid_dataset_shape",
+                        message=f"datasets[{index}] must be mapping",
+                        path=f"datasets[{index}]",
+                    )
+                )
+                continue
+            required_dataset_keys = {"path", "relative_path", "suffix", "file_type", "size_bytes"}
+            for key in sorted(required_dataset_keys - set(dataset.keys())):
+                issues.append(
+                    OfflineDataPreflightIssue(
+                        code="missing_dataset_key",
+                        message=f"missing dataset key: {key}",
+                        path=f"datasets[{index}].{key}",
+                    )
+                )
+            if "size_bytes" in dataset and not isinstance(dataset.get("size_bytes"), int):
+                issues.append(
+                    OfflineDataPreflightIssue(
+                        code="invalid_dataset_size",
+                        message="dataset size_bytes must be int",
+                        path=f"datasets[{index}].size_bytes",
+                    )
+                )
+
+    try:
+        json.dumps(data, sort_keys=True)
+    except TypeError as exc:
+        issues.append(
+            OfflineDataPreflightIssue(
+                code="not_json_serializable",
+                message=f"report contains non-JSON-serializable value: {type(exc).__name__}",
+                path=None,
+            )
+        )
+
+    return issues
+
+
+def _offline_report_payload(report: OfflineDataPreflightReport | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(report, OfflineDataPreflightReport):
+        return report.to_dict()
+    if isinstance(report, Mapping):
+        return sanitize_mapping(report)
+    raise ValueError("report_must_be_object")
+
+
+def render_offline_data_preflight_report(
+    report: OfflineDataPreflightReport | Mapping[str, Any],
+    *,
+    output_format: str = "text",
+) -> str:
+    """Render an offline data preflight report as deterministic text or Markdown."""
+
+    payload = _offline_report_payload(report)
+    normalized_format = output_format.strip().lower()
+    if normalized_format not in {"text", "markdown"}:
+        raise ValueError("unsupported_report_format")
+
+    issues = payload.get("issues") if isinstance(payload.get("issues"), list) else []
+    warnings = payload.get("warnings") if isinstance(payload.get("warnings"), list) else []
+    datasets = payload.get("datasets") if isinstance(payload.get("datasets"), list) else []
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), Mapping) else {}
+    coverage_matrix = (
+        metadata.get("coverage_matrix")
+        if isinstance(metadata.get("coverage_matrix"), Mapping)
+        else None
+    )
+    status = "PASS" if payload.get("ok") else "FAIL"
+    root = str(payload.get("root", "unknown"))
+    scanned_files = int(payload.get("scanned_files", 0) or 0)
+    accepted_files = int(payload.get("accepted_files", 0) or 0)
+    rejected_files = int(payload.get("rejected_files", 0) or 0)
+
+    if normalized_format == "markdown":
+        lines = [
+            "# Offline Data Preflight Report",
+            "",
+            "## Summary",
+            f"- Status: `{status}`",
+            f"- Root: `{root}`",
+            f"- Scanned files: `{scanned_files}`",
+            f"- Accepted files: `{accepted_files}`",
+            f"- Rejected files: `{rejected_files}`",
+            "",
+            "## Issues",
+        ]
+        lines.extend(
+            f"- `{item.get('code', 'unknown_error')}`: {item.get('message', 'unknown')}"
+            for item in issues
+            if isinstance(item, Mapping)
+        )
+        if not issues:
+            lines.append("- none")
+        lines.append("")
+        lines.append("## Warnings")
+        lines.extend(
+            f"- `{item.get('code', 'unknown_warning')}`: {item.get('message', 'unknown')}"
+            for item in warnings
+            if isinstance(item, Mapping)
+        )
+        if not warnings:
+            lines.append("- none")
+        lines.append("")
+        lines.append("## Coverage Matrix")
+        if coverage_matrix and coverage_matrix.get("matrix"):
+            timeframes = [str(item) for item in coverage_matrix.get("timeframes", [])]
+            lines.append("| Pair | " + " | ".join(timeframes) + " |")
+            lines.append("| --- | " + " | ".join("---" for _ in timeframes) + " |")
+            for row in coverage_matrix.get("matrix", []):
+                if not isinstance(row, Mapping):
+                    continue
+                cells = row.get("cells") if isinstance(row.get("cells"), list) else []
+                statuses = [
+                    str(cell.get("status", "missing")) if isinstance(cell, Mapping) else "missing"
+                    for cell in cells
+                ]
+                lines.append(f"| {row.get('pair', 'unknown')} | " + " | ".join(statuses) + " |")
+        else:
+            lines.append("- no requirements coverage matrix")
+        lines.append("")
+        lines.append("## Datasets")
+        lines.extend(
+            f"- `{item.get('relative_path') or item.get('path')}`"
+            for item in datasets
+            if isinstance(item, Mapping)
+        )
+        if not datasets:
+            lines.append("- none")
+        return "\n".join(lines) + "\n"
+
+    lines = [
+        "Offline Data Preflight Report",
+        f"status: {status}",
+        f"root: {root}",
+        f"scanned_files: {scanned_files}",
+        f"accepted_files: {accepted_files}",
+        f"rejected_files: {rejected_files}",
+        "issues:",
+    ]
+    lines.extend(
+        f"- {item.get('code', 'unknown_error')}: {item.get('message', 'unknown')}"
+        for item in issues
+        if isinstance(item, Mapping)
+    )
+    if not issues:
+        lines.append("- none")
+    lines.append("warnings:")
+    lines.extend(
+        f"- {item.get('code', 'unknown_warning')}: {item.get('message', 'unknown')}"
+        for item in warnings
+        if isinstance(item, Mapping)
+    )
+    if not warnings:
+        lines.append("- none")
+    lines.append("coverage_matrix:")
+    if coverage_matrix and coverage_matrix.get("matrix"):
+        timeframes = ", ".join(str(item) for item in coverage_matrix.get("timeframes", []))
+        lines.append(f"- timeframes: {timeframes}")
+        for row in coverage_matrix.get("matrix", []):
+            if not isinstance(row, Mapping):
+                continue
+            statuses = []
+            cells = row.get("cells") if isinstance(row.get("cells"), list) else []
+            for cell in cells:
+                if isinstance(cell, Mapping):
+                    statuses.append(f"{cell.get('timeframe')}: {cell.get('status')}")
+            lines.append(f"- {row.get('pair', 'unknown')}: {', '.join(statuses)}")
+    else:
+        lines.append("- no requirements coverage matrix")
+    return "\n".join(lines) + "\n"
 
 
 def _resolve_path(value: str | Path | None) -> Path | None:
@@ -492,6 +900,189 @@ def _check_data_manifest_state(
             },
         ),
         False,
+    )
+
+
+def _report_dataset_from_manifest_item(item: Mapping[str, Any]) -> dict[str, Any]:
+    file_format = item.get("format")
+    relative_path = normalize_offline_relative_path(item.get("path"))
+    return {
+        "path": relative_path,
+        "relative_path": relative_path,
+        "suffix": f".{file_format}" if file_format else None,
+        "file_type": file_format,
+        "format": file_format,
+        "size_bytes": item.get("size_bytes"),
+        "pair": item.get("pair"),
+        "timeframe": item.get("timeframe"),
+    }
+
+
+def _issue_from_gate_error(error: Any) -> OfflineDataPreflightIssue:
+    if isinstance(error, Mapping):
+        code = str(error.get("code", "gate_error"))
+        pair = error.get("pair")
+        timeframe = error.get("timeframe")
+        details = " ".join(str(item) for item in (pair, timeframe) if item)
+        message = f"{code}: {details}" if details else code
+        return OfflineDataPreflightIssue(code=code, message=message, path=None, severity="error")
+
+    code = str(error)
+    path = None
+    message = code
+    if code.startswith("datasets["):
+        message = f"inventory_manifest_gate:{code}"
+    return OfflineDataPreflightIssue(code=code, message=message, path=path, severity="error")
+
+
+def _resolve_offline_data_requirements(
+    requirements: Mapping[str, Any] | None,
+    requirements_path: str | Path | None,
+) -> Mapping[str, Any] | None:
+    if requirements is not None and requirements_path is not None:
+        raise ValueError("requirements_conflict")
+    if requirements_path is None:
+        return requirements
+
+    from bollinger_evolver.data_gate import load_offline_data_requirements
+
+    return load_offline_data_requirements(requirements_path)
+
+
+def _unsupported_file_warnings(root_path: Path, accepted_paths: set[str]) -> list[OfflineDataPreflightIssue]:
+    if not root_path.exists() or not root_path.is_dir():
+        return []
+    warnings: list[OfflineDataPreflightIssue] = []
+    for path in sorted(item for item in root_path.rglob("*") if item.is_file()):
+        relative_path = path.relative_to(root_path).as_posix()
+        if relative_path in accepted_paths:
+            continue
+        warnings.append(
+            OfflineDataPreflightIssue(
+                code="unsupported_file",
+                message="unsupported file ignored by offline data inventory",
+                path=relative_path,
+                severity="warning",
+            )
+        )
+    return warnings
+
+
+def build_offline_data_preflight_report(
+    root: str | Path,
+    requirements: Mapping[str, Any] | None = None,
+    requirements_path: str | Path | None = None,
+) -> OfflineDataPreflightReport:
+    """Build a deterministic metadata-only report for offline data preflight."""
+
+    from bollinger_evolver.data_gate import run_inventory_manifest_gate
+    from bollinger_evolver.data_gate import build_requirements_coverage_matrix
+    from bollinger_evolver.data_gate import extract_data_gate_error_codes
+    from bollinger_evolver.data_manifest import build_manifest_from_inventory
+    from bollinger_evolver.offline_data import inventory_offline_data
+
+    resolved_requirements = _resolve_offline_data_requirements(requirements, requirements_path)
+    root_path = Path(root).expanduser().resolve()
+    inventory = inventory_offline_data(root_path)
+    manifest = build_manifest_from_inventory(inventory)
+    gate = run_inventory_manifest_gate(manifest, requirements=resolved_requirements)
+    coverage_matrix = (
+        build_requirements_coverage_matrix(manifest, resolved_requirements)
+        if resolved_requirements is not None
+        else None
+    )
+
+    datasets = [
+        _report_dataset_from_manifest_item(item)
+        for item in manifest.get("datasets", [])
+        if isinstance(item, Mapping)
+    ]
+    datasets = sorted(
+        datasets,
+        key=lambda item: offline_path_sort_key(item.get("relative_path") or ""),
+    )
+    accepted_paths = {str(item.get("relative_path")) for item in datasets}
+    warnings = _unsupported_file_warnings(root_path, accepted_paths)
+    issues = [
+        OfflineDataPreflightIssue(
+            code=str(code),
+            message=str(code),
+            path=None,
+            severity="error",
+        )
+        for code in inventory.get("errors", [])
+    ]
+    issues.extend(_issue_from_gate_error(error) for error in gate.get("errors", []))
+    issues = sorted(issues, key=lambda item: (item.severity, item.code, item.path or ""))
+    warnings = sorted(warnings, key=lambda item: (item.severity, item.code, item.path or ""))
+
+    accepted_files = len(datasets)
+    rejected_files = len(warnings)
+    scanned_files = accepted_files + rejected_files
+    total_size_bytes = sum(
+        int(item.get("size_bytes") or 0)
+        for item in datasets
+        if isinstance(item.get("size_bytes"), int)
+    )
+
+    return OfflineDataPreflightReport(
+        ok=not issues and bool(gate.get("ok")),
+        root=str(root_path),
+        scanned_files=scanned_files,
+        accepted_files=accepted_files,
+        rejected_files=rejected_files,
+        total_size_bytes=total_size_bytes,
+        datasets=datasets,
+        issues=issues,
+        warnings=warnings,
+        metadata={
+            "source": "offline_data_preflight",
+            "inventory_source": "metadata_only",
+            "manifest_source": manifest.get("source"),
+            "gate_ok": bool(gate.get("ok")),
+            "error_codes": extract_data_gate_error_codes(list(gate.get("errors") or [])),
+            "requirements": sanitize_mapping(resolved_requirements or {}),
+            "coverage_matrix": coverage_matrix,
+            "summary": OfflineDataPreflightSummary(
+                scanned_files=scanned_files,
+                accepted_files=accepted_files,
+                rejected_files=rejected_files,
+                total_size_bytes=total_size_bytes,
+            ).to_dict(),
+        },
+    )
+
+
+def run_offline_data_preflight(
+    root: str | Path,
+    requirements: Mapping[str, Any] | None = None,
+    requirements_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Run metadata inventory, manifest conversion, gate checks, and report shaping."""
+
+    from bollinger_evolver.data_gate import run_inventory_manifest_gate
+    from bollinger_evolver.data_gate import extract_data_gate_error_codes
+    from bollinger_evolver.data_manifest import build_manifest_from_inventory
+    from bollinger_evolver.offline_data import inventory_offline_data
+
+    resolved_requirements = _resolve_offline_data_requirements(requirements, requirements_path)
+    inventory = inventory_offline_data(root)
+    manifest = build_manifest_from_inventory(inventory)
+    gate = run_inventory_manifest_gate(manifest, requirements=resolved_requirements)
+    report = build_offline_data_preflight_report(root, requirements=resolved_requirements)
+    errors = list(inventory.get("errors") or []) + list(gate.get("errors") or [])
+    error_codes = extract_data_gate_error_codes(errors)
+    return sanitize_mapping(
+        {
+            "ok": not errors and bool(gate.get("ok")),
+            "errors": errors,
+            "error_codes": error_codes,
+            "inventory": inventory,
+            "manifest": manifest,
+            "requirements": sanitize_mapping(resolved_requirements or {}),
+            "gate": gate,
+            "report": report.to_dict(),
+        }
     )
 
 

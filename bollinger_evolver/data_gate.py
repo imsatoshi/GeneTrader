@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -21,7 +22,11 @@ SCHEMA_VERSION = "offline_data_manifest.v1"
 DEFAULT_SYMBOL = "BTC/USDT"
 DEFAULT_REQUIRED_TIMEFRAMES = ["15m", "1h", "4h"]
 DEFAULT_MIN_CANDLES = 100
-ACCEPTED_FORMATS = {"json", "jsonl", "csv", "feather", "parquet"}
+ACCEPTED_FORMATS = {"json", "jsonl", "json.gz", "csv", "feather", "parquet"}
+INVENTORY_TIMEFRAME_RE = re.compile(r"^\d+[mhdwM]$")
+INVENTORY_PAIR_RE = re.compile(r"^[A-Z0-9]+/[A-Z0-9]+$")
+PAIR_SYMBOL_RE = re.compile(r"^(?P<base>[A-Za-z0-9]+)[/_-](?P<quote>[A-Za-z0-9]+)$")
+TIMEFRAME_RE = re.compile(r"^(?P<count>\d+)(?P<unit>[mhdwMHDW])$")
 
 
 def _project_root() -> Path:
@@ -36,7 +41,31 @@ def _resolve_path(value: str | Path) -> Path:
 
 
 def _normalize_required_timeframes(value: list[str] | tuple[str, ...] | None) -> list[str]:
-    return list(value or DEFAULT_REQUIRED_TIMEFRAMES)
+    return [
+        normalized
+        for item in (value or DEFAULT_REQUIRED_TIMEFRAMES)
+        if (normalized := normalize_timeframe(item)) is not None
+    ]
+
+
+def normalize_pair_symbol(value: Any) -> str | None:
+    """Normalize a simple spot pair token to BASE/QUOTE form."""
+
+    text = str(value).strip()
+    match = PAIR_SYMBOL_RE.match(text)
+    if match is None:
+        return None
+    return f"{match.group('base').upper()}/{match.group('quote').upper()}"
+
+
+def normalize_timeframe(value: Any) -> str | None:
+    """Normalize a timeframe token to lowercase count+unit form."""
+
+    text = str(value).strip()
+    match = TIMEFRAME_RE.match(text)
+    if match is None:
+        return None
+    return f"{match.group('count')}{match.group('unit').lower()}"
 
 
 def _read_first_json_row(path: Path) -> Any:
@@ -166,6 +195,452 @@ def _entry_lookup(manifest: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[
     return entries
 
 
+def _requirement_error(code: str, **details: Any) -> dict[str, Any]:
+    return {"code": code, **details}
+
+
+def load_offline_data_requirements(path: str | Path) -> dict[str, Any]:
+    """Load offline data pair/timeframe requirements from a JSON object file."""
+
+    requirements_path = Path(path)
+    if not requirements_path.exists():
+        raise FileNotFoundError(requirements_path)
+    try:
+        payload = json.loads(requirements_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("requirements_json_invalid") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("requirements_json_must_be_object")
+    return payload
+
+
+def extract_data_gate_error_codes(errors: list[Any]) -> list[str]:
+    """Return stable machine-readable codes from mixed string/dict gate errors."""
+
+    codes: list[str] = []
+    for error in errors:
+        if isinstance(error, Mapping):
+            code = error.get("code")
+            codes.append(str(code or "unknown_error"))
+        else:
+            codes.append(str(error))
+    return codes
+
+
+def _is_safe_relative_dataset_path(path_value: str) -> bool:
+    dataset_path = Path(path_value)
+    if dataset_path.is_absolute():
+        return False
+    if re.match(r"^[A-Za-z]:[\\/]", path_value):
+        return False
+    return ".." not in dataset_path.parts
+
+
+def _parse_iso_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _normalize_requirements(requirements: Mapping[str, Any] | None) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    if requirements is None:
+        return [], [], []
+    if not isinstance(requirements, Mapping):
+        return [], [], [_requirement_error("requirements_invalid")]
+
+    pairs = requirements.get("pairs")
+    timeframes = requirements.get("timeframes")
+    errors: list[dict[str, Any]] = []
+
+    if not isinstance(pairs, list):
+        errors.append(_requirement_error("requirements_invalid", field="pairs"))
+        pairs_list: list[str] = []
+    else:
+        pairs_list = []
+        for pair in pairs:
+            normalized_pair = normalize_pair_symbol(pair)
+            if normalized_pair is None:
+                errors.append(_requirement_error("requirements_pair_invalid", pair=str(pair)))
+                continue
+            pairs_list.append(normalized_pair)
+        if not pairs:
+            errors.append(_requirement_error("requirements_pairs_empty"))
+
+    if not isinstance(timeframes, list):
+        errors.append(_requirement_error("requirements_invalid", field="timeframes"))
+        timeframes_list: list[str] = []
+    else:
+        timeframes_list = []
+        for timeframe in timeframes:
+            normalized_timeframe = normalize_timeframe(timeframe)
+            if normalized_timeframe is None:
+                errors.append(
+                    _requirement_error("requirements_timeframe_invalid", timeframe=str(timeframe))
+                )
+                continue
+            timeframes_list.append(normalized_timeframe)
+        if not timeframes_list:
+            errors.append(_requirement_error("requirements_timeframes_empty"))
+
+    return pairs_list, timeframes_list, errors
+
+
+def _normalize_requirement_date_range(
+    requirements: Mapping[str, Any] | None,
+) -> tuple[datetime | None, datetime | None, list[dict[str, Any]]]:
+    if not isinstance(requirements, Mapping):
+        return None, None, []
+    start_value = requirements.get("start")
+    end_value = requirements.get("end")
+    errors: list[dict[str, Any]] = []
+    start = _parse_iso_datetime(start_value) if start_value is not None else None
+    end = _parse_iso_datetime(end_value) if end_value is not None else None
+    if start_value is not None and start is None:
+        errors.append(_requirement_error("requirements_start_invalid"))
+    if end_value is not None and end is None:
+        errors.append(_requirement_error("requirements_end_invalid"))
+    if start is not None and end is not None and start > end:
+        errors.append(_requirement_error("requirements_date_range_invalid"))
+    return start, end, errors
+
+
+def check_manifest_requirements(
+    manifest: Mapping[str, Any],
+    requirements: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Check required pair/timeframe coverage using inventory manifest metadata."""
+
+    errors: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    if requirements is None:
+        return {"ok": True, "errors": errors, "error_codes": [], "warnings": warnings}
+    if not isinstance(manifest, Mapping):
+        errors = [_requirement_error("manifest_not_mapping")]
+        return {
+            "ok": False,
+            "errors": errors,
+            "error_codes": extract_data_gate_error_codes(errors),
+            "warnings": warnings,
+        }
+
+    pairs, timeframes, requirement_errors = _normalize_requirements(requirements)
+    required_start, required_end, date_requirement_errors = _normalize_requirement_date_range(requirements)
+    requirement_errors.extend(date_requirement_errors)
+    errors.extend(requirement_errors)
+    if requirement_errors:
+        return sanitize_mapping(
+            {
+                "ok": False,
+                "errors": errors,
+                "error_codes": extract_data_gate_error_codes(errors),
+                "warnings": warnings,
+            }
+        )
+
+    datasets = manifest.get("datasets")
+    if not isinstance(datasets, list):
+        errors.append(_requirement_error("datasets_not_list"))
+        return sanitize_mapping(
+            {
+                "ok": False,
+                "errors": errors,
+                "error_codes": extract_data_gate_error_codes(errors),
+                "warnings": warnings,
+            }
+        )
+
+    available: set[tuple[str, str]] = set()
+    counts: dict[tuple[str, str], int] = {}
+    datasets_by_key: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
+    for dataset in datasets:
+        if not isinstance(dataset, Mapping):
+            continue
+        pair = dataset.get("pair")
+        timeframe = dataset.get("timeframe")
+        if isinstance(pair, str) and isinstance(timeframe, str):
+            available.add((pair, timeframe))
+            counts[(pair, timeframe)] = counts.get((pair, timeframe), 0) + 1
+            datasets_by_key.setdefault((pair, timeframe), []).append(dataset)
+
+    for pair in pairs:
+        for timeframe in timeframes:
+            if (pair, timeframe) not in available:
+                errors.append(
+                    _requirement_error(
+                        "missing_required_dataset",
+                        pair=pair,
+                        timeframe=timeframe,
+                    )
+                )
+            elif counts.get((pair, timeframe), 0) > 1:
+                warnings.append(
+                    _requirement_error(
+                        "duplicate_dataset_coverage",
+                        pair=pair,
+                        timeframe=timeframe,
+                        count=counts[(pair, timeframe)],
+                    )
+                )
+            elif required_start is not None or required_end is not None:
+                dataset = datasets_by_key[(pair, timeframe)][0]
+                dataset_start = _parse_iso_datetime(dataset.get("start"))
+                dataset_end = _parse_iso_datetime(dataset.get("end"))
+                if dataset_start is None or dataset_end is None:
+                    errors.append(
+                        _requirement_error(
+                            "dataset_date_range_missing",
+                            pair=pair,
+                            timeframe=timeframe,
+                        )
+                    )
+                elif required_start is not None and dataset_start > required_start:
+                    errors.append(
+                        _requirement_error(
+                            "dataset_starts_too_late",
+                            pair=pair,
+                            timeframe=timeframe,
+                        )
+                    )
+                elif required_end is not None and dataset_end < required_end:
+                    errors.append(
+                        _requirement_error(
+                            "dataset_ends_too_early",
+                            pair=pair,
+                            timeframe=timeframe,
+                        )
+                    )
+
+    return sanitize_mapping(
+        {
+            "ok": not errors,
+            "errors": errors,
+            "error_codes": extract_data_gate_error_codes(errors),
+            "warnings": warnings,
+        }
+    )
+
+
+def build_requirements_coverage_matrix(
+    manifest: Mapping[str, Any],
+    requirements: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build a sorted pair x timeframe coverage matrix from manifest metadata."""
+
+    if not isinstance(manifest, Mapping):
+        return {
+            "ok": False,
+            "errors": [_requirement_error("manifest_not_mapping")],
+            "pairs": [],
+            "timeframes": [],
+            "matrix": [],
+        }
+
+    pairs, timeframes, requirement_errors = _normalize_requirements(requirements)
+    if requirement_errors:
+        return sanitize_mapping(
+            {
+                "ok": False,
+                "errors": requirement_errors,
+                "pairs": [],
+                "timeframes": [],
+                "matrix": [],
+            }
+        )
+
+    datasets = manifest.get("datasets")
+    if not isinstance(datasets, list):
+        return {
+            "ok": False,
+            "errors": [_requirement_error("datasets_not_list")],
+            "pairs": [],
+            "timeframes": [],
+            "matrix": [],
+        }
+
+    available: set[tuple[str, str]] = set()
+    for dataset in datasets:
+        if not isinstance(dataset, Mapping):
+            continue
+        pair = dataset.get("pair")
+        timeframe = dataset.get("timeframe")
+        if isinstance(pair, str) and isinstance(timeframe, str):
+            available.add((pair, timeframe))
+
+    sorted_pairs = sorted(set(pairs))
+    sorted_timeframes = sorted(set(timeframes))
+    matrix = []
+    for pair in sorted_pairs:
+        cells = []
+        for timeframe in sorted_timeframes:
+            present = (pair, timeframe) in available
+            cells.append({"timeframe": timeframe, "status": "present" if present else "missing"})
+        matrix.append({"pair": pair, "cells": cells})
+
+    return sanitize_mapping(
+        {
+            "ok": True,
+            "errors": [],
+            "pairs": sorted_pairs,
+            "timeframes": sorted_timeframes,
+            "matrix": matrix,
+        }
+    )
+
+
+def run_inventory_manifest_gate(
+    manifest: Mapping[str, Any],
+    requirements: Mapping[str, Any] | None = None,
+    *,
+    min_candles_per_dataset: int | None = None,
+    strict: bool = False,
+) -> dict[str, Any]:
+    """Validate an inventory-generated manifest without reading dataset contents."""
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not isinstance(manifest, Mapping):
+        errors = ["manifest_not_mapping"]
+        return {
+            "ok": False,
+            "errors": errors,
+            "error_codes": extract_data_gate_error_codes(errors),
+            "warnings": warnings,
+        }
+
+    datasets = manifest.get("datasets")
+    if not isinstance(datasets, list):
+        errors = ["datasets_not_list"]
+        return {
+            "ok": False,
+            "errors": errors,
+            "error_codes": extract_data_gate_error_codes(errors),
+            "warnings": warnings,
+        }
+    if not datasets:
+        coverage = check_manifest_requirements(manifest, requirements)
+        coverage_matrix = (
+            build_requirements_coverage_matrix(manifest, requirements)
+            if requirements is not None
+            else None
+        )
+        return sanitize_mapping(
+            {
+                "ok": False,
+                "errors": ["datasets_empty", *coverage["errors"]],
+                "error_codes": extract_data_gate_error_codes(
+                    ["datasets_empty", *coverage["errors"]]
+                ),
+                "warnings": [*warnings, *coverage["warnings"]],
+                "requirements": coverage,
+                "coverage_matrix": coverage_matrix,
+            }
+        )
+
+    root_value = manifest.get("root")
+    root_path = Path(str(root_value)).resolve() if root_value else None
+
+    for index, dataset in enumerate(datasets):
+        if not isinstance(dataset, Mapping):
+            errors.append(f"datasets[{index}].not_mapping")
+            continue
+
+        path_value = dataset.get("path")
+        if not isinstance(path_value, str) or not path_value:
+            errors.append(f"datasets[{index}].path_missing")
+            continue
+
+        dataset_path = Path(path_value)
+        path_is_safe = _is_safe_relative_dataset_path(path_value)
+        if not path_is_safe:
+            errors.append(f"datasets[{index}].dataset_path_unsafe")
+
+        file_format = dataset.get("format")
+        if file_format not in ACCEPTED_FORMATS:
+            errors.append(f"datasets[{index}].format_unsupported")
+
+        size_bytes = dataset.get("size_bytes")
+        if not isinstance(size_bytes, int) or size_bytes <= 0:
+            errors.append(f"datasets[{index}].size_bytes_not_positive")
+
+        pair = dataset.get("pair")
+        if pair is not None and not (
+            isinstance(pair, str) and INVENTORY_PAIR_RE.match(pair)
+        ):
+            errors.append(f"datasets[{index}].pair_invalid")
+
+        timeframe = dataset.get("timeframe")
+        if timeframe is not None and not (
+            isinstance(timeframe, str) and INVENTORY_TIMEFRAME_RE.match(timeframe)
+        ):
+            errors.append(f"datasets[{index}].timeframe_invalid")
+
+        if strict and (pair is None or timeframe is None):
+            errors.append(f"datasets[{index}].pair_timeframe_unknown")
+
+        probe = dataset.get("probe")
+        row_count: Any = dataset.get("row_count")
+        if isinstance(probe, Mapping):
+            if probe.get("has_ohlcv_columns") is False:
+                errors.append(f"datasets[{index}].probe_missing_ohlcv_columns")
+            row_count = probe.get("row_count_estimate", row_count)
+
+        if min_candles_per_dataset is not None:
+            if not isinstance(row_count, int):
+                warnings.append(f"datasets[{index}].row_count_unknown")
+            elif row_count < min_candles_per_dataset:
+                errors.append(f"datasets[{index}].row_count_below_minimum")
+
+        start = dataset.get("start")
+        end = dataset.get("end")
+        parsed_start = _parse_iso_datetime(start) if start is not None else None
+        parsed_end = _parse_iso_datetime(end) if end is not None else None
+        if start is not None and parsed_start is None:
+            errors.append(f"datasets[{index}].start_date_invalid")
+        if end is not None and parsed_end is None:
+            errors.append(f"datasets[{index}].end_date_invalid")
+        if parsed_start is not None and parsed_end is not None and parsed_start > parsed_end:
+            errors.append(f"datasets[{index}].date_range_invalid")
+
+        if root_path is not None and path_is_safe:
+            full_path = root_path / dataset_path
+            if not full_path.exists():
+                errors.append(f"datasets[{index}].file_missing")
+            elif full_path.stat().st_size <= 0:
+                errors.append(f"datasets[{index}].file_empty")
+
+    coverage = check_manifest_requirements(manifest, requirements)
+    coverage_matrix = (
+        build_requirements_coverage_matrix(manifest, requirements)
+        if requirements is not None
+        else None
+    )
+    strict_duplicate_errors: list[Any] = []
+    if strict:
+        strict_duplicate_errors = [
+            {**warning, "code": "duplicate_dataset_coverage"}
+            for warning in coverage["warnings"]
+            if isinstance(warning, Mapping) and warning.get("code") == "duplicate_dataset_coverage"
+        ]
+    combined_errors: list[Any] = [*errors, *coverage["errors"], *strict_duplicate_errors]
+    combined_warnings: list[Any] = [*warnings, *coverage["warnings"]]
+    return sanitize_mapping(
+        {
+            "ok": not combined_errors,
+            "errors": combined_errors,
+            "error_codes": extract_data_gate_error_codes(combined_errors),
+            "warnings": combined_warnings,
+            "requirements": coverage,
+            "coverage_matrix": coverage_matrix,
+        }
+    )
+
+
 def run_offline_data_gate(
     data_dir: str | Path = "user_data/data",
     symbol: str = DEFAULT_SYMBOL,
@@ -175,14 +650,56 @@ def run_offline_data_gate(
     """Evaluate whether local files satisfy the minimum offline data contract."""
 
     resolved_data_dir = _resolve_path(data_dir)
-    timeframes = _normalize_required_timeframes(required_timeframes)
-    detected_files = _discover_candidate_files(resolved_data_dir, symbol, timeframes)
+    normalized_symbol = normalize_pair_symbol(symbol)
+    if normalized_symbol is None:
+        return sanitize_mapping(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "status": "FAIL",
+                "allowed_for_evaluation": False,
+                "symbol": symbol,
+                "required_timeframes": _normalize_required_timeframes(required_timeframes),
+                "detected_files": [],
+                "missing_timeframes": [],
+                "format_checks": {"accepted_format": False, "detected_format": None},
+                "quality_checks": {},
+                "blocked_reasons": ["invalid_symbol"],
+                "safe_next_action": "prepare_offline_data_files",
+                "readOnly": True,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+    raw_timeframes = list(required_timeframes or DEFAULT_REQUIRED_TIMEFRAMES)
+    invalid_timeframes = [
+        str(item) for item in raw_timeframes if normalize_timeframe(item) is None
+    ]
+    timeframes = _normalize_required_timeframes(raw_timeframes)
+    if invalid_timeframes:
+        return sanitize_mapping(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "status": "FAIL",
+                "allowed_for_evaluation": False,
+                "symbol": normalized_symbol,
+                "required_timeframes": raw_timeframes,
+                "detected_files": [],
+                "missing_timeframes": [],
+                "format_checks": {"accepted_format": False, "detected_format": None},
+                "quality_checks": {},
+                "blocked_reasons": ["invalid_timeframe"],
+                "invalid_timeframes": invalid_timeframes,
+                "safe_next_action": "prepare_offline_data_files",
+                "readOnly": True,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+    detected_files = _discover_candidate_files(resolved_data_dir, normalized_symbol, timeframes)
     accepted_files = [item for item in detected_files if item["accepted_format"]]
     unsupported_files = [item for item in detected_files if not item["accepted_format"]]
 
     manifest = build_offline_data_manifest(
         str(resolved_data_dir),
-        pairs=[symbol],
+        pairs=[normalized_symbol],
         timeframes=timeframes,
         write_report=False,
     )
@@ -214,7 +731,7 @@ def run_offline_data_gate(
         selected_file = Path(str(accepted_for_timeframe[0]["path"]))
         file_format = str(accepted_for_timeframe[0]["detected_format"])
         schema = _inspect_file_schema(selected_file, file_format)
-        entry = entries_by_key.get((symbol, timeframe), {})
+        entry = entries_by_key.get((normalized_symbol, timeframe), {})
         row_count = int(entry.get("row_count", 0) or 0)
         missing_ohlc_count = int(entry.get("missing_ohlc_count", 0) or 0)
         invalid_ohlc_count = int(entry.get("invalid_ohlc_count", 0) or 0)
@@ -271,7 +788,7 @@ def run_offline_data_gate(
         "schema_version": SCHEMA_VERSION,
         "status": status,
         "allowed_for_evaluation": status == "READY",
-        "symbol": symbol,
+        "symbol": normalized_symbol,
         "required_timeframes": timeframes,
         "min_candles_per_pair_timeframe": int(min_candles_per_pair_timeframe),
         "data_dir": str(resolved_data_dir),
