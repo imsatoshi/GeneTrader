@@ -6,6 +6,7 @@ import json
 import unittest
 
 from bollinger_evolver.fitness import MockBacktestMetrics, risk_governor_metrics_from_mock_metrics
+from bollinger_evolver.custom_strategy_schema import CustomStrategyGenome, custom_strategy_config_from_genome
 from bollinger_evolver.risk_governor import RiskGovernorConfig, apply_risk_governor
 from bollinger_evolver.strategy_factory import StrategyConfig, risk_governor_advice_for_strategy_config
 
@@ -69,6 +70,21 @@ class TestRiskGovernor(unittest.TestCase):
         encoded = json.dumps(result, sort_keys=True)
         self.assertIn("risk-governor/v1", encoded)
         self.assertEqual(strategy.leverage, 5.0)
+
+    def test_risk_governor_accepts_custom_strategy_config_mapping(self) -> None:
+        custom_config = custom_strategy_config_from_genome(
+            CustomStrategyGenome(genome_id="custom-risk", leverage=6.0, risk_per_trade=0.04)
+        )
+
+        result = apply_risk_governor(
+            custom_config,
+            {"drawdown": 0.12, "max_consecutive_losses": 6},
+            config=RiskGovernorConfig(max_leverage=3.0, max_risk_per_trade=0.02),
+        )
+
+        self.assertEqual(result["adjusted_leverage"], 3.0)
+        self.assertLessEqual(result["adjusted_risk_per_trade"], 0.01)
+        self.assertEqual(custom_config["leverage"], 6.0)
 
 
 if __name__ == "__main__":
