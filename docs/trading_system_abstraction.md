@@ -34,16 +34,16 @@ strategy idea
 | `entry_bb_stddev` | float | 2.0 | 1.2..3.5 | yes | finite numeric |
 | `entry_rsi_period` | int | 14 | 5..40 | yes | positive integer |
 | `entry_rsi_max` | float | 35.0 | 10.0..55.0 | yes | finite numeric |
-| `exit_take_profit_pct` | float | 0.08 | 0.01..0.50 | yes | greater than stop loss preferred |
-| `exit_stop_loss_pct` | float | 0.03 | 0.005..0.20 | yes | finite numeric |
-| `trailing_stop_pct` | float | 0.02 | 0.0..0.15 | yes | non-negative |
-| `add_position_threshold_pct` | float | 0.025 | 0.0..0.12 | yes | non-negative |
-| `reduce_position_threshold_pct` | float | 0.04 | 0.0..0.20 | yes | non-negative |
-| `max_additions` | int | 2 | 0..5 | yes | integer |
-| `leverage` | float | 1.0 | 1.0..10.0 | yes | RiskGovernor clamps preferred max |
-| `risk_per_trade` | float | 0.01 | 0.001..0.05 | yes | RiskGovernor clamps preferred max |
-| `max_portfolio_exposure` | float | 0.30 | 0.05..1.0 | yes | RiskGovernor clamps preferred max |
-| `cooldown_candles` | int | 3 | 0..50 | yes | integer |
+| `exit_take_profit_pct` | float | 0.08 | 0.01..0.25 | yes | must be greater than stop loss |
+| `exit_stop_loss_pct` | float | 0.03 | 0.005..0.12 | yes | must be below take profit |
+| `trailing_stop_pct` | float | 0.02 | 0.0..0.08 | yes | non-negative |
+| `add_position_threshold_pct` | float | 0.025 | 0.0..0.08 | yes | non-negative |
+| `reduce_position_threshold_pct` | float | 0.04 | 0.0..0.15 | yes | non-negative |
+| `max_additions` | int | 2 | 0..3 | yes | integer |
+| `leverage` | float | 1.0 | 1.0..3.0 | yes | hard max aligned with RiskGovernor default |
+| `risk_per_trade` | float | 0.01 | 0.001..0.02 | yes | hard max aligned with RiskGovernor default |
+| `max_portfolio_exposure` | float | 0.30 | 0.05..0.60 | yes | must not exceed 1.0 |
+| `cooldown_candles` | int | 3 | 0..72 | yes | integer |
 
 ## Rule Table
 
@@ -82,7 +82,23 @@ needing to mutate the original object.
 - Boolean values are rejected for numeric fields.
 - Non-finite values are rejected.
 - Int parameters must be integer values.
+- `exit_stop_loss_pct` must be lower than `exit_take_profit_pct`.
+- `leverage` is capped at `3.0` by the genome bounds.
+- `risk_per_trade` is capped at `0.02` by the genome bounds.
+- `max_portfolio_exposure` must not exceed `1.0`; current calibration caps it at `0.60`.
+- `cooldown_candles` cannot be negative.
 - Config output must serialize with `json.dumps(..., sort_keys=True)`.
+
+## Owner Review Questions
+
+- Confirm whether `3.0` is the right hard leverage maximum for all pairs or only
+  for the first mock portfolio basket.
+- Confirm whether `0.02` risk per trade should be absolute, or further reduced
+  by pair volatility and account drawdown state.
+- Confirm whether `max_additions` should remain at `3`, or be split by pair,
+  regime, or position direction.
+- Confirm whether `cooldown_candles` should be expressed in candles only or also
+  mapped to wall-clock time in the final trading system adapter.
 
 ## Deferred Work
 

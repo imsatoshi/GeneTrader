@@ -73,7 +73,7 @@ class TestRiskGovernor(unittest.TestCase):
 
     def test_risk_governor_accepts_custom_strategy_config_mapping(self) -> None:
         custom_config = custom_strategy_config_from_genome(
-            CustomStrategyGenome(genome_id="custom-risk", leverage=6.0, risk_per_trade=0.04)
+            CustomStrategyGenome(genome_id="custom-risk", leverage=3.0, risk_per_trade=0.02)
         )
 
         result = apply_risk_governor(
@@ -84,7 +84,7 @@ class TestRiskGovernor(unittest.TestCase):
 
         self.assertEqual(result["adjusted_leverage"], 3.0)
         self.assertLessEqual(result["adjusted_risk_per_trade"], 0.01)
-        self.assertEqual(custom_config["leverage"], 6.0)
+        self.assertEqual(custom_config["leverage"], 3.0)
 
 
 if __name__ == "__main__":

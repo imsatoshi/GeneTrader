@@ -12,6 +12,7 @@ from bollinger_evolver.ga_execution_custom import (
     run_custom_ga_execution,
 )
 from bollinger_evolver.custom_strategy_schema import CustomStrategyGenome
+from bollinger_evolver.risk_governor import RiskGovernorConfig
 
 
 class TestCustomGAExecution(unittest.TestCase):
@@ -33,12 +34,14 @@ class TestCustomGAExecution(unittest.TestCase):
 
     def test_custom_ga_evaluation_applies_risk_governor(self) -> None:
         evaluation = evaluate_custom_genome(
-            CustomStrategyGenome(genome_id="risk-heavy", leverage=8.0, risk_per_trade=0.04),
+            CustomStrategyGenome(genome_id="risk-heavy", leverage=3.0, risk_per_trade=0.02),
             seed=11,
+            risk_config=RiskGovernorConfig(max_leverage=2.0, max_risk_per_trade=0.01),
         )
 
         self.assertTrue(evaluation.adjusted_strategy_config["risk_governor_applied"])
-        self.assertLessEqual(evaluation.adjusted_strategy_config["leverage"], 3.0)
+        self.assertLessEqual(evaluation.adjusted_strategy_config["leverage"], 2.0)
+        self.assertLessEqual(evaluation.adjusted_strategy_config["risk_per_trade"], 0.01)
         self.assertIn("risk-governor/v1", json.dumps(evaluation.to_dict(), sort_keys=True))
 
     def test_custom_ga_result_is_json_serializable(self) -> None:

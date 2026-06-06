@@ -51,16 +51,16 @@ class CustomStrategyBounds:
     entry_bb_stddev: ParameterBound = ParameterBound(1.2, 3.5, "float")
     entry_rsi_period: ParameterBound = ParameterBound(5, 40, "int")
     entry_rsi_max: ParameterBound = ParameterBound(10.0, 55.0, "float")
-    exit_take_profit_pct: ParameterBound = ParameterBound(0.01, 0.50, "float")
-    exit_stop_loss_pct: ParameterBound = ParameterBound(0.005, 0.20, "float")
-    trailing_stop_pct: ParameterBound = ParameterBound(0.0, 0.15, "float")
-    add_position_threshold_pct: ParameterBound = ParameterBound(0.0, 0.12, "float")
-    reduce_position_threshold_pct: ParameterBound = ParameterBound(0.0, 0.20, "float")
-    max_additions: ParameterBound = ParameterBound(0, 5, "int")
-    leverage: ParameterBound = ParameterBound(1.0, 10.0, "float")
-    risk_per_trade: ParameterBound = ParameterBound(0.001, 0.05, "float")
-    max_portfolio_exposure: ParameterBound = ParameterBound(0.05, 1.0, "float")
-    cooldown_candles: ParameterBound = ParameterBound(0, 50, "int")
+    exit_take_profit_pct: ParameterBound = ParameterBound(0.01, 0.25, "float")
+    exit_stop_loss_pct: ParameterBound = ParameterBound(0.005, 0.12, "float")
+    trailing_stop_pct: ParameterBound = ParameterBound(0.0, 0.08, "float")
+    add_position_threshold_pct: ParameterBound = ParameterBound(0.0, 0.08, "float")
+    reduce_position_threshold_pct: ParameterBound = ParameterBound(0.0, 0.15, "float")
+    max_additions: ParameterBound = ParameterBound(0, 3, "int")
+    leverage: ParameterBound = ParameterBound(1.0, 3.0, "float")
+    risk_per_trade: ParameterBound = ParameterBound(0.001, 0.02, "float")
+    max_portfolio_exposure: ParameterBound = ParameterBound(0.05, 0.60, "float")
+    cooldown_candles: ParameterBound = ParameterBound(0, 72, "int")
 
     def to_dict(self) -> dict[str, dict[str, float | str]]:
         return {field.name: getattr(self, field.name).to_dict() for field in fields(self)}
@@ -114,6 +114,11 @@ def validate_custom_strategy_genome(
             raise ValueError(f"{name}_unsupported_bound_kind")
         if not bound.minimum <= numeric <= bound.maximum:
             raise ValueError(f"{name}_out_of_bounds")
+
+    if float(data["exit_stop_loss_pct"]) >= float(data["exit_take_profit_pct"]):
+        raise ValueError("stoploss_must_be_below_takeprofit")
+    if float(data["max_portfolio_exposure"]) > 1.0:
+        raise ValueError("max_portfolio_exposure_must_not_exceed_one")
 
     json.dumps(data, sort_keys=True)
 

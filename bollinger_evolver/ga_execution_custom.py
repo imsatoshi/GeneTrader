@@ -87,6 +87,32 @@ def _coerce_value(value: int | float, bound: ParameterBound) -> int | float:
     return round(clipped, 6)
 
 
+def _repair_semantic_constraints(
+    payload: dict[str, int | float],
+    bounds: CustomStrategyBounds,
+) -> dict[str, int | float]:
+    """Repair cross-field constraints that independent sampling can violate."""
+
+    repaired = dict(payload)
+    stop = float(repaired["exit_stop_loss_pct"])
+    take = float(repaired["exit_take_profit_pct"])
+    if stop < take:
+        return repaired
+
+    gap = 0.001
+    take_bound = bounds.exit_take_profit_pct
+    stop_bound = bounds.exit_stop_loss_pct
+    candidate_take = min(take_bound.maximum, max(take, stop + gap))
+    if stop < candidate_take:
+        repaired["exit_take_profit_pct"] = round(candidate_take, 6)
+        return repaired
+
+    candidate_stop = max(stop_bound.minimum, candidate_take - gap)
+    repaired["exit_stop_loss_pct"] = round(candidate_stop, 6)
+    repaired["exit_take_profit_pct"] = round(candidate_take, 6)
+    return repaired
+
+
 def create_custom_random_genome(
     rng: random.Random,
     genome_id: str,
@@ -98,6 +124,7 @@ def create_custom_random_genome(
         name: _sample_value(getattr(active_bounds, name), rng)
         for name in CUSTOM_STRATEGY_PARAMETER_NAMES
     }
+    payload = _repair_semantic_constraints(payload, active_bounds)
     genome = CustomStrategyGenome(genome_id=genome_id, **payload)
     validate_custom_strategy_genome(genome, bounds=active_bounds)
     return genome
@@ -134,6 +161,7 @@ def crossover_custom_genomes(
         name: getattr(parent_a, name) if rng.random() < 0.5 else getattr(parent_b, name)
         for name in CUSTOM_STRATEGY_PARAMETER_NAMES
     }
+    payload = _repair_semantic_constraints(payload, CustomStrategyBounds())
     child = CustomStrategyGenome(genome_id=child_id, **payload)
     validate_custom_strategy_genome(child)
     return child
@@ -160,6 +188,7 @@ def mutate_custom_genome(
         else:
             span = bound.maximum - bound.minimum
             payload[name] = _coerce_value(float(value) + rng.uniform(-0.10 * span, 0.10 * span), bound)
+    payload = _repair_semantic_constraints(payload, active_bounds)
     mutated = CustomStrategyGenome(genome_id=genome_id or genome.genome_id, **payload)
     validate_custom_strategy_genome(mutated, bounds=active_bounds)
     return mutated

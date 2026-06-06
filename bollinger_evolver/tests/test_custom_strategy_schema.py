@@ -49,6 +49,32 @@ class TestCustomStrategySchema(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "leverage_out_of_bounds"):
             validate_custom_strategy_genome(self._genome(leverage=99.0))
 
+    def test_bounds_reject_excessive_leverage(self) -> None:
+        with self.assertRaisesRegex(ValueError, "leverage_out_of_bounds"):
+            validate_custom_strategy_genome(self._genome(leverage=3.5))
+
+    def test_bounds_reject_excessive_risk_per_trade(self) -> None:
+        with self.assertRaisesRegex(ValueError, "risk_per_trade_out_of_bounds"):
+            validate_custom_strategy_genome(self._genome(risk_per_trade=0.025))
+
+    def test_bounds_require_stoploss_below_takeprofit(self) -> None:
+        with self.assertRaisesRegex(ValueError, "stoploss_must_be_below_takeprofit"):
+            validate_custom_strategy_genome(
+                self._genome(exit_stop_loss_pct=0.05, exit_take_profit_pct=0.04)
+            )
+
+    def test_bounds_reject_negative_cooldown(self) -> None:
+        with self.assertRaisesRegex(ValueError, "cooldown_candles_out_of_bounds"):
+            validate_custom_strategy_genome(self._genome(cooldown_candles=-1))
+
+    def test_bounds_accept_safe_default_genome(self) -> None:
+        genome = self._genome()
+
+        validate_custom_strategy_genome(genome)
+
+        self.assertEqual(genome.leverage, 1.0)
+        self.assertLessEqual(genome.risk_per_trade, 0.02)
+
     def test_validate_custom_strategy_genome_requires_int_fields(self) -> None:
         with self.assertRaisesRegex(ValueError, "entry_bb_window_must_be_int"):
             validate_custom_strategy_genome(self._genome(entry_bb_window=20.5))
@@ -63,7 +89,7 @@ class TestCustomStrategySchema(unittest.TestCase):
         self.assertTrue(config["constraints"]["no_exchange_api"])
 
     def test_custom_strategy_config_exposes_risk_governor_fields(self) -> None:
-        config = custom_strategy_config_from_genome(self._genome(leverage=6.0, risk_per_trade=0.04))
+        config = custom_strategy_config_from_genome(self._genome(leverage=3.0, risk_per_trade=0.02))
 
         advice = apply_risk_governor(
             config,
@@ -73,7 +99,7 @@ class TestCustomStrategySchema(unittest.TestCase):
 
         self.assertEqual(advice["adjusted_leverage"], 3.0)
         self.assertLessEqual(advice["adjusted_risk_per_trade"], 0.01)
-        self.assertEqual(config["leverage"], 6.0)
+        self.assertEqual(config["leverage"], 3.0)
 
     def test_custom_strategy_genome_is_not_mutated_by_mapping(self) -> None:
         genome = self._genome(leverage=2.0)
