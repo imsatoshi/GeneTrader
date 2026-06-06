@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+import json
+import random
 import shutil
 import tempfile
 import unittest
@@ -10,9 +12,18 @@ import uuid
 from pathlib import Path
 
 from bollinger_evolver.evaluators import FitnessConfig
+from bollinger_evolver.fitness import (
+    MockBacktestMetrics,
+    MockEvaluator as ExecutionMockEvaluator,
+    build_fitness_summary,
+    calculate_risk_aware_fitness,
+    evaluate_genome_fitness,
+    evaluate_population_fitness,
+)
 from bollinger_evolver.ga.backtest_evaluation_adapter import BacktestEvaluationAdapter
 from bollinger_evolver.ga.evaluation_pipeline import MockStrategyEvaluator
 from bollinger_evolver.ga.generation_runner import GenerationConfig, run_generation
+from bollinger_evolver.genome import Genome, create_population
 from bollinger_evolver.scoring.fitness import calculate_fitness
 from bollinger_evolver.strategy_factory import GENERATED_ROOT
 from bollinger_evolver.strategies.indicator_helpers import DEFAULT_GENES
@@ -295,6 +306,101 @@ class TestFitnessIntegration(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertIn("fitness_breakdown", result["metrics"])
         self.assertTrue(result["metrics"]["fitness_breakdown"]["accepted"])
+
+
+class TestRiskAwareExecutionFitness(unittest.TestCase):
+    def test_high_drawdown_reduces_fitness(self) -> None:
+        baseline = MockBacktestMetrics(
+            profit=0.2,
+            drawdown=0.05,
+            sharpe=1.2,
+            win_rate=0.58,
+            max_consecutive_losses=1,
+        )
+        high_drawdown = MockBacktestMetrics(
+            profit=0.2,
+            drawdown=0.35,
+            sharpe=1.2,
+            win_rate=0.58,
+            max_consecutive_losses=1,
+        )
+
+        self.assertLess(
+            calculate_risk_aware_fitness(high_drawdown, leverage=3.0),
+            calculate_risk_aware_fitness(baseline, leverage=3.0),
+        )
+
+    def test_excessive_leverage_reduces_fitness(self) -> None:
+        metrics = MockBacktestMetrics(
+            profit=0.18,
+            drawdown=0.08,
+            sharpe=1.1,
+            win_rate=0.55,
+            max_consecutive_losses=1,
+        )
+
+        self.assertLess(
+            calculate_risk_aware_fitness(metrics, leverage=9.0),
+            calculate_risk_aware_fitness(metrics, leverage=3.0),
+        )
+
+    def test_loss_streak_reduces_fitness(self) -> None:
+        low_streak = MockBacktestMetrics(
+            profit=0.18,
+            drawdown=0.08,
+            sharpe=1.1,
+            win_rate=0.55,
+            max_consecutive_losses=1,
+        )
+        high_streak = MockBacktestMetrics(
+            profit=0.18,
+            drawdown=0.08,
+            sharpe=1.1,
+            win_rate=0.55,
+            max_consecutive_losses=8,
+        )
+
+        self.assertLess(
+            calculate_risk_aware_fitness(high_streak, leverage=3.0),
+            calculate_risk_aware_fitness(low_streak, leverage=3.0),
+        )
+
+    def test_single_genome_fitness_calculates(self) -> None:
+        genome = Genome(
+            genome_id="risk-aware-001",
+            parameters={
+                "bb_window": 20,
+                "bb_stddev": 2.0,
+                "stop_loss_pct": 0.03,
+                "take_profit_pct": 0.08,
+                "leverage": 3.0,
+                "risk_per_trade": 0.01,
+            },
+        )
+
+        result = evaluate_genome_fitness(genome, ExecutionMockEvaluator(seed=77))
+
+        self.assertEqual(result.genome.genome_id, "risk-aware-001")
+        self.assertIsInstance(result.fitness, float)
+        self.assertGreaterEqual(result.metrics.max_consecutive_losses, 0)
+
+    def test_batch_population_fitness_calculates(self) -> None:
+        population = create_population(5, random.Random(9))
+
+        results = evaluate_population_fitness(population, ExecutionMockEvaluator(seed=9))
+
+        self.assertEqual(len(results), 5)
+        self.assertEqual([item.genome.genome_id for item in results], [item.genome_id for item in population])
+
+    def test_fitness_summary_is_json_safe(self) -> None:
+        population = create_population(3, random.Random(12))
+        results = evaluate_population_fitness(population, ExecutionMockEvaluator(seed=12))
+
+        summary = build_fitness_summary(results)
+
+        json.dumps(summary, sort_keys=True)
+        self.assertEqual(summary["count"], 3)
+        self.assertIn("max_consecutive_losses", summary["evaluations"][0]["metrics"])
 
 
 if __name__ == "__main__":

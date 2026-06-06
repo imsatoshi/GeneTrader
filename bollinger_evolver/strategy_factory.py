@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from pprint import pformat
 from typing import Any, Dict
 
 from bollinger_evolver.gene_space import load_gene_space, validate_genes
+from bollinger_evolver.genome import Genome, validate_genome as validate_execution_genome
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -17,6 +19,46 @@ GENERATED_ROOT = (PROJECT_ROOT / "user_data" / "strategies" / "generated").resol
 
 class StrategyFactoryError(Exception):
     """Raised when strategy file generation fails."""
+
+
+@dataclass(frozen=True)
+class StrategyConfig:
+    """JSON-safe strategy configuration derived from a GA execution genome."""
+
+    genome_id: str
+    bollinger_window: int
+    bollinger_stddev: float
+    stoploss: float
+    takeprofit: float
+    leverage: float
+    risk_per_trade: float
+    parameters: Dict[str, int | float]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def strategy_config_from_genome(genome: Genome) -> StrategyConfig:
+    """Convert one GA execution genome into a strategy config snapshot."""
+
+    validate_execution_genome(genome)
+    params = dict(genome.parameters)
+    return StrategyConfig(
+        genome_id=genome.genome_id,
+        bollinger_window=int(params["bb_window"]),
+        bollinger_stddev=float(params["bb_stddev"]),
+        stoploss=float(params["stop_loss_pct"]),
+        takeprofit=float(params["take_profit_pct"]),
+        leverage=float(params["leverage"]),
+        risk_per_trade=float(params["risk_per_trade"]),
+        parameters=params,
+    )
+
+
+def strategy_configs_from_population(population: list[Genome]) -> list[StrategyConfig]:
+    """Convert a population of genomes into strategy config snapshots."""
+
+    return [strategy_config_from_genome(genome) for genome in population]
 
 
 def _ensure_non_negative_int(value: Any, field_name: str) -> int:

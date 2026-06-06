@@ -5,15 +5,20 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import random
 import shutil
 import unittest
 from pathlib import Path
 
 from bollinger_evolver.gene_space import load_gene_space, sample_genes
+from bollinger_evolver.genome import Genome, create_population
 from bollinger_evolver.strategy_factory import (
     GENERATED_ROOT,
+    StrategyConfig,
     StrategyFactoryError,
     generate_strategy_from_genes,
+    strategy_config_from_genome,
+    strategy_configs_from_population,
 )
 
 
@@ -191,3 +196,61 @@ class TestStrategyFactory(unittest.TestCase):
                 individual_index=0,
                 output_dir=str(TEST_OUTPUT_DIR),
             )
+
+
+class TestStrategyConfigFromGenome(unittest.TestCase):
+    def test_single_genome_converts_to_strategy_config(self) -> None:
+        genome = Genome(
+            genome_id="genome-001",
+            parameters={
+                "bb_window": 20,
+                "bb_stddev": 2.0,
+                "stop_loss_pct": 0.03,
+                "take_profit_pct": 0.08,
+                "leverage": 3.0,
+                "risk_per_trade": 0.01,
+            },
+        )
+
+        config = strategy_config_from_genome(genome)
+
+        self.assertIsInstance(config, StrategyConfig)
+        self.assertEqual(config.genome_id, "genome-001")
+        self.assertEqual(config.bollinger_window, 20)
+        self.assertEqual(config.bollinger_stddev, 2.0)
+        self.assertEqual(config.stoploss, 0.03)
+        self.assertEqual(config.takeprofit, 0.08)
+        self.assertEqual(config.leverage, 3.0)
+        self.assertEqual(config.risk_per_trade, 0.01)
+
+    def test_population_converts_to_strategy_configs(self) -> None:
+        population = create_population(5, random.Random(21))
+
+        configs = strategy_configs_from_population(population)
+
+        self.assertEqual(len(configs), 5)
+        self.assertEqual([item.genome_id for item in configs], [item.genome_id for item in population])
+
+    def test_strategy_config_is_json_safe(self) -> None:
+        genome = create_population(1, random.Random(8))[0]
+        config = strategy_config_from_genome(genome)
+
+        encoded = json.dumps(config.to_dict(), sort_keys=True)
+
+        self.assertIn(genome.genome_id, encoded)
+
+    def test_invalid_genome_rejected(self) -> None:
+        genome = Genome(
+            genome_id="bad",
+            parameters={
+                "bb_window": 999,
+                "bb_stddev": 2.0,
+                "stop_loss_pct": 0.03,
+                "take_profit_pct": 0.08,
+                "leverage": 3.0,
+                "risk_per_trade": 0.01,
+            },
+        )
+
+        with self.assertRaises(ValueError):
+            strategy_config_from_genome(genome)
