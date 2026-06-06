@@ -150,9 +150,11 @@ class AdaptiveRunner:
 
         logger.info("Adaptive optimization system initialized")
 
-    def start_api(self, host: str = '0.0.0.0', port: int = 8090):
+    def start_api(self, host: str = '127.0.0.1', port: int = 8090):
         """Start the Agent API server."""
-        api_key = getattr(self.settings, 'agent_api_key', '') or os.environ.get('AGENT_API_KEY', 'default-key')
+        api_key = getattr(self.settings, 'agent_api_key', '') or os.environ.get('AGENT_API_KEY', '')
+        if not api_key:
+            raise ValueError("Agent API key required. Set agent_api_key or AGENT_API_KEY.")
 
         self.api = AgentAPI(
             host=host,
@@ -303,6 +305,8 @@ Examples:
                         help='Force immediate optimization')
     parser.add_argument('--api-port', type=int, default=0,
                         help='Start Agent API on this port (0 = disabled)')
+    parser.add_argument('--api-host', type=str, default=None,
+                        help='Host for Agent API (default: config agent_api_host or 127.0.0.1)')
     parser.add_argument('--interval', type=int, default=60,
                         help='Check interval in seconds (default: 60)')
 
@@ -339,7 +343,8 @@ Examples:
     else:
         # Start API if requested
         if args.api_port > 0:
-            runner.start_api(port=args.api_port)
+            api_host = args.api_host or getattr(settings, 'agent_api_host', '127.0.0.1')
+            runner.start_api(host=api_host, port=args.api_port)
 
         # Run main loop
         runner.run(interval_seconds=args.interval)

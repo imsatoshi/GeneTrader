@@ -10,7 +10,7 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence
 from urllib.parse import parse_qs, urlparse
 from utils.logging_config import logger
 
@@ -52,6 +52,7 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
     adaptive_optimizer: Optional[AdaptiveOptimizer] = None
     scheduler: Optional[OptimizationScheduler] = None
     approval_requests: Dict[str, Dict[str, Any]] = {}
+    cors_allowed_origins: tuple[str, ...] = ()
 
     def log_message(self, format, *args):
         """Override to use custom logger."""
@@ -62,22 +63,23 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
         if not self.auth_manager:
             return None
 
-        # Get API key from header
+        # Only accept API keys from headers. Query-string keys leak into logs,
+        # browser history, and reverse-proxy diagnostics too easily.
         api_key_str = self.headers.get('X-API-Key', '')
-
-        if not api_key_str:
-            # Try query parameter
-            parsed = urlparse(self.path)
-            params = parse_qs(parsed.query)
-            api_key_str = params.get('api_key', [''])[0]
-
         return self.auth_manager.validate_key(api_key_str)
+
+    def _send_cors_headers(self) -> None:
+        """Send CORS headers for explicitly allowed origins."""
+        origin = self.headers.get('Origin', '')
+        if origin and origin in self.cors_allowed_origins:
+            self.send_header('Access-Control-Allow-Origin', origin)
+            self.send_header('Access-Control-Allow-Credentials', 'false')
 
     def _send_response(self, response: APIResponse) -> None:
         """Send API response."""
         self.send_response(response.status_code)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(response.to_json().encode())
 
@@ -95,13 +97,20 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         """Handle CORS preflight."""
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        self._send_cors_headers()
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type')
         self.end_headers()
 
     def do_GET(self):
         """Handle GET requests."""
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip('/')
+
+        if path == '/api/v1/health':
+            self._handle_health()
+            return
+
         api_key = self._authenticate()
         if not api_key:
             self._send_response(APIResponse(
@@ -111,14 +120,8 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
             ))
             return
 
-        parsed = urlparse(self.path)
-        path = parsed.path.rstrip('/')
-
         try:
-            if path == '/api/v1/health':
-                self._handle_health()
-
-            elif path == '/api/v1/status':
+            if path == '/api/v1/status':
                 self._handle_status()
 
             elif path == '/api/v1/metrics':
@@ -147,7 +150,7 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
             logger.error(f"API error: {e}")
             self._send_response(APIResponse(
                 success=False,
-                error=str(e),
+                error="Internal server error",
                 status_code=500
             ))
 
@@ -198,7 +201,7 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
             logger.error(f"API error: {e}")
             self._send_response(APIResponse(
                 success=False,
-                error=str(e),
+                error="Internal server error",
                 status_code=500
             ))
 
@@ -442,18 +445,21 @@ class AgentAPI:
 
     Usage:
         api = AgentAPI(
-            host='0.0.0.0',
+            host='127.0.0.1',
             port=8090,
-            api_key='your-secret-key'
+            api_key='your-strong-secret-key'
         )
         api.start()
     """
 
+    WEAK_API_KEYS = {'default-key', 'your-secret-key', 'your-secret-api-key'}
+
     def __init__(
         self,
-        host: str = '0.0.0.0',
+        host: str = '127.0.0.1',
         port: int = 8090,
         api_key: Optional[str] = None,
+        cors_allowed_origins: Optional[Sequence[str]] = None,
         performance_db: Optional[PerformanceDB] = None,
         version_control: Optional[StrategyVersionControl] = None,
         adaptive_optimizer: Optional[AdaptiveOptimizer] = None,
@@ -466,11 +472,13 @@ class AgentAPI:
             host: Host to bind to
             port: Port to listen on
             api_key: Master API key
+            cors_allowed_origins: Browser origins allowed to call the API
             performance_db: Performance database
             version_control: Version control system
             adaptive_optimizer: Adaptive optimizer
             scheduler: Optimization scheduler
         """
+        self._validate_api_key(api_key)
         self.host = host
         self.port = port
 
@@ -483,9 +491,22 @@ class AgentAPI:
         AgentAPIHandler.version_control = version_control
         AgentAPIHandler.adaptive_optimizer = adaptive_optimizer
         AgentAPIHandler.scheduler = scheduler
+        AgentAPIHandler.cors_allowed_origins = tuple(cors_allowed_origins or (
+            'http://127.0.0.1:5173',
+            'http://localhost:5173',
+        ))
 
         self._server: Optional[HTTPServer] = None
         self._server_thread: Optional[threading.Thread] = None
+
+    def _validate_api_key(self, api_key: Optional[str]) -> None:
+        """Fail closed when the Agent API master key is missing or weak."""
+        if not api_key:
+            raise ValueError("Agent API key required")
+        if api_key in self.WEAK_API_KEYS:
+            raise ValueError("Agent API key is not allowed")
+        if len(api_key) < 16:
+            raise ValueError("Agent API key must be at least 16 characters")
 
     def start(self) -> None:
         """Start the API server in a background thread."""
@@ -503,6 +524,7 @@ class AgentAPI:
         """Stop the API server."""
         if self._server:
             self._server.shutdown()
+            self._server.server_close()
             self._server = None
 
         logger.info("Agent API server stopped")

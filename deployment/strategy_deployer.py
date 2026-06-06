@@ -85,10 +85,9 @@ class StrategyDeployer:
 
     Deployment flow:
     1. Validation: Check strategy file and parameters
-    2. Shadow Trading: Run strategy in paper trading mode
-    3. Approval: Wait for approval (if required)
-    4. Gradual Rollout: Deploy in phases with increasing allocation
-    5. Monitoring: Monitor live performance
+    2. Approval: Wait for approval (if required)
+    3. Deploy: Copy the strategy file and optionally reload Freqtrade config
+    4. Monitoring: Record deployment status for external monitoring
     6. Completion or Rollback: Based on performance
 
     Usage:
@@ -275,7 +274,7 @@ class StrategyDeployer:
             version_id=version_id,
             strategy_name=strategy_name,
             started_at=datetime.now(),
-            total_phases=len(config.rollout_phases) if config.gradual_rollout else 1
+            total_phases=1
         )
 
         self._current_deployment = result
@@ -311,10 +310,23 @@ class StrategyDeployer:
                         return result
                     result.approved = True
                 else:
-                    # Auto-approve if no callback set
-                    result.approved = True
+                    result.status = DeploymentStatus.FAILED
+                    result.error_message = "Deployment approval callback required"
+                    result.notes.append(
+                        f"[{datetime.now().isoformat()}] Approval callback missing; failing closed"
+                    )
+                    return result
 
                 result.notes.append(f"[{datetime.now().isoformat()}] Approved")
+
+            if config.shadow_trading_hours > 0:
+                result.notes.append(
+                    f"[{datetime.now().isoformat()}] Shadow trading not executed by StrategyDeployer"
+                )
+            if config.gradual_rollout:
+                result.notes.append(
+                    f"[{datetime.now().isoformat()}] Gradual rollout not executed by StrategyDeployer"
+                )
 
             # Step 3: Backup current strategy
             backup_path = self.backup_current_strategy(strategy_name)

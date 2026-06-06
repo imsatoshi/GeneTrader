@@ -9,6 +9,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch, AsyncMock
 import asyncio
+import http.client
 
 from agent_api.auth import AuthManager, APIKey, APIKeyAuth
 from agent_api.websocket_manager import (
@@ -369,7 +370,7 @@ class TestAgentAPI(unittest.TestCase):
         self.api = AgentAPI(
             host='127.0.0.1',
             port=8099,
-            api_key='test-api-key'
+            api_key='test-api-key-123456'
         )
 
     def test_initialization(self):
@@ -377,6 +378,85 @@ class TestAgentAPI(unittest.TestCase):
         self.assertEqual(self.api.host, '127.0.0.1')
         self.assertEqual(self.api.port, 8099)
         self.assertIsNotNone(self.api.auth_manager)
+
+    def test_requires_strong_api_key(self):
+        """Test API refuses missing or weak master keys."""
+        for key in (None, '', 'default-key', 'short-key'):
+            with self.subTest(key=key):
+                with self.assertRaises(ValueError):
+                    AgentAPI(host='127.0.0.1', port=0, api_key=key)
+
+    def test_header_auth_query_key_rejected_and_cors_allowlisted(self):
+        """Test API accepts header auth but rejects query-string API keys."""
+        api = AgentAPI(
+            host='127.0.0.1',
+            port=0,
+            api_key='test-api-key-123456',
+            cors_allowed_origins=('http://localhost:5173',),
+        )
+        api.start()
+        port = api._server.server_port
+
+        try:
+            conn = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+            conn.request(
+                'GET',
+                '/api/v1/status',
+                headers={
+                    'X-API-Key': 'test-api-key-123456',
+                    'Origin': 'http://localhost:5173',
+                },
+            )
+            response = conn.getresponse()
+            response.read()
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.getheader('Access-Control-Allow-Origin'), 'http://localhost:5173')
+            conn.close()
+
+            conn = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+            conn.request('GET', '/api/v1/status?api_key=test-api-key-123456')
+            response = conn.getresponse()
+            response.read()
+            self.assertEqual(response.status, 401)
+            self.assertIsNone(response.getheader('Access-Control-Allow-Origin'))
+            conn.close()
+
+            conn = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+            conn.request('GET', '/api/v1/health')
+            response = conn.getresponse()
+            response.read()
+            self.assertEqual(response.status, 200)
+            conn.close()
+        finally:
+            api.stop()
+
+    def test_internal_errors_are_not_echoed_to_client(self):
+        """Test server errors do not expose internal exception details."""
+        optimizer = MagicMock()
+        optimizer.get_status.side_effect = RuntimeError("C:/Users/name/.env api_key=abc")
+        api = AgentAPI(
+            host='127.0.0.1',
+            port=0,
+            api_key='test-api-key-123456',
+            adaptive_optimizer=optimizer,
+        )
+        api.start()
+        port = api._server.server_port
+
+        try:
+            conn = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+            conn.request('GET', '/api/v1/status', headers={'X-API-Key': 'test-api-key-123456'})
+            response = conn.getresponse()
+            body = response.read().decode()
+            conn.close()
+
+            self.assertEqual(response.status, 500)
+            self.assertIn("Internal server error", body)
+            self.assertNotIn("C:/Users", body)
+            self.assertNotIn("api_key", body)
+            self.assertNotIn("abc", body)
+        finally:
+            api.stop()
 
     def test_add_approval_request(self):
         """Test adding approval request."""

@@ -5,6 +5,10 @@ __pycache__/
 *.so
 .pytest_cache/
 .runtime/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
 
 fitness_log.txt
 

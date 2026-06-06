@@ -17,7 +17,7 @@ services:
   genetrader-daemon:
     build:
       context: .
-      dockerfile: Dockerfile.adaptive
+      dockerfile: Dockerfile
     container_name: genetrader-daemon
     restart: unless-stopped
     environment:
@@ -50,15 +50,15 @@ services:
   agent-api:
     build:
       context: .
-      dockerfile: Dockerfile.adaptive
+      dockerfile: Dockerfile
     container_name: genetrader-api
     restart: unless-stopped
     ports:
-      - "8090:8090"
+      - "127.0.0.1:8090:8090"
     environment:
       - GENETRADER_CONFIG=/app/ga.json
       - PYTHONPATH=/app
-      - AGENT_API_KEY=${AGENT_API_KEY:-default-key}
+      - AGENT_API_KEY=${AGENT_API_KEY:?AGENT_API_KEY is required}
     volumes:
       - ./ga.json:/app/ga.json:ro
       - ./data:/app/data
@@ -66,7 +66,7 @@ services:
       python run_adaptive.py
       --strategy GeneTrader
       --api-port 8090
-      --check-only
+      --api-host 0.0.0.0
     networks:
       - genetrader-net
     healthcheck:
