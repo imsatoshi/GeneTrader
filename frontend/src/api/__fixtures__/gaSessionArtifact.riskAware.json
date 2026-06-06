@@ -1,0 +1,98 @@
+{
+  "schema_version": "ga-generation-artifact/v1",
+  "source": "mock-ga-execution",
+  "run_id": "mock-risk-aware-session",
+  "generation": 3,
+  "population_size": 4,
+  "best_fitness": 1.23,
+  "average_fitness": 0.73,
+  "diversity": 0.75,
+  "best_genome": {
+    "genome_id": "gen003-ind001",
+    "parameters": {
+      "bb_window": 20,
+      "bb_stddev": 2.0,
+      "stop_loss_pct": 0.03,
+      "take_profit_pct": 0.06,
+      "leverage": 2.0,
+      "risk_per_trade": 0.015
+    }
+  },
+  "genomes": [
+    {
+      "rank": 1,
+      "genome_id": "gen003-ind001",
+      "fitness": 1.23,
+      "profit": 0.18,
+      "drawdown": 0.08,
+      "sharpe": 1.4,
+      "win_rate": 0.57,
+      "max_consecutive_losses": 3,
+      "leverage": 2.0,
+      "risk_per_trade": 0.015,
+      "fitness_components": {
+        "profit_component": 0.18,
+        "sharpe_component": 0.35,
+        "win_rate_component": 0.057,
+        "drawdown_penalty": 0.16,
+        "leverage_penalty": 0,
+        "risk_per_trade_penalty": 0,
+        "loss_streak_penalty": 0.45,
+        "final_fitness": 1.23
+      },
+      "genome": {
+        "genome_id": "gen003-ind001",
+        "parameters": {
+          "bb_window": 20,
+          "bb_stddev": 2.0,
+          "stop_loss_pct": 0.03,
+          "take_profit_pct": 0.06,
+          "leverage": 2.0,
+          "risk_per_trade": 0.015
+        }
+      }
+    }
+  ],
+  "session_summary": {
+    "schema_version": "ga-session-summary/v1",
+    "source": "mock-ga-execution",
+    "run_id": "mock-risk-aware-session",
+    "status": "completed",
+    "generation": 3,
+    "population_size": 4,
+    "best_fitness": 1.23,
+    "average_fitness": 0.73,
+    "diversity": 0.75,
+    "best_genome": {
+      "genome_id": "gen003-ind001",
+      "parameters": {
+        "bb_window": 20,
+        "bb_stddev": 2.0,
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.06,
+        "leverage": 2.0,
+        "risk_per_trade": 0.015
+      }
+    },
+    "fitness_series": [
+      {
+        "generation": 1,
+        "best_fitness": 0.41,
+        "average_fitness": 0.22,
+        "diversity": 1.0
+      },
+      {
+        "generation": 2,
+        "best_fitness": 0.92,
+        "average_fitness": 0.51,
+        "diversity": 0.75
+      },
+      {
+        "generation": 3,
+        "best_fitness": 1.23,
+        "average_fitness": 0.73,
+        "diversity": 0.75
+      }
+    ]
+  }
+}

@@ -1,0 +1,397 @@
+:root {
+  font-family: "Aptos Display", "Trebuchet MS", sans-serif;
+  color: #10211c;
+  background:
+    radial-gradient(circle at top left, rgba(185, 125, 43, 0.22), transparent 34rem),
+    linear-gradient(135deg, #f6f0df 0%, #efe2c8 48%, #e4efe7 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 28px 20px;
+  color: #fffaf0;
+  background:
+    linear-gradient(180deg, rgba(16, 33, 28, 0.96), rgba(53, 92, 75, 0.96)),
+    repeating-linear-gradient(45deg, rgba(255, 250, 240, 0.04) 0 2px, transparent 2px 8px);
+}
+
+.brand-block {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 34px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(255, 250, 240, 0.3);
+  border-radius: 18px;
+  background: rgba(185, 125, 43, 0.4);
+  font-weight: 800;
+}
+
+.brand-block small {
+  display: block;
+  color: #d7c9ad;
+}
+
+.nav-link {
+  display: block;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  color: #f7edd8;
+  text-decoration: none;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  color: #10211c;
+  background: #f6f0df;
+}
+
+.app-main {
+  padding: 28px;
+}
+
+.topbar,
+.hero-panel,
+.panel,
+.table-shell,
+.gate-panel,
+.chart-frame {
+  border: 1px solid rgba(16, 33, 28, 0.12);
+  border-radius: 26px;
+  background: rgba(255, 250, 240, 0.82);
+  box-shadow: 0 22px 60px rgba(16, 33, 28, 0.12);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 28px;
+  padding: 22px 26px;
+}
+
+.topbar h1,
+.hero-panel h2,
+.section-heading h2 {
+  margin: 0;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #b97d2b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.runtime-pill,
+.coverage-cell,
+.quick-actions a {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.runtime-pill {
+  background: #10211c;
+  color: #fffaf0;
+}
+
+.page-stack {
+  display: grid;
+  gap: 22px;
+}
+
+.hero-panel,
+.panel,
+.gate-panel {
+  padding: 24px;
+}
+
+.hero-panel h2 {
+  max-width: 720px;
+  font-size: clamp(2rem, 5vw, 4.6rem);
+  line-height: 0.95;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.status-card {
+  min-height: 140px;
+  padding: 20px;
+  border-radius: 22px;
+  background: #fffaf0;
+  border: 1px solid rgba(16, 33, 28, 0.1);
+}
+
+.status-card span,
+.status-card small {
+  color: #63706a;
+}
+
+.status-card strong {
+  display: block;
+  margin: 16px 0 8px;
+  font-size: 2rem;
+}
+
+.status-card-success {
+  border-color: rgba(40, 116, 93, 0.35);
+}
+
+.status-card-warning {
+  border-color: rgba(185, 125, 43, 0.45);
+}
+
+.status-card-danger,
+.gate-fail {
+  border-color: rgba(166, 64, 45, 0.45);
+}
+
+.quick-actions,
+.editor-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quick-actions a {
+  color: #fffaf0;
+  background: #355c4b;
+  text-decoration: none;
+}
+
+.section-heading {
+  max-width: 760px;
+}
+
+.table-shell {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(16, 33, 28, 0.08);
+  text-align: left;
+}
+
+th button {
+  border: 0;
+  background: transparent;
+  color: #355c4b;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.manifest-list {
+  display: grid;
+  gap: 10px;
+}
+
+.manifest-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 120px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.75);
+}
+
+.coverage-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.coverage-row {
+  display: contents;
+}
+
+.coverage-cell.present {
+  background: rgba(40, 116, 93, 0.16);
+  color: #28745d;
+}
+
+.coverage-cell.missing {
+  background: rgba(166, 64, 45, 0.16);
+  color: #a6402d;
+}
+
+.gate-ok {
+  border-color: rgba(40, 116, 93, 0.35);
+}
+
+.gate-lists {
+  display: flex;
+  gap: 12px;
+  color: #63706a;
+}
+
+.summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.summary-grid span {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(53, 92, 75, 0.1);
+  color: #355c4b;
+  font-weight: 800;
+}
+
+.batch-job-list {
+  display: grid;
+  gap: 12px;
+}
+
+.batch-job-card {
+  border: 1px solid rgba(16, 33, 28, 0.12);
+  border-radius: 18px;
+  background: #fffaf0;
+}
+
+.batch-job-card summary {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(150px, 1fr) 150px;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.batch-job-card-success {
+  border-color: rgba(40, 116, 93, 0.35);
+}
+
+.batch-job-card-failed,
+.batch-job-card-timeout,
+.batch-job-card-policy_rejected {
+  border-color: rgba(166, 64, 45, 0.45);
+}
+
+.batch-job-card-skipped {
+  border-color: rgba(185, 125, 43, 0.45);
+}
+
+.batch-job-detail {
+  display: grid;
+  gap: 14px;
+  padding: 0 18px 18px;
+  color: #355c4b;
+}
+
+.editor-grid label {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 8px;
+  font-weight: 800;
+}
+
+input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(16, 33, 28, 0.18);
+  border-radius: 14px;
+  background: #fffaf0;
+}
+
+.json-preview,
+pre {
+  overflow: auto;
+  padding: 18px;
+  border-radius: 18px;
+  background: #10211c;
+  color: #fffaf0;
+}
+
+.error-text {
+  color: #a6402d;
+  font-weight: 800;
+}
+
+.chart-frame {
+  min-height: 360px;
+  padding: 8px;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .app-main {
+    padding: 16px;
+  }
+
+  .topbar,
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

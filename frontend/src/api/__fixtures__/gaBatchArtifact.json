@@ -1,0 +1,101 @@
+{
+  "batch_id": "small-batch-mock-001",
+  "execution_mode": "small_batch_manual_opt_in",
+  "status": "partial_success",
+  "total_jobs": 5,
+  "succeeded": 1,
+  "failed": 1,
+  "skipped": 1,
+  "timed_out": 1,
+  "policy_rejected": 1,
+  "metadata": {
+    "source": "stage-093-small-batch-mock",
+    "allow_real_execution": false,
+    "sequential_only": true,
+    "operator_note": "Mock-first fixture with redacted failure states"
+  },
+  "results": [
+    {
+      "job_id": "job-success-001",
+      "genome_hash": "genome-hash-success",
+      "status": "success",
+      "normalized_result": {
+        "profit": 0.21,
+        "sharpe": 1.52,
+        "win_rate": 0.61,
+        "max_drawdown": 0.07,
+        "total_trades": 42,
+        "max_consecutive_losses": 2,
+        "leverage": 2.4,
+        "risk_per_trade": 0.014,
+        "metadata": {
+          "source": "mock-small-batch",
+          "fitness_components": {
+            "profit_component": 0.21,
+            "sharpe_component": 0.38,
+            "win_rate_component": 0.061,
+            "drawdown_penalty": 0.14,
+            "leverage_penalty": 0,
+            "risk_per_trade_penalty": 0,
+            "loss_streak_penalty": 0.3,
+            "final_fitness": 0.211
+          }
+        }
+      },
+      "error_type": null,
+      "error_message": null,
+      "metadata": {
+        "genome": {
+          "bb_window": 34,
+          "bb_stddev": 2.08,
+          "leverage": 2.4,
+          "risk_per_trade": 0.014
+        }
+      }
+    },
+    {
+      "job_id": "job-failed-002",
+      "genome_hash": "genome-hash-failed",
+      "status": "failed",
+      "normalized_result": null,
+      "error_type": "ValueError",
+      "error_message": "failed at <redacted:path> with <redacted:secret-key>=<redacted:secret>",
+      "metadata": {
+        "source": "mock-failure"
+      }
+    },
+    {
+      "job_id": "job-skipped-003",
+      "genome_hash": "genome-hash-skipped",
+      "status": "skipped",
+      "normalized_result": null,
+      "error_type": "SkippedAfterFailure",
+      "error_message": "skipped_after_previous_failure",
+      "metadata": {
+        "source": "mock-skip"
+      }
+    },
+    {
+      "job_id": "job-timeout-004",
+      "genome_hash": "genome-hash-timeout",
+      "status": "timeout",
+      "normalized_result": null,
+      "error_type": "TimeoutError",
+      "error_message": "per_genome_timeout_seconds exceeded before completion",
+      "metadata": {
+        "source": "mock-timeout"
+      }
+    },
+    {
+      "job_id": "job-policy-005",
+      "genome_hash": "genome-hash-policy",
+      "status": "policy_rejected",
+      "normalized_result": null,
+      "error_type": "RealExecutionDisabled",
+      "error_message": "small_batch_real_execution_requires_dual_env_opt_in",
+      "metadata": {
+        "source": "mock-policy-rejected"
+      }
+    }
+  ]
+}
