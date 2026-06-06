@@ -8,6 +8,7 @@ import unittest
 from bollinger_evolver.walk_forward import (
     WalkForwardConfig,
     calculate_stability_score,
+    calculate_walk_forward_gaps,
     run_mock_walk_forward_evaluation,
 )
 
@@ -31,6 +32,8 @@ class TestWalkForward(unittest.TestCase):
         self.assertIn("validation", result)
         self.assertIn("test", result)
         self.assertIn("stability_score", result)
+        self.assertIn("train_validation_gap", result)
+        self.assertIn("validation_test_gap", result)
 
     def test_walk_forward_is_deterministic(self) -> None:
         config = WalkForwardConfig(base_seed=22, trade_count=25)
@@ -53,6 +56,16 @@ class TestWalkForward(unittest.TestCase):
         ]
 
         self.assertGreater(calculate_stability_score(stable), calculate_stability_score(drifting))
+
+    def test_walk_forward_gaps_track_profit_drift(self) -> None:
+        gaps = calculate_walk_forward_gaps(
+            {"profit": 0.20},
+            {"profit": 0.12},
+            {"profit": -0.01},
+        )
+
+        self.assertEqual(gaps["train_validation_gap"], 0.08)
+        self.assertEqual(gaps["validation_test_gap"], 0.13)
 
     def test_walk_forward_result_is_json_serializable(self) -> None:
         result = run_mock_walk_forward_evaluation(GENOME, config=WalkForwardConfig(base_seed=31, trade_count=20))

@@ -57,6 +57,21 @@ def calculate_stability_score(segment_results: Sequence[Mapping[str, Any]]) -> f
     return round(max(0.0, min(1.0, 1.0 - drift)), 6)
 
 
+def calculate_walk_forward_gaps(
+    train: Mapping[str, Any],
+    validation: Mapping[str, Any],
+    test: Mapping[str, Any],
+) -> dict[str, float]:
+    """Calculate profit drift gaps used by the overfitting penalty."""
+
+    train_validation_gap = abs(float(train["profit"]) - float(validation["profit"]))
+    validation_test_gap = abs(float(validation["profit"]) - float(test["profit"]))
+    return {
+        "train_validation_gap": round(train_validation_gap, 6),
+        "validation_test_gap": round(validation_test_gap, 6),
+    }
+
+
 def run_mock_walk_forward_evaluation(
     genome: Mapping[str, Any],
     *,
@@ -82,6 +97,12 @@ def run_mock_walk_forward_evaluation(
         segment_payloads[segment] = snapshot
         ordered_results.append(snapshot)
 
+    gaps = calculate_walk_forward_gaps(
+        segment_payloads["train"],
+        segment_payloads["validation"],
+        segment_payloads["test"],
+    )
+    stability_score = calculate_stability_score(ordered_results)
     payload = {
         "schema_version": "mock-walk-forward/v1",
         "source": "mock-backtest-adapter",
@@ -89,7 +110,8 @@ def run_mock_walk_forward_evaluation(
         "train": segment_payloads["train"],
         "validation": segment_payloads["validation"],
         "test": segment_payloads["test"],
-        "stability_score": calculate_stability_score(ordered_results),
+        "stability_score": stability_score,
+        **gaps,
     }
     json.dumps(payload, sort_keys=True)
     return payload

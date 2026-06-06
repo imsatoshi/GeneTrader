@@ -32,6 +32,8 @@ class RiskAwareFitnessConfig:
     leverage_penalty_weight: float = 0.35
     risk_per_trade_penalty_weight: float = 0.50
     loss_streak_penalty_weight: float = 0.15
+    stability_weight: float = 0.20
+    overfit_penalty_weight: float = 1.0
     max_preferred_leverage: float = 3.0
     max_preferred_risk_per_trade: float = 0.02
 
@@ -84,6 +86,9 @@ def calculate_risk_aware_fitness_breakdown(
     leverage: float | None = None,
     risk_per_trade: float | None = None,
     max_loss_streak: int | None = None,
+    stability_score: float | None = None,
+    train_validation_gap: float | None = None,
+    validation_test_gap: float | None = None,
     config: RiskAwareFitnessConfig | None = None,
 ) -> dict[str, float]:
     """Return JSON-safe components for risk-aware fitness scoring."""
@@ -100,6 +105,10 @@ def calculate_risk_aware_fitness_breakdown(
         if max_loss_streak is not None
         else (metrics.max_consecutive_losses if metrics else 0)
     )
+    resolved_stability = float(stability_score if stability_score is not None else 1.0)
+    resolved_stability = _clip(resolved_stability, 0.0, 1.0)
+    resolved_train_validation_gap = abs(float(train_validation_gap or 0.0))
+    resolved_validation_test_gap = abs(float(validation_test_gap or 0.0))
 
     profit_component = resolved_config.profit_weight * resolved_profit
     sharpe_component = resolved_config.sharpe_weight * resolved_sharpe
@@ -114,14 +123,20 @@ def calculate_risk_aware_fitness_breakdown(
         resolved_risk - resolved_config.max_preferred_risk_per_trade,
     )
     loss_streak_penalty = resolved_config.loss_streak_penalty_weight * max(0, resolved_loss_streak)
+    stability_component = resolved_config.stability_weight * resolved_stability
+    overfit_penalty = resolved_config.overfit_penalty_weight * (
+        resolved_train_validation_gap + resolved_validation_test_gap + max(0.0, 1.0 - resolved_stability)
+    )
     final_fitness = (
         profit_component
         + sharpe_component
         + win_rate_component
+        + stability_component
         - drawdown_penalty
         - leverage_penalty
         - risk_per_trade_penalty
         - loss_streak_penalty
+        - overfit_penalty
     )
 
     return {
@@ -132,6 +147,10 @@ def calculate_risk_aware_fitness_breakdown(
         "leverage_penalty": round(leverage_penalty, 6),
         "risk_per_trade_penalty": round(risk_per_trade_penalty, 6),
         "loss_streak_penalty": round(loss_streak_penalty, 6),
+        "stability_component": round(stability_component, 6),
+        "overfit_penalty": round(overfit_penalty, 6),
+        "train_validation_gap": round(resolved_train_validation_gap, 6),
+        "validation_test_gap": round(resolved_validation_test_gap, 6),
         "final_fitness": round(final_fitness, 6),
     }
 
@@ -146,6 +165,9 @@ def calculate_risk_aware_fitness(
     leverage: float | None = None,
     risk_per_trade: float | None = None,
     max_loss_streak: int | None = None,
+    stability_score: float | None = None,
+    train_validation_gap: float | None = None,
+    validation_test_gap: float | None = None,
     config: RiskAwareFitnessConfig | None = None,
 ) -> float:
     """Score mock metrics with drawdown, leverage, position-risk, and loss-streak penalties."""
@@ -159,6 +181,9 @@ def calculate_risk_aware_fitness(
         leverage=leverage,
         risk_per_trade=risk_per_trade,
         max_loss_streak=max_loss_streak,
+        stability_score=stability_score,
+        train_validation_gap=train_validation_gap,
+        validation_test_gap=validation_test_gap,
         config=config,
     )["final_fitness"]
 

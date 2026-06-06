@@ -158,6 +158,10 @@ class TestRiskAwareFitness(unittest.TestCase):
                 "leverage_penalty",
                 "risk_per_trade_penalty",
                 "loss_streak_penalty",
+                "stability_component",
+                "overfit_penalty",
+                "train_validation_gap",
+                "validation_test_gap",
                 "final_fitness",
             },
         )
@@ -203,6 +207,77 @@ class TestRiskAwareFitness(unittest.TestCase):
         )
 
         self.assertLess(strict_score, default_score)
+
+    def test_fitness_penalizes_train_validation_gap(self) -> None:
+        stable = calculate_risk_aware_fitness(
+            profit=0.2,
+            drawdown=0.05,
+            sharpe=1.0,
+            win_rate=0.55,
+            leverage=2.0,
+            risk_per_trade=0.01,
+            stability_score=0.9,
+            train_validation_gap=0.01,
+            validation_test_gap=0.01,
+        )
+        overfit = calculate_risk_aware_fitness(
+            profit=0.2,
+            drawdown=0.05,
+            sharpe=1.0,
+            win_rate=0.55,
+            leverage=2.0,
+            risk_per_trade=0.01,
+            stability_score=0.9,
+            train_validation_gap=0.25,
+            validation_test_gap=0.01,
+        )
+
+        self.assertLess(overfit, stable)
+
+    def test_fitness_rewards_stable_walk_forward_metrics(self) -> None:
+        stable = calculate_risk_aware_fitness(
+            profit=0.2,
+            drawdown=0.05,
+            sharpe=1.0,
+            win_rate=0.55,
+            leverage=2.0,
+            risk_per_trade=0.01,
+            stability_score=0.95,
+            train_validation_gap=0.01,
+            validation_test_gap=0.01,
+        )
+        unstable = calculate_risk_aware_fitness(
+            profit=0.2,
+            drawdown=0.05,
+            sharpe=1.0,
+            win_rate=0.55,
+            leverage=2.0,
+            risk_per_trade=0.01,
+            stability_score=0.35,
+            train_validation_gap=0.08,
+            validation_test_gap=0.08,
+        )
+
+        self.assertGreater(stable, unstable)
+
+    def test_overfit_penalty_appears_in_fitness_components(self) -> None:
+        breakdown = calculate_risk_aware_fitness_breakdown(
+            profit=0.2,
+            drawdown=0.05,
+            sharpe=1.0,
+            win_rate=0.55,
+            leverage=2.0,
+            risk_per_trade=0.01,
+            stability_score=0.5,
+            train_validation_gap=0.1,
+            validation_test_gap=0.2,
+        )
+
+        self.assertIn("stability_component", breakdown)
+        self.assertIn("overfit_penalty", breakdown)
+        self.assertIn("train_validation_gap", breakdown)
+        self.assertIn("validation_test_gap", breakdown)
+        self.assertGreater(breakdown["overfit_penalty"], 0.0)
 
 
 if __name__ == "__main__":
