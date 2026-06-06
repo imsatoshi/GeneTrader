@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -107,6 +108,55 @@ class TestFreqtradeAdapterE2E(unittest.TestCase):
 
             self.assertFalse(output_root.exists())
             self.assertEqual(list(root.iterdir()), [])
+
+    def test_fake_runner_e2e_rejects_repo_runtime_and_data_output_roots(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        blocked_roots = (
+            repo_root,
+            repo_root / ".runtime" / "freqtrade-out",
+            repo_root / "user_data" / "data" / "freqtrade-out",
+        )
+
+        for blocked_root in blocked_roots:
+            request = FreqtradeAdapterRequest(
+                strategy_config={"bb_window": 20},
+                pair="BTC/USDT",
+                timeframe="5m",
+                timerange="20240101-20240201",
+                run_id="stage-112",
+                dry_run_only=True,
+                output_root=str(blocked_root),
+                approval={"execution_allowed": True},
+            )
+            with self.subTest(output_root=str(blocked_root)):
+                with self.assertRaises(ValueError):
+                    run_fake_freqtrade_backtest_boundary(
+                        request,
+                        base_config={"dry_run": True},
+                        allowed_output_roots=(repo_root,),
+                        env=ENABLE_ENV,
+                    )
+
+    def test_fake_runner_e2e_request_and_result_are_json_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request = _request(root)
+            result = run_fake_freqtrade_backtest_boundary(
+                request,
+                base_config={"dry_run": True},
+                allowed_output_roots=(root,),
+                env=ENABLE_ENV,
+            )
+
+        encoded = json.dumps(
+            {
+                "request": request.to_dict(),
+                "result": result.to_dict(),
+            },
+            sort_keys=True,
+        )
+        self.assertIn("stage-099", encoded)
+        self.assertIn("freqtrade_fake_runner_boundary", encoded)
 
 
 if __name__ == "__main__":

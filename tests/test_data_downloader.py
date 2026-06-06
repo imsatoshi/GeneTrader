@@ -92,9 +92,13 @@ class TestDataDownloaderCoverage(unittest.TestCase):
         downloader.freqtrade_path = "freqtrade"
         downloader.timeframes = ["1m"]
 
-        with patch.dict(os.environ, {LEGACY_EXECUTION_ENV: ""}, clear=False):
+        with patch.dict(os.environ, {LEGACY_EXECUTION_ENV: ""}, clear=False), patch(
+            "data.downloader.subprocess.run",
+            side_effect=AssertionError("subprocess must not run without explicit opt-in"),
+        ) as mocked_run:
             with self.assertRaises(LegacyFreqtradeExecutionDisabled):
                 downloader.download_data(date(2024, 1, 1))
+            self.assertFalse(mocked_run.called)
 
     def test_download_command_log_redacts_paths_and_secret_values(self):
         redacted = _redact_command_for_log([

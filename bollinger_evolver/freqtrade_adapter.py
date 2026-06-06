@@ -143,6 +143,15 @@ def _resolve_allowed_output_root(output_root: str, allowed_output_roots: Sequenc
         raise ValueError("output_root_must_not_be_disk_root")
     if _contains_sensitive_text(candidate):
         raise ValueError("output_root_must_not_contain_secret_markers")
+    repo_root = Path(__file__).resolve().parents[1]
+    disallowed_child_roots = (
+        repo_root / ".runtime",
+        repo_root / "user_data" / "data",
+    )
+    if candidate == repo_root or any(
+        candidate == root or candidate.is_relative_to(root) for root in disallowed_child_roots
+    ):
+        raise ValueError("output_root_disallowed")
     allowed = tuple(Path(root).resolve() for root in allowed_output_roots)
     if not allowed:
         raise ValueError("allowed_output_roots_required")
