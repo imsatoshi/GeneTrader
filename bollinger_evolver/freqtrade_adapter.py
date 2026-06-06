@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
+from bollinger_evolver.backtest_adapter import NormalizedBacktestResult, validate_normalized_backtest_result
 from bollinger_evolver.execution_gate import validate_real_backtest_execution_gate
+from bollinger_evolver.freqtrade_result_parser import parse_freqtrade_result_payload
 
 
 SENSITIVE_CONFIG_KEYS = frozenset(
@@ -213,6 +215,122 @@ def build_freqtrade_command_spec(
     }
     json.dumps(spec, sort_keys=True)
     return spec
+
+
+DEFAULT_FAKE_FREQTRADE_PAYLOAD: dict[str, Any] = {
+    "profit_total": 0.118,
+    "max_drawdown": 0.072,
+    "sharpe": 1.25,
+    "winrate": 0.56,
+    "total_trades": 32,
+    "max_consecutive_losses": 2,
+    "leverage": 1.0,
+    "risk_per_trade": 0.01,
+}
+
+
+class FakeFreqtradeRunner:
+    """In-memory runner for adapter boundary tests.
+
+    It accepts a command spec and returns a fixed JSON-like payload. It never
+    starts a process and never writes output files.
+    """
+
+    def __init__(self, payload: Mapping[str, Any] | None = None) -> None:
+        self.payload = dict(payload or DEFAULT_FAKE_FREQTRADE_PAYLOAD)
+        self.calls: list[dict[str, Any]] = []
+
+    def run(self, command_spec: Mapping[str, Any]) -> Mapping[str, Any]:
+        args = command_spec.get("args")
+        if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+            raise ValueError("fake_runner_args_must_be_list_strings")
+        if command_spec.get("shell") is not False:
+            raise ValueError("fake_runner_shell_must_be_false")
+        self.calls.append(dict(command_spec))
+        return dict(self.payload)
+
+
+def run_fake_freqtrade_backtest_boundary(
+    request: FreqtradeAdapterRequest,
+    *,
+    base_config: Mapping[str, Any],
+    allowed_output_roots: Sequence[str | Path],
+    runner: FakeFreqtradeRunner | None = None,
+    env: Mapping[str, str] | None = None,
+) -> NormalizedBacktestResult:
+    """Run the no-process adapter boundary with an in-memory fake runner."""
+
+    gate = validate_real_backtest_execution_gate(request, env=env)
+    if not gate["ok"]:
+        raise ExecutionNotAllowed(";".join(str(error) for error in gate["errors"]))
+    sandbox_config = build_sandbox_config(base_config)
+    command_spec = build_freqtrade_command_spec(
+        request,
+        sandbox_config=sandbox_config,
+        allowed_output_roots=allowed_output_roots,
+        env=env,
+    )
+    active_runner = runner or FakeFreqtradeRunner()
+    payload = active_runner.run(command_spec)
+    parsed = parse_freqtrade_result_payload(payload)
+    metadata = dict(parsed.metadata)
+    metadata.update(
+        {
+            "source": "freqtrade_fake_runner_boundary",
+            "run_id": request.run_id,
+            "pair": request.pair,
+            "timeframe": request.timeframe,
+            "command_args_count": len(command_spec["args"]),
+            "real_process_started": False,
+            "real_output_directory_written": False,
+        }
+    )
+    return validate_normalized_backtest_result(
+        NormalizedBacktestResult(
+            profit=parsed.profit,
+            sharpe=parsed.sharpe,
+            win_rate=parsed.win_rate,
+            max_drawdown=parsed.max_drawdown,
+            total_trades=parsed.total_trades,
+            max_consecutive_losses=parsed.max_consecutive_losses,
+            leverage=parsed.leverage,
+            risk_per_trade=parsed.risk_per_trade,
+            metadata=metadata,
+        )
+    )
+
+
+class FakeRunnerFreqtradeAdapter:
+    """BacktestAdapter-compatible fake runner boundary."""
+
+    def __init__(
+        self,
+        request_template: FreqtradeAdapterRequest,
+        *,
+        base_config: Mapping[str, Any],
+        allowed_output_roots: Sequence[str | Path],
+        runner: FakeFreqtradeRunner | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> None:
+        self.request_template = request_template
+        self.base_config = dict(base_config)
+        self.allowed_output_roots = tuple(allowed_output_roots)
+        self.runner = runner or FakeFreqtradeRunner()
+        self.env = dict(env or {})
+
+    def run_backtest(self, genome: Mapping[str, Any]) -> NormalizedBacktestResult:
+        request = replace(
+            self.request_template,
+            strategy_config=dict(genome),
+            genome=dict(genome),
+        )
+        return run_fake_freqtrade_backtest_boundary(
+            request,
+            base_config=self.base_config,
+            allowed_output_roots=self.allowed_output_roots,
+            runner=self.runner,
+            env=self.env,
+        )
 
 
 class RealBacktestAdapter:
