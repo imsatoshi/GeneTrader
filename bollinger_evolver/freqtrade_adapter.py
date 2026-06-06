@@ -271,7 +271,10 @@ def run_fake_freqtrade_backtest_boundary(
 
     gate = validate_real_backtest_execution_gate(request, env=env)
     if not gate["ok"]:
-        raise ExecutionNotAllowed(";".join(str(error) for error in gate["errors"]))
+        errors = tuple(str(error) for error in gate["errors"])
+        if "disallowed_output_root" in errors:
+            raise ValueError("output_root_disallowed")
+        raise ExecutionNotAllowed(";".join(errors))
     sandbox_config = build_sandbox_config(base_config)
     command_spec = build_freqtrade_command_spec(
         request,

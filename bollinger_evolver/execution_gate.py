@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 
@@ -77,6 +78,18 @@ def _command_tokens(request: object | None) -> tuple[str, ...]:
     return (str(raw),)
 
 
+def _is_disallowed_output_root(output_root: str) -> bool:
+    candidate = Path(output_root).resolve()
+    repo_root = Path(__file__).resolve().parents[1]
+    disallowed_child_roots = (
+        repo_root / ".runtime",
+        repo_root / "user_data" / "data",
+    )
+    return candidate == repo_root or any(
+        candidate == root or candidate.is_relative_to(root) for root in disallowed_child_roots
+    )
+
+
 def validate_real_backtest_execution_gate(
     request: object | None = None,
     *,
@@ -107,6 +120,8 @@ def validate_real_backtest_execution_gate(
         errors.append("allowed_output_root_required")
     elif _secret_hits(output_root, path="output_root"):
         errors.append("secret_like_output_root_not_allowed")
+    elif _is_disallowed_output_root(output_root):
+        errors.append("disallowed_output_root")
 
     tokens = tuple(token.lower() for token in _command_tokens(request))
     if any(token in FORBIDDEN_COMMANDS for token in tokens):
