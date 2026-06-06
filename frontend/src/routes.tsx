@@ -8,6 +8,7 @@ import OverviewPage from './pages/OverviewPage';
 import RequirementsPage from './pages/RequirementsPage';
 import ResultsPage from './pages/ResultsPage';
 import RunExplorerPage from './pages/RunExplorerPage';
+import RunExplorerCustomPage from './pages/RunExplorerCustomPage';
 import SettingsPage from './pages/SettingsPage';
 
 export function AppRoutes() {
@@ -20,6 +21,7 @@ export function AppRoutes() {
       <Route path="/mock-batch-dashboard" element={<MockBatchDashboardPage />} />
       <Route path="/ga-runs" element={<GaRunsPage />} />
       <Route path="/run-explorer" element={<RunExplorerPage />} />
+      <Route path="/custom-run-explorer" element={<RunExplorerCustomPage />} />
       <Route path="/results" element={<ResultsPage />} />
       <Route path="/charts" element={<ChartsPage />} />
       <Route path="/settings" element={<SettingsPage />} />

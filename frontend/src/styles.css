@@ -23,7 +23,8 @@ a {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -338,12 +339,24 @@ th button {
   font-weight: 800;
 }
 
-input {
+input,
+select {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid rgba(16, 33, 28, 0.18);
   border-radius: 14px;
   background: #fffaf0;
+}
+
+button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(16, 33, 28, 0.18);
+  border-radius: 14px;
+  background: #355c4b;
+  color: #fffaf0;
+  cursor: pointer;
+  font-weight: 800;
 }
 
 .json-preview,
