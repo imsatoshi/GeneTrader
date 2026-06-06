@@ -51,6 +51,15 @@ class FitnessEvaluation:
         }
 
 
+def risk_governor_metrics_from_mock_metrics(metrics: MockBacktestMetrics) -> dict[str, int | float]:
+    """Return the risk fields consumed by the advisory risk governor."""
+
+    return {
+        "drawdown": float(metrics.drawdown),
+        "max_consecutive_losses": int(metrics.max_consecutive_losses),
+    }
+
+
 def _stable_seed(seed: int, genome: Genome) -> int:
     payload = json.dumps(
         {"seed": seed, "genome_id": genome.genome_id, "parameters": genome.parameters},

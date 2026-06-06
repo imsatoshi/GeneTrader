@@ -11,6 +11,7 @@ from typing import Any, Dict
 
 from bollinger_evolver.gene_space import load_gene_space, validate_genes
 from bollinger_evolver.genome import Genome, validate_genome as validate_execution_genome
+from bollinger_evolver.risk_governor import RiskGovernorConfig, apply_risk_governor
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -59,6 +60,17 @@ def strategy_configs_from_population(population: list[Genome]) -> list[StrategyC
     """Convert a population of genomes into strategy config snapshots."""
 
     return [strategy_config_from_genome(genome) for genome in population]
+
+
+def risk_governor_advice_for_strategy_config(
+    strategy_config: StrategyConfig,
+    metrics: Any,
+    *,
+    config: RiskGovernorConfig | None = None,
+) -> dict[str, Any]:
+    """Build advisory risk-governor output without mutating the strategy config."""
+
+    return apply_risk_governor(strategy_config, metrics, config=config)
 
 
 def _ensure_non_negative_int(value: Any, field_name: str) -> int:
