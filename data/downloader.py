@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 import json
+import re
 
 project_root = str(Path(__file__).resolve().parent.parent)
 sys.path.append(project_root)
@@ -15,6 +16,10 @@ from utils.logging_config import logger
 
 
 MANIFEST_FILENAME = "data_coverage_manifest.json"
+LEGACY_EXECUTION_ENV = "GENETRADER_ENABLE_LEGACY_FREQTRADE_EXECUTION"
+FORBIDDEN_COMMAND_TOKENS = {"trade", "hyperopt", "live", "webserver", "api-server"}
+SECRET_VALUE_PATTERN = re.compile(r"(?i)(api[_-]?key|secret|password|private[_-]?key|token)=([^\s,}]+)")
+PATH_PATTERN = re.compile(r"([A-Za-z]:[\\/][^\s\"']+|/(?:home|Users)/[^\s\"']+)")
 TIMEFRAME_MS = {
     "1m": 60_000,
     "5m": 5 * 60_000,
@@ -26,6 +31,41 @@ TIMEFRAME_MS = {
     "1w": 7 * 24 * 60 * 60_000,
     "1M": 30 * 24 * 60 * 60_000,
 }
+
+
+class LegacyFreqtradeExecutionDisabled(RuntimeError):
+    """Raised when legacy Freqtrade subprocess execution is not explicitly enabled."""
+
+
+class LegacyFreqtradeExecutionPolicyViolation(ValueError):
+    """Raised when a legacy Freqtrade command violates the safe subset."""
+
+
+def _legacy_freqtrade_execution_enabled() -> bool:
+    if os.environ.get(LEGACY_EXECUTION_ENV) == "1":
+        return True
+    try:
+        return bool(getattr(settings, "allow_legacy_freqtrade_execution", False))
+    except Exception:
+        return False
+
+
+def _redact_command_for_log(command: List[str]) -> str:
+    text = " ".join(str(token) for token in command)
+    redacted = SECRET_VALUE_PATTERN.sub(lambda match: f"{match.group(1)}=<redacted:secret>", text)
+    redacted = PATH_PATTERN.sub("<redacted:path>", redacted)
+    return redacted.replace(".env", "<redacted:env>")
+
+
+def _validate_legacy_freqtrade_command(command: List[str], *, allowed_subcommand: str) -> None:
+    if len(command) < 2:
+        raise LegacyFreqtradeExecutionPolicyViolation("freqtrade_command_too_short")
+    if command[1] != allowed_subcommand:
+        raise LegacyFreqtradeExecutionPolicyViolation("freqtrade_subcommand_not_allowed")
+    for token in command[2:]:
+        lowered = str(token).lower()
+        if lowered in FORBIDDEN_COMMAND_TOKENS or "shell=true" in lowered:
+            raise LegacyFreqtradeExecutionPolicyViolation("freqtrade_forbidden_token")
 
 
 def _pair_file_stem(pair: str) -> str:
@@ -253,6 +293,11 @@ class DataDownloader:
         self.timeframes = ["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
     def download_data(self, start_date: date):
+        if not _legacy_freqtrade_execution_enabled():
+            raise LegacyFreqtradeExecutionDisabled(
+                f"Legacy Freqtrade data download disabled. Set {LEGACY_EXECUTION_ENV}=1 to opt in."
+            )
+
         timerange = f"{start_date.strftime('%Y%m%d')}-"
         
         command = [
@@ -263,8 +308,9 @@ class DataDownloader:
             "--timerange", timerange,
             "-t", *self.timeframes
         ]
+        _validate_legacy_freqtrade_command(command, allowed_subcommand="download-data")
 
-        logger.info(f"Downloading data with command: {' '.join(command)}")
+        logger.info(f"Downloading data with command: {_redact_command_for_log(command)}")
         
         try:
             result = subprocess.run(command, check=True, capture_output=True, text=True)

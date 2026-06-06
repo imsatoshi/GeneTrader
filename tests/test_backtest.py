@@ -1,10 +1,20 @@
 import unittest
 import json
+import os
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
-from strategy.backtest import render_strategy, run_backtest
+
+os.environ.setdefault("GENETRADER_CONFIG", "ga.json.example")
+
+from strategy.backtest import (
+    LEGACY_EXECUTION_ENV,
+    LegacyFreqtradeExecutionDisabled,
+    _redact_for_log,
+    render_strategy,
+    run_backtest,
+)
 
 class TestBacktest(unittest.TestCase):
 
@@ -78,7 +88,8 @@ class TestBacktest(unittest.TestCase):
                 backtest_timerange_weeks=1,
             )
 
-            with patch('strategy.backtest.settings', fake_settings), \
+            with patch.dict(os.environ, {LEGACY_EXECUTION_ENV: "1"}), \
+                    patch('strategy.backtest.settings', fake_settings), \
                     patch('strategy.backtest.render_strategy', return_value='class S: pass'), \
                     patch('strategy.backtest.subprocess.run', return_value=SimpleNamespace(returncode=0)), \
                     patch('strategy.backtest.parse_backtest_results', return_value={'total_trades': 1}), \
@@ -89,6 +100,24 @@ class TestBacktest(unittest.TestCase):
 
             self.assertEqual(result, 42.0)
             self.assertEqual(list(user_dir.glob('temp_config_*.json')), [])
+
+    def test_run_backtest_disabled_without_explicit_opt_in(self):
+        with patch.dict(os.environ, {LEGACY_EXECUTION_ENV: ""}, clear=False):
+            with self.assertRaises(LegacyFreqtradeExecutionDisabled):
+                run_backtest([1, 2, 3], ['BTC/USDT'], generation=1)
+
+    def test_render_strategy_redacts_secret_like_params_in_logs(self):
+        payload = _redact_for_log({
+            "api_key": "abc",
+            "nested": {"password": "bad"},
+            "path": "C:/Users/name/.env token=secret-value",
+        })
+
+        encoded = json.dumps(payload, sort_keys=True)
+        self.assertNotIn("abc", encoded)
+        self.assertNotIn("bad", encoded)
+        self.assertNotIn("secret-value", encoded)
+        self.assertNotIn("C:/Users", encoded)
 
 if __name__ == '__main__':
     unittest.main()

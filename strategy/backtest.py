@@ -4,6 +4,7 @@ import os
 import time
 import random
 import subprocess
+import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from config.settings import settings
@@ -23,6 +24,11 @@ TIMEFRAME_MAP = {
     6: "12h",
     7: "1d"
 }
+LEGACY_EXECUTION_ENV = "GENETRADER_ENABLE_LEGACY_FREQTRADE_EXECUTION"
+FORBIDDEN_COMMAND_TOKENS = {"trade", "hyperopt", "live", "webserver", "api-server"}
+SECRET_KEY_PATTERN = re.compile(r"(api[_-]?key|secret|password|private[_-]?key|token|webhook|jwt)", re.IGNORECASE)
+SECRET_VALUE_PATTERN = re.compile(r"(?i)(api[_-]?key|secret|password|private[_-]?key|token)=([^\s,}]+)")
+PATH_PATTERN = re.compile(r"([A-Za-z]:[\\/][^\s\"']+|/(?:home|Users)/[^\s\"']+)")
 
 
 # 添加项目根目录到 Python 路径
@@ -36,6 +42,50 @@ def _remove_file_quietly(path: str) -> None:
             os.remove(path)
     except OSError as exc:
         logger.warning(f"Failed to remove temporary config {path}: {exc}")
+
+
+class LegacyFreqtradeExecutionDisabled(RuntimeError):
+    """Raised when legacy Freqtrade subprocess execution is not explicitly enabled."""
+
+
+class LegacyFreqtradeExecutionPolicyViolation(ValueError):
+    """Raised when a legacy Freqtrade command violates the safe subset."""
+
+
+def _legacy_freqtrade_execution_enabled() -> bool:
+    if os.environ.get(LEGACY_EXECUTION_ENV) == "1":
+        return True
+    try:
+        return bool(getattr(settings, "allow_legacy_freqtrade_execution", False))
+    except Exception:
+        return False
+
+
+def _redact_for_log(value):
+    if isinstance(value, dict):
+        return {
+            key: "<redacted:secret>" if SECRET_KEY_PATTERN.search(str(key)) else _redact_for_log(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_for_log(item) for item in value]
+    if isinstance(value, str):
+        redacted = SECRET_VALUE_PATTERN.sub(lambda match: f"{match.group(1)}=<redacted:secret>", value)
+        redacted = PATH_PATTERN.sub("<redacted:path>", redacted)
+        return redacted.replace(".env", "<redacted:env>")
+    return value
+
+
+def _validate_legacy_freqtrade_command(cmd_args: List[str], *, allowed_subcommand: str) -> None:
+    if len(cmd_args) < 2:
+        raise LegacyFreqtradeExecutionPolicyViolation("freqtrade_command_too_short")
+    subcommand = cmd_args[1]
+    if subcommand != allowed_subcommand:
+        raise LegacyFreqtradeExecutionPolicyViolation("freqtrade_subcommand_not_allowed")
+    for token in cmd_args[2:]:
+        lowered = str(token).lower()
+        if lowered in FORBIDDEN_COMMAND_TOKENS or "shell=true" in lowered:
+            raise LegacyFreqtradeExecutionPolicyViolation("freqtrade_forbidden_token")
 
 def render_strategy(params: list, strategy_name: str) -> str:
     # Generate the dynamic template
@@ -58,7 +108,7 @@ def render_strategy(params: list, strategy_name: str) -> str:
                     strategy_params[param_name] = params[i]
             else:
                 logger.warning(f"Not enough parameters provided. Skipping {param_name}")
-    logger.info(strategy_params)
+    logger.info(_redact_for_log(strategy_params))
     rendered_strategy = strategy_template.substitute(strategy_params)
     return rendered_strategy
 
@@ -77,6 +127,11 @@ def run_backtest(genes: list, trading_pairs: list, generation: int,
     Returns:
         Fitness score for the strategy
     """
+    if not _legacy_freqtrade_execution_enabled():
+        raise LegacyFreqtradeExecutionDisabled(
+            f"Legacy Freqtrade backtesting disabled. Set {LEGACY_EXECUTION_ENV}=1 to opt in."
+        )
+
     timestamp = int(time.time())
     random_id = random.randint(1000, 9999)
     strategy_name = f"GeneTrader_gen{generation}_{timestamp}_{random_id}"
@@ -142,6 +197,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int,
             "--enable-protections",
             "--cache", "none"
         ]
+        _validate_legacy_freqtrade_command(cmd_args, allowed_subcommand="backtesting")
 
         for attempt in range(settings.max_retries):
             logger.info(f"Running backtest command (attempt {attempt + 1}/{settings.max_retries})")
