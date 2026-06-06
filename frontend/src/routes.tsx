@@ -7,6 +7,7 @@ import OfflineDataPage from './pages/OfflineDataPage';
 import OverviewPage from './pages/OverviewPage';
 import RequirementsPage from './pages/RequirementsPage';
 import ResultsPage from './pages/ResultsPage';
+import RunExplorerPage from './pages/RunExplorerPage';
 import SettingsPage from './pages/SettingsPage';
 
 export function AppRoutes() {
@@ -18,6 +19,7 @@ export function AppRoutes() {
       <Route path="/mock-dashboard" element={<MockDashboardPage />} />
       <Route path="/mock-batch-dashboard" element={<MockBatchDashboardPage />} />
       <Route path="/ga-runs" element={<GaRunsPage />} />
+      <Route path="/run-explorer" element={<RunExplorerPage />} />
       <Route path="/results" element={<ResultsPage />} />
       <Route path="/charts" element={<ChartsPage />} />
       <Route path="/settings" element={<SettingsPage />} />

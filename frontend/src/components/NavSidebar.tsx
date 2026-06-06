@@ -7,6 +7,7 @@ const navItems = [
   { to: '/mock-dashboard', label: 'Mock Dashboard' },
   { to: '/mock-batch-dashboard', label: 'Batch Dashboard' },
   { to: '/ga-runs', label: 'GA Runs' },
+  { to: '/run-explorer', label: 'Run Explorer' },
   { to: '/results', label: 'Results' },
   { to: '/charts', label: 'Charts' },
   { to: '/settings', label: 'Settings' },
