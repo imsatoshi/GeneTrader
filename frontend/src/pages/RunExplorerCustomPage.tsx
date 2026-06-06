@@ -11,6 +11,10 @@ function latestRun(runs: CustomExperimentRun[]) {
   return [...runs].sort((left, right) => right.created_at.localeCompare(left.created_at))[0];
 }
 
+function previewJson(value: unknown) {
+  return JSON.stringify(value, null, 2);
+}
+
 export default function RunExplorerCustomPage() {
   const runs = customRunRegistry;
   const [sortKey, setSortKey] = useState<SortKey>('best_fitness');
@@ -137,7 +141,7 @@ export default function RunExplorerCustomPage() {
       </div>
 
       {selectedRun ? (
-        <div className="panel">
+        <div className="panel custom-detail-view">
           <div className="section-heading">
             <p className="eyebrow">Selected Run</p>
             <h2>{selectedRun.run_id}</h2>
@@ -149,6 +153,72 @@ export default function RunExplorerCustomPage() {
             <span>Artifact dir: {selectedRun.artifact_dir}</span>
           </div>
           <p>{selectedRun.notes}</p>
+          <div className="detail-grid">
+            <section>
+              <h3>Genome Parameters</h3>
+              <pre className="json-preview">{previewJson(selectedRun.genome)}</pre>
+            </section>
+            <section>
+              <h3>StrategyConfig</h3>
+              <pre className="json-preview">{previewJson(selectedRun.strategy_config)}</pre>
+            </section>
+            <section>
+              <h3>RiskGovernor Adjustments</h3>
+              <div className="summary-grid">
+                <span>Adjusted leverage: {formatMetric(selectedRun.risk_governor.adjusted_leverage, 2)}</span>
+                <span>
+                  Adjusted risk per trade: {formatMetric(selectedRun.risk_governor.adjusted_risk_per_trade, 3)}
+                </span>
+                <span>Actions: {selectedRun.risk_governor.actions.join(', ')}</span>
+              </div>
+            </section>
+            <section>
+              <h3>TradingSystemConfig Preview</h3>
+              <pre className="json-preview">{previewJson(selectedRun.trading_system_config)}</pre>
+            </section>
+            <section>
+              <h3>Fitness Components</h3>
+              <pre className="json-preview">{previewJson(selectedRun.fitness_components)}</pre>
+            </section>
+            <section>
+              <h3>Walk-forward Stability</h3>
+              <div className="summary-grid">
+                <span>
+                  Stability: {formatMetric(selectedRun.robustness_summary.walk_forward.stability_score)}
+                </span>
+                <span>
+                  Train/validation gap:{' '}
+                  {formatMetric(selectedRun.robustness_summary.walk_forward.train_validation_gap)}
+                </span>
+                <span>
+                  Validation/test gap:{' '}
+                  {formatMetric(selectedRun.robustness_summary.walk_forward.validation_test_gap)}
+                </span>
+              </div>
+            </section>
+            <section>
+              <h3>Monte Carlo Summary</h3>
+              <div className="summary-grid">
+                <span>Runs: {selectedRun.robustness_summary.monte_carlo.runs}</span>
+                <span>Profit p05: {formatMetric(selectedRun.robustness_summary.monte_carlo.profit_p05)}</span>
+                <span>
+                  Drawdown p95: {formatMetric(selectedRun.robustness_summary.monte_carlo.drawdown_p95)}
+                </span>
+                <span>Failure rate: {formatMetric(selectedRun.robustness_summary.monte_carlo.failure_rate)}</span>
+              </div>
+            </section>
+            <section>
+              <h3>Portfolio Summary</h3>
+              <div className="summary-grid">
+                <span>Profit: {formatMetric(selectedRun.robustness_summary.portfolio.portfolio_profit)}</span>
+                <span>Drawdown: {formatMetric(selectedRun.robustness_summary.portfolio.portfolio_drawdown)}</span>
+                <span>
+                  Correlation penalty:{' '}
+                  {formatMetric(selectedRun.robustness_summary.portfolio.correlation_penalty)}
+                </span>
+              </div>
+            </section>
+          </div>
         </div>
       ) : null}
 

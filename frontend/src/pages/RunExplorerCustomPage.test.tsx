@@ -72,4 +72,41 @@ describe('RunExplorerCustomPage', () => {
     expect(screen.getByText(/Genome: custom-gen006-ind021/i)).toBeInTheDocument();
     expect(screen.getByLabelText('mock json export')).toHaveTextContent('custom-ga-seed-42');
   });
+
+  it('renders genome detail', () => {
+    render(<RunExplorerCustomPage />);
+
+    expect(screen.getByText('Genome Parameters')).toBeInTheDocument();
+    expect(screen.getByText(/entry_bb_window/i)).toBeInTheDocument();
+  });
+
+  it('renders risk governor adjustments', () => {
+    render(<RunExplorerCustomPage />);
+
+    expect(screen.getByText('RiskGovernor Adjustments')).toBeInTheDocument();
+    expect(screen.getByText(/Adjusted leverage:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Adjusted risk per trade:/i)).toBeInTheDocument();
+  });
+
+  it('renders trading system config preview', () => {
+    render(<RunExplorerCustomPage />);
+
+    expect(screen.getByText('TradingSystemConfig Preview')).toBeInTheDocument();
+    expect(screen.getByText(/custom-trading-system-config\/v1/i)).toBeInTheDocument();
+  });
+
+  it('renders fitness components', () => {
+    render(<RunExplorerCustomPage />);
+
+    expect(screen.getByText('Fitness Components')).toBeInTheDocument();
+    expect(screen.getByText(/final_fitness/i)).toBeInTheDocument();
+  });
+
+  it('renders robustness summary', () => {
+    render(<RunExplorerCustomPage />);
+
+    expect(screen.getByText('Walk-forward Stability')).toBeInTheDocument();
+    expect(screen.getByText('Monte Carlo Summary')).toBeInTheDocument();
+    expect(screen.getByText('Portfolio Summary')).toBeInTheDocument();
+  });
 });
