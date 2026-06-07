@@ -46,6 +46,8 @@ owner.
 - Drawdown above the risk cutoff.
 - Long loss streaks that trigger risk reduction or cooldown.
 - Position sizing previews capped by max position value.
+- Risk dashboard summaries that show `reduce_risk` or `pause_trading`.
+- Strategy explainability warnings that conflict with the intended system.
 
 ## Mock-First Pipeline To Review
 
@@ -90,6 +92,40 @@ Portfolio summaries aggregate mock multi-pair outputs and correlation penalty.
 Owner should confirm whether exposure caps are conservative enough for the
 actual account context.
 
+### Position Sizing Preview
+
+Position sizing preview is local arithmetic from fixture equity, stop-loss,
+risk-per-trade, leverage, and max position value. It is not an account lookup
+and does not confirm exchange margin availability.
+
+Owner should check:
+
+- Whether the previewed notional size is reasonable for the intended account.
+- Whether capped position values are acceptable or indicate too much risk.
+- Whether margin required stays conservative after leverage is applied.
+
+### Strategy Explanation
+
+Strategy explanation turns a genome and metrics into review text for entry,
+exit, risk, warnings, and fitness rationale. It is meant to make owner review
+faster, not to replace manual approval.
+
+Owner should check:
+
+- Whether the explanation matches the real strategy intent.
+- Whether high-score rationale depends on excessive leverage or drawdown.
+- Whether RiskGovernor actions are acceptable and conservative enough.
+
+### Risk Dashboard Summary
+
+The owner review pack includes a risk dashboard summary derived from the same
+mock fixtures used by the frontend risk dashboard. It summarizes drawdown,
+loss streak, portfolio exposure, risk per trade, leverage, and circuit breaker
+status.
+
+Owner should treat any `reduce_risk` or `pause_trading` row as a required
+manual review item. These statuses do not authorize real execution.
+
 ## Local Review Reference Report
 
 The local health report generator can produce JSON, Markdown, and HTML files
@@ -118,5 +154,6 @@ Real backtest remains `BLOCKED` until all of the following are true:
 ```powershell
 python -m bollinger_evolver.owner_review_pack --output <tempdir>
 python -m bollinger_evolver.risk_cli explain --fixture safe_default --output <tempdir>
+python -m bollinger_evolver.risk_cli explain-strategy --fixture safe_default --output <tempdir>
 python -m unittest bollinger_evolver.tests.test_owner_review_pack bollinger_evolver.tests.test_risk_cli
 ```
