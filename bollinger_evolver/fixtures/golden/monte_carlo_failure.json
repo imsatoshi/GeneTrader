@@ -1,0 +1,31 @@
+{
+  "schema_version": "monte-carlo-risk-scenario/v1",
+  "scenario": "monte_carlo_failure",
+  "trades": [
+    {
+      "pnl_pct": 0.01
+    },
+    {
+      "pnl_pct": -0.04
+    },
+    {
+      "pnl_pct": -0.025
+    },
+    {
+      "pnl_pct": 0.012
+    },
+    {
+      "pnl_pct": -0.03
+    }
+  ],
+  "config": {
+    "runs": 25,
+    "seed": 326,
+    "perturbation": 0.001,
+    "failure_profit_threshold": 0.0,
+    "failure_drawdown_threshold": 0.05
+  },
+  "expected": {
+    "failure_rate_min": 0.1
+  }
+}

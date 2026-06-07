@@ -1,0 +1,30 @@
+{
+  "schema_version": "custom-risk-scenario/v1",
+  "scenario": "loss_streak",
+  "genome": {
+    "genome_id": "golden-loss-streak",
+    "entry_bb_window": 30,
+    "entry_bb_stddev": 2.4,
+    "entry_rsi_period": 16,
+    "entry_rsi_max": 38.0,
+    "exit_take_profit_pct": 0.07,
+    "exit_stop_loss_pct": 0.035,
+    "trailing_stop_pct": 0.015,
+    "add_position_threshold_pct": 0.015,
+    "reduce_position_threshold_pct": 0.05,
+    "max_additions": 1,
+    "leverage": 2.0,
+    "risk_per_trade": 0.015,
+    "max_portfolio_exposure": 0.32,
+    "cooldown_candles": 24
+  },
+  "metrics": {
+    "profit": 0.02,
+    "drawdown": 0.12,
+    "max_consecutive_losses": 8
+  },
+  "expected": {
+    "risk_level": "review",
+    "risk_action": "cooldown_applied"
+  }
+}

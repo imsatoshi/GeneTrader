@@ -1,0 +1,25 @@
+{
+  "schema_version": "custom-risk-scenario/v1",
+  "scenario": "high_leverage",
+  "genome": {
+    "genome_id": "golden-high-leverage",
+    "entry_bb_window": 18,
+    "entry_bb_stddev": 1.8,
+    "entry_rsi_period": 12,
+    "entry_rsi_max": 32.0,
+    "exit_take_profit_pct": 0.09,
+    "exit_stop_loss_pct": 0.025,
+    "trailing_stop_pct": 0.02,
+    "add_position_threshold_pct": 0.02,
+    "reduce_position_threshold_pct": 0.04,
+    "max_additions": 2,
+    "leverage": 3.0,
+    "risk_per_trade": 0.018,
+    "max_portfolio_exposure": 0.45,
+    "cooldown_candles": 6
+  },
+  "expected": {
+    "risk_level": "review",
+    "risk_warning": "leverage_at_owner_review_limit"
+  }
+}

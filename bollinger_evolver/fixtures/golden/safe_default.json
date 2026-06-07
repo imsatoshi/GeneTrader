@@ -1,0 +1,25 @@
+{
+  "schema_version": "custom-risk-scenario/v1",
+  "scenario": "safe_default",
+  "genome": {
+    "genome_id": "golden-safe-default",
+    "entry_bb_window": 20,
+    "entry_bb_stddev": 2.0,
+    "entry_rsi_period": 14,
+    "entry_rsi_max": 35.0,
+    "exit_take_profit_pct": 0.08,
+    "exit_stop_loss_pct": 0.03,
+    "trailing_stop_pct": 0.02,
+    "add_position_threshold_pct": 0.025,
+    "reduce_position_threshold_pct": 0.04,
+    "max_additions": 1,
+    "leverage": 1.5,
+    "risk_per_trade": 0.01,
+    "max_portfolio_exposure": 0.24,
+    "cooldown_candles": 3
+  },
+  "expected": {
+    "risk_level": "low",
+    "real_backtest_used": false
+  }
+}

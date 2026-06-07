@@ -1,0 +1,30 @@
+{
+  "schema_version": "portfolio-risk-scenario/v1",
+  "scenario": "portfolio_exposure_breach",
+  "positions": [
+    {
+      "pair": "BTC/USDT",
+      "exposure": 0.22,
+      "leverage": 3.0
+    },
+    {
+      "pair": "ETH/USDT",
+      "exposure": 0.18,
+      "leverage": 2.5
+    },
+    {
+      "pair": "SOL/USDT",
+      "exposure": 0.12,
+      "leverage": 2.0
+    }
+  ],
+  "limits": {
+    "max_portfolio_exposure": 0.30,
+    "max_pair_exposure": 0.15,
+    "max_leverage_usage": 1.0
+  },
+  "expected_violation_codes": [
+    "portfolio_exposure_exceeded",
+    "pair_exposure_exceeded"
+  ]
+}

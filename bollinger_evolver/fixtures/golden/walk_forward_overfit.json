@@ -1,0 +1,30 @@
+{
+  "schema_version": "walk-forward-risk-scenario/v1",
+  "scenario": "walk_forward_overfit",
+  "genome": {
+    "genome_id": "golden-walk-forward-overfit",
+    "entry_bb_window": 14,
+    "entry_bb_stddev": 1.5,
+    "entry_rsi_period": 8,
+    "entry_rsi_max": 50.0,
+    "exit_take_profit_pct": 0.18,
+    "exit_stop_loss_pct": 0.045,
+    "trailing_stop_pct": 0.005,
+    "add_position_threshold_pct": 0.04,
+    "reduce_position_threshold_pct": 0.09,
+    "max_additions": 3,
+    "leverage": 2.8,
+    "risk_per_trade": 0.018,
+    "max_portfolio_exposure": 0.5,
+    "cooldown_candles": 6
+  },
+  "config": {
+    "base_seed": 326,
+    "trade_count": 18,
+    "pair": "BTC/USDT",
+    "timeframe": "1h"
+  },
+  "expected": {
+    "schema_version": "custom-walk-forward/v1"
+  }
+}

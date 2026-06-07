@@ -1,0 +1,30 @@
+{
+  "schema_version": "custom-risk-scenario/v1",
+  "scenario": "high_drawdown",
+  "genome": {
+    "genome_id": "golden-high-drawdown",
+    "entry_bb_window": 24,
+    "entry_bb_stddev": 1.6,
+    "entry_rsi_period": 10,
+    "entry_rsi_max": 42.0,
+    "exit_take_profit_pct": 0.12,
+    "exit_stop_loss_pct": 0.06,
+    "trailing_stop_pct": 0.01,
+    "add_position_threshold_pct": 0.05,
+    "reduce_position_threshold_pct": 0.08,
+    "max_additions": 3,
+    "leverage": 2.5,
+    "risk_per_trade": 0.019,
+    "max_portfolio_exposure": 0.55,
+    "cooldown_candles": 12
+  },
+  "metrics": {
+    "profit": 0.16,
+    "drawdown": 0.22,
+    "max_consecutive_losses": 6
+  },
+  "expected": {
+    "risk_level": "high",
+    "risk_warning": "drawdown_above_review_cutoff"
+  }
+}
