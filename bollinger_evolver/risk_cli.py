@@ -20,6 +20,7 @@ from bollinger_evolver.trading_system_adapter import build_position_sizing_previ
 
 RISK_REPORT_FILENAME = "risk_report.json"
 STRATEGY_EXPLANATION_FILENAME = "strategy_explanation.json"
+STRATEGY_EXPLANATION_MARKDOWN_FILENAME = "strategy_explanation.md"
 
 
 def _repo_root() -> Path:
@@ -44,6 +45,7 @@ def validate_risk_output_dir(output: str | Path) -> Path:
     disallowed_roots = (
         root,
         root / ".runtime",
+        root / ".workflow",
         root / "user_data" / "data",
     )
     if destination == root:
@@ -111,6 +113,37 @@ def build_fixture_risk_report(fixture_name: str, *, equity: float = 10_000.0) ->
     return risk_report, explanation
 
 
+def render_strategy_explanation_markdown(
+    fixture_name: str,
+    explanation: dict[str, Any],
+) -> str:
+    """Render a small Markdown report for one fixture explanation."""
+
+    def _list(title: str, values: Sequence[Any]) -> str:
+        items = [f"- {value}" for value in values]
+        body = "\n".join(items) if items else "- none"
+        return f"## {title}\n\n{body}"
+
+    sections = [
+        "# Strategy Explanation",
+        f"Fixture: `{fixture_name}`",
+        f"Schema: `{explanation['schema_version']}`",
+        "## Summary",
+        str(explanation["summary"]),
+        _list("Entry Logic", explanation["entry_logic"]),
+        _list("Exit Logic", explanation["exit_logic"]),
+        _list("Risk Logic", explanation["risk_logic"]),
+        _list("Warnings", explanation["warnings"]),
+        _list("Fitness Explanation", explanation["fitness_explanation"]),
+        "## Safety",
+        "- fixture_only=true",
+        "- real_backtest_used=false",
+        "- exchange_api_used=false",
+        "- freqtrade_used=false",
+    ]
+    return "\n\n".join(sections) + "\n"
+
+
 def explain_command(args: argparse.Namespace) -> dict[str, str]:
     output_dir = validate_risk_output_dir(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -125,6 +158,23 @@ def explain_command(args: argparse.Namespace) -> dict[str, str]:
     }
 
 
+def explain_strategy_command(args: argparse.Namespace) -> dict[str, str]:
+    output_dir = validate_risk_output_dir(args.output)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _, explanation = build_fixture_risk_report(str(args.fixture), equity=float(args.equity))
+    explanation_json_path = output_dir / STRATEGY_EXPLANATION_FILENAME
+    explanation_md_path = output_dir / STRATEGY_EXPLANATION_MARKDOWN_FILENAME
+    explanation_json_path.write_text(json.dumps(explanation, indent=2, sort_keys=True), encoding="utf-8")
+    explanation_md_path.write_text(
+        render_strategy_explanation_markdown(str(args.fixture), explanation),
+        encoding="utf-8",
+    )
+    return {
+        "strategy_explanation": str(explanation_json_path),
+        "strategy_explanation_markdown": str(explanation_md_path),
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m bollinger_evolver.risk_cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -133,6 +183,11 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("--output", required=True)
     explain.add_argument("--equity", type=float, default=10_000.0)
     explain.set_defaults(handler=explain_command)
+    explain_strategy = subparsers.add_parser("explain-strategy")
+    explain_strategy.add_argument("--fixture", required=True)
+    explain_strategy.add_argument("--output", required=True)
+    explain_strategy.add_argument("--equity", type=float, default=10_000.0)
+    explain_strategy.set_defaults(handler=explain_strategy_command)
     return parser
 
 

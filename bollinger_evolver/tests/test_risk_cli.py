@@ -38,6 +38,8 @@ class TestRiskCli(unittest.TestCase):
     def test_risk_cli_rejects_missing_output_dir(self) -> None:
         with self.assertRaises(SystemExit):
             risk_cli.main(["explain", "--fixture", "safe_default"])
+        with self.assertRaises(SystemExit):
+            risk_cli.main(["explain-strategy", "--fixture", "safe_default"])
 
     def test_risk_cli_rejects_disallowed_output_dir(self) -> None:
         root = risk_cli._repo_root()
@@ -47,12 +49,35 @@ class TestRiskCli(unittest.TestCase):
         with self.assertRaises(SystemExit):
             risk_cli.main(["explain", "--fixture", "safe_default", "--output", str(root / ".runtime" / "risk")])
         with self.assertRaises(SystemExit):
+            risk_cli.main(["explain-strategy", "--fixture", "safe_default", "--output", str(root / ".workflow" / "risk")])
+        with self.assertRaises(SystemExit):
             risk_cli.main(["explain", "--fixture", "safe_default", "--output", str(root / "user_data" / "data" / "risk")])
 
     def test_risk_cli_does_not_execute_external_process(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             with patch("subprocess.run", side_effect=AssertionError("external process should not run")):
                 _run_cli(["explain", "--fixture", "safe_default", "--output", str(Path(tmp) / "risk")])
+
+    def test_risk_cli_explain_strategy_writes_json_and_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "strategy"
+
+            stdout = _run_cli(["explain-strategy", "--fixture", "safe_default", "--output", str(output)])
+            explanation = json.loads((output / "strategy_explanation.json").read_text(encoding="utf-8"))
+            markdown = (output / "strategy_explanation.md").read_text(encoding="utf-8")
+
+        paths = json.loads(stdout)
+        self.assertIn("strategy_explanation", paths)
+        self.assertIn("strategy_explanation_markdown", paths)
+        self.assertEqual(explanation["schema_version"], "strategy-explainability/v1")
+        self.assertIn("# Strategy Explanation", markdown)
+        self.assertIn("Fixture: `safe_default`", markdown)
+        self.assertIn("real_backtest_used=false", markdown)
+
+    def test_risk_cli_explain_strategy_does_not_execute_external_process(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("subprocess.run", side_effect=AssertionError("external process should not run")):
+                _run_cli(["explain-strategy", "--fixture", "safe_default", "--output", str(Path(tmp) / "strategy")])
 
     def test_risk_cli_high_risk_fixture_contains_warnings(self) -> None:
         report, explanation = risk_cli.build_fixture_risk_report("high_leverage_high_drawdown")
