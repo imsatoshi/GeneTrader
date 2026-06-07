@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 const ChartsPage = lazy(() => import('./pages/ChartsPage'));
 const GaRunsPage = lazy(() => import('./pages/GaRunsPage'));
 const HyperparamSweepPage = lazy(() => import('./pages/HyperparamSweepPage'));
+const MonteCarloPanelPage = lazy(() => import('./pages/MonteCarloPanelPage'));
 const MockBatchDashboardPage = lazy(() => import('./pages/MockBatchDashboardPage'));
 const MockDashboardPage = lazy(() => import('./pages/MockDashboardPage'));
 const OfflineDataPage = lazy(() => import('./pages/OfflineDataPage'));
@@ -26,6 +27,7 @@ export function AppRoutes() {
       <Route path="/mock-batch-dashboard" element={<MockBatchDashboardPage />} />
       <Route path="/ga-runs" element={<GaRunsPage />} />
       <Route path="/hyperparam-sweep" element={<HyperparamSweepPage />} />
+      <Route path="/monte-carlo" element={<MonteCarloPanelPage />} />
       <Route path="/run-explorer" element={<RunExplorerPage />} />
       <Route path="/custom-run-explorer" element={<RunExplorerCustomPage />} />
       <Route path="/run-comparison" element={<RunComparisonPage />} />
