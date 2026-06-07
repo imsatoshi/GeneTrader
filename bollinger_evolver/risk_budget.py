@@ -56,23 +56,37 @@ def _validate_position(position: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_positions(positions: Sequence[Mapping[str, Any]] | Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    if isinstance(positions, Mapping):
+        normalized: list[Mapping[str, Any]] = []
+        for pair, value in positions.items():
+            if isinstance(value, Mapping):
+                item = dict(value)
+                item.setdefault("pair", pair)
+                normalized.append(item)
+            else:
+                normalized.append({"pair": pair, "exposure": value, "leverage": 1.0})
+        return normalized
+    if isinstance(positions, (str, bytes)) or not isinstance(positions, Sequence):
+        raise ValueError("risk_budget_positions_must_be_sequence_or_mapping")
+    return list(positions)
+
+
 def simulate_risk_budget(
-    positions: Sequence[Mapping[str, Any]],
+    positions: Sequence[Mapping[str, Any]] | Mapping[str, Any],
     *,
     config: RiskBudgetConfig | None = None,
     loss_streak: int = 0,
 ) -> dict[str, Any]:
     """Return a JSON-safe account risk budget simulation for mock positions."""
 
-    if isinstance(positions, (str, bytes)) or not isinstance(positions, Sequence):
-        raise ValueError("risk_budget_positions_must_be_sequence")
     if isinstance(loss_streak, bool) or not isinstance(loss_streak, int) or loss_streak < 0:
         raise ValueError("risk_budget_loss_streak_must_be_non_negative_int")
 
     active_config = config or RiskBudgetConfig()
     pair_exposures: dict[str, float] = defaultdict(float)
     leverage_usage = 0.0
-    for position in positions:
+    for position in _normalize_positions(positions):
         if not isinstance(position, Mapping):
             raise ValueError("risk_budget_position_must_be_mapping")
         validated = _validate_position(position)

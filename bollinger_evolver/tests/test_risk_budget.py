@@ -9,6 +9,21 @@ from bollinger_evolver.risk_budget import RiskBudgetConfig, simulate_risk_budget
 
 
 class TestRiskBudgetSimulator(unittest.TestCase):
+    def test_risk_budget_accepts_pair_exposure_mapping(self) -> None:
+        result = simulate_risk_budget(
+            {
+                "BTC/USDT": 0.12,
+                "ETH/USDT": 0.10,
+            }
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["schema_version"], "risk-budget-simulation/v1")
+        self.assertEqual(result["total_exposure"], 0.22)
+        self.assertEqual(result["pair_exposures"], {"BTC/USDT": 0.12, "ETH/USDT": 0.10})
+        self.assertEqual(result["violations"], [])
+        self.assertEqual(result["recommendations"], [])
+
     def test_risk_budget_allows_within_limits(self) -> None:
         result = simulate_risk_budget(
             [
