@@ -393,6 +393,70 @@ pre {
   font-size: 0.95rem;
 }
 
+.detail-grid h4 {
+  margin: 0;
+  color: #355c4b;
+  font-size: 0.82rem;
+}
+
+.warning-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.warning-list li,
+.muted-text {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(185, 125, 43, 0.16);
+  color: #7d531f;
+  font-weight: 800;
+}
+
+.muted-text {
+  margin: 0;
+  background: rgba(53, 92, 75, 0.1);
+  color: #355c4b;
+}
+
+.metric-good {
+  color: #28745d;
+  font-weight: 800;
+}
+
+.metric-risk,
+.risk-critical {
+  color: #a6402d;
+  font-weight: 800;
+}
+
+.metric-neutral {
+  color: #63706a;
+  font-weight: 800;
+}
+
+.risk-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(53, 92, 75, 0.1);
+}
+
+.risk-ok {
+  color: #28745d;
+}
+
+.risk-warning {
+  color: #7d531f;
+  font-weight: 800;
+}
+
 .error-text {
   color: #a6402d;
   font-weight: 800;
@@ -401,6 +465,49 @@ pre {
 .chart-frame {
   min-height: 360px;
   padding: 8px;
+}
+
+.fitness-chart {
+  display: grid;
+  gap: 12px;
+  min-height: 300px;
+}
+
+.fitness-chart svg {
+  width: 100%;
+  min-height: 230px;
+}
+
+.chart-axis {
+  stroke: rgba(16, 33, 28, 0.18);
+  stroke-width: 1;
+}
+
+.chart-label {
+  fill: #63706a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #355c4b;
+  font-weight: 800;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.chart-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
 }
 
 @media (max-width: 900px) {

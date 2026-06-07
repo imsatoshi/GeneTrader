@@ -9,6 +9,8 @@ const navItems = [
   { to: '/ga-runs', label: 'GA Runs' },
   { to: '/run-explorer', label: 'Run Explorer' },
   { to: '/custom-run-explorer', label: 'Custom Runs' },
+  { to: '/run-comparison', label: 'Run Compare' },
+  { to: '/risk-dashboard', label: 'Risk Dashboard' },
   { to: '/results', label: 'Results' },
   { to: '/charts', label: 'Charts' },
   { to: '/settings', label: 'Settings' },

@@ -18,6 +18,28 @@ export type CustomRunRobustnessSummary = {
   };
 };
 
+export type PositionSizingPreview = {
+  schema_version: string;
+  position_value: number;
+  margin_required: number;
+  risk_amount: number;
+  leverage: number;
+  warnings: string[];
+  source?: string;
+  max_portfolio_exposure?: number;
+  max_position_value?: number;
+};
+
+export type StrategyExplanation = {
+  schema_version: string;
+  summary: string;
+  entry_logic: string[];
+  exit_logic: string[];
+  risk_logic: string[];
+  warnings: string[];
+  fitness_explanation: string[];
+};
+
 export type CustomExperimentRun = {
   run_id: string;
   created_at: string;
@@ -30,6 +52,7 @@ export type CustomExperimentRun = {
   status: 'completed' | 'review' | 'failed';
   strategy_family: string;
   stability_score: number;
+  max_drawdown: number;
   failure_rate: number;
   portfolio_profit: number;
   portfolio_drawdown: number;
@@ -42,6 +65,8 @@ export type CustomExperimentRun = {
     adjusted_risk_per_trade: number;
     actions: string[];
   };
+  position_sizing_preview: PositionSizingPreview;
+  strategy_explanation: StrategyExplanation;
   fitness_components: Record<string, number>;
   robustness_summary: CustomRunRobustnessSummary;
   notes: string;
@@ -121,6 +146,33 @@ const baselineTradingSystemConfig = {
   },
 };
 
+const baselinePositionSizingPreview = {
+  schema_version: 'position-sizing/v1',
+  position_value: 3000,
+  margin_required: 1500,
+  risk_amount: 90,
+  leverage: 2,
+  warnings: ['max_position_value_applied'],
+  source: 'trading-system-config',
+  max_portfolio_exposure: 0.3,
+  max_position_value: 3000,
+};
+
+const baselineStrategyExplanation = {
+  schema_version: 'strategy-explainability/v1',
+  summary: 'Balanced custom strategy profile for mock-first evaluation.',
+  entry_logic: ['bollinger_window=30', 'bollinger_stddev=2.1', 'rsi_max=34'],
+  exit_logic: ['stoploss_pct=0.03', 'takeprofit_pct=0.08', 'trailing_stop_pct=0.02'],
+  risk_logic: ['leverage=2', 'risk_per_trade=0.012', 'max_portfolio_exposure=0.3'],
+  warnings: ['max_position_value_applied'],
+  fitness_explanation: [
+    'final_fitness=0.864',
+    'drawdown_penalty_applied',
+    'overfit_penalty_applied',
+    'stability_component_rewards_walk_forward_consistency',
+  ],
+};
+
 export const customRunRegistry: CustomExperimentRun[] = [
   {
     run_id: 'custom-ga-seed-42',
@@ -134,6 +186,7 @@ export const customRunRegistry: CustomExperimentRun[] = [
     status: 'completed',
     strategy_family: 'custom-bollinger-rsi',
     stability_score: 0.82,
+    max_drawdown: 0.09,
     failure_rate: 0.06,
     portfolio_profit: 0.18,
     portfolio_drawdown: 0.09,
@@ -146,6 +199,8 @@ export const customRunRegistry: CustomExperimentRun[] = [
       adjusted_risk_per_trade: 0.012,
       actions: ['advisory_only_no_strategy_mutation'],
     },
+    position_sizing_preview: baselinePositionSizingPreview,
+    strategy_explanation: baselineStrategyExplanation,
     fitness_components: {
       profit_component: 0.18,
       sharpe_component: 0.36,
@@ -188,6 +243,7 @@ export const customRunRegistry: CustomExperimentRun[] = [
     status: 'review',
     strategy_family: 'custom-bollinger-rsi',
     stability_score: 0.76,
+    max_drawdown: 0.18,
     failure_rate: 0.09,
     portfolio_profit: 0.14,
     portfolio_drawdown: 0.13,
@@ -196,8 +252,9 @@ export const customRunRegistry: CustomExperimentRun[] = [
       ...baselineGenome,
       genome_id: 'custom-gen003-ind009',
       entry_bb_window: 26,
-      leverage: 2.5,
-      risk_per_trade: 0.015,
+      leverage: 3,
+      risk_per_trade: 0.02,
+      max_portfolio_exposure: 0.55,
       cooldown_candles: 12,
     },
     strategy_config: {
@@ -207,11 +264,64 @@ export const customRunRegistry: CustomExperimentRun[] = [
     trading_system_config: {
       ...baselineTradingSystemConfig,
       strategy_id: 'custom-gen003-ind009',
+      position: {
+        ...baselineTradingSystemConfig.position,
+        base_leverage: 3,
+        max_leverage: 3,
+        risk_per_trade: 0.02,
+      },
+      risk_control: {
+        ...baselineTradingSystemConfig.risk_control,
+        max_portfolio_exposure: 0.55,
+        cooldown_candles: 12,
+      },
     },
     risk_governor: {
-      adjusted_leverage: 2.5,
+      adjusted_leverage: 3,
       adjusted_risk_per_trade: 0.01,
       actions: ['reduced_risk_after_drawdown'],
+    },
+    position_sizing_preview: {
+      schema_version: 'position-sizing/v1',
+      position_value: 5500,
+      margin_required: 1833.3333333333,
+      risk_amount: 165,
+      leverage: 3,
+      warnings: [
+        'high_leverage',
+        'high_leverage_config',
+        'high_portfolio_exposure',
+        'max_position_value_applied',
+        'risk_per_trade_near_upper_bound',
+      ],
+      source: 'trading-system-config',
+      max_portfolio_exposure: 0.55,
+      max_position_value: 5500,
+    },
+    strategy_explanation: {
+      schema_version: 'strategy-explainability/v1',
+      summary: 'Strategy profile requires risk review before any real backtest gate.',
+      entry_logic: ['bollinger_window=26', 'bollinger_stddev=2.1', 'rsi_max=34'],
+      exit_logic: ['stoploss_pct=0.03', 'takeprofit_pct=0.08', 'trailing_stop_pct=0.02'],
+      risk_logic: [
+        'leverage=3',
+        'risk_per_trade=0.02',
+        'max_portfolio_exposure=0.55',
+        'risk_governor_action=reduced_risk_after_drawdown',
+      ],
+      warnings: [
+        'drawdown_requires_risk_review',
+        'high_leverage_strategy',
+        'high_portfolio_exposure',
+        'risk_governor:reduced_risk_after_drawdown',
+        'risk_per_trade_near_limit',
+      ],
+      fitness_explanation: [
+        'final_fitness=0.799',
+        'drawdown_penalty_applied',
+        'overfit_penalty_applied',
+        'stability_component_rewards_walk_forward_consistency',
+      ],
     },
     fitness_components: {
       profit_component: 0.14,
@@ -255,6 +365,7 @@ export const customRunRegistry: CustomExperimentRun[] = [
     status: 'completed',
     strategy_family: 'custom-bollinger-rsi',
     stability_score: 0.79,
+    max_drawdown: 0.08,
     failure_rate: 0.05,
     portfolio_profit: 0.21,
     portfolio_drawdown: 0.08,
@@ -278,6 +389,26 @@ export const customRunRegistry: CustomExperimentRun[] = [
       adjusted_leverage: 2,
       adjusted_risk_per_trade: 0.012,
       actions: ['advisory_only_no_strategy_mutation'],
+    },
+    position_sizing_preview: {
+      ...baselinePositionSizingPreview,
+      position_value: 3500,
+      margin_required: 1750,
+      risk_amount: 105,
+      max_portfolio_exposure: 0.35,
+      max_position_value: 3500,
+      warnings: ['max_position_value_applied', 'portfolio_exposure_review'],
+    },
+    strategy_explanation: {
+      ...baselineStrategyExplanation,
+      summary: 'Portfolio-focused mock strategy with controlled drawdown and reviewable exposure.',
+      warnings: ['portfolio_exposure_review'],
+      fitness_explanation: [
+        'final_fitness=0.812',
+        'drawdown_penalty_applied',
+        'overfit_penalty_applied',
+        'stability_component_rewards_walk_forward_consistency',
+      ],
     },
     fitness_components: {
       profit_component: 0.21,

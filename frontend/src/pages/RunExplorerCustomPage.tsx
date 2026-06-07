@@ -15,11 +15,25 @@ function previewJson(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
+function renderList(items: string[], emptyText: string) {
+  if (items.length === 0) {
+    return <p className="muted-text">{emptyText}</p>;
+  }
+  return (
+    <ul className="warning-list">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
 export default function RunExplorerCustomPage() {
   const runs = customRunRegistry;
   const [sortKey, setSortKey] = useState<SortKey>('best_fitness');
   const [minStability, setMinStability] = useState(0);
   const [maxPortfolioDrawdown, setMaxPortfolioDrawdown] = useState(1);
+  const [maxDrawdown, setMaxDrawdown] = useState(1);
   const [selectedRunId, setSelectedRunId] = useState(runs[0]?.run_id ?? '');
   const [showJsonExport, setShowJsonExport] = useState(false);
   const latest = latestRun(runs);
@@ -29,13 +43,14 @@ export default function RunExplorerCustomPage() {
     return runs
       .filter((run) => run.stability_score >= minStability)
       .filter((run) => run.portfolio_drawdown <= maxPortfolioDrawdown)
+      .filter((run) => run.max_drawdown <= maxDrawdown)
       .sort((left, right) => {
         if (sortKey === 'run_id') {
           return left.run_id.localeCompare(right.run_id);
         }
         return Number(right[sortKey]) - Number(left[sortKey]);
       });
-  }, [runs, sortKey, minStability, maxPortfolioDrawdown]);
+  }, [runs, sortKey, minStability, maxPortfolioDrawdown, maxDrawdown]);
   const selectedRun = visibleRuns.find((run) => run.run_id === selectedRunId) ?? visibleRuns[0];
 
   return (
@@ -102,6 +117,18 @@ export default function RunExplorerCustomPage() {
             onChange={(event) => setMaxPortfolioDrawdown(Number(event.target.value || 0))}
           />
         </label>
+        <label>
+          Max drawdown
+          <input
+            aria-label="Maximum max drawdown"
+            max="1"
+            min="0"
+            step="0.01"
+            type="number"
+            value={maxDrawdown}
+            onChange={(event) => setMaxDrawdown(Number(event.target.value || 0))}
+          />
+        </label>
         <button type="button" onClick={() => setShowJsonExport((value) => !value)}>
           Export JSON
         </button>
@@ -115,6 +142,7 @@ export default function RunExplorerCustomPage() {
               <th>source</th>
               <th>best_fitness</th>
               <th>stability_score</th>
+              <th>max_drawdown</th>
               <th>failure_rate</th>
               <th>portfolio_profit</th>
               <th>portfolio_drawdown</th>
@@ -129,6 +157,7 @@ export default function RunExplorerCustomPage() {
                 <td>{run.source}</td>
                 <td>{formatMetric(run.best_fitness)}</td>
                 <td>{formatMetric(run.stability_score)}</td>
+                <td>{formatMetric(run.max_drawdown)}</td>
                 <td>{formatMetric(run.failure_rate)}</td>
                 <td>{formatMetric(run.portfolio_profit)}</td>
                 <td>{formatMetric(run.portfolio_drawdown)}</td>
@@ -149,6 +178,7 @@ export default function RunExplorerCustomPage() {
           <div className="summary-grid">
             <span>Source: {selectedRun.source}</span>
             <span>Genome: {selectedRun.best_genome_id}</span>
+            <span>Max drawdown: {formatMetric(selectedRun.max_drawdown)}</span>
             <span>Portfolio drawdown: {formatMetric(selectedRun.portfolio_drawdown)}</span>
             <span>Artifact dir: {selectedRun.artifact_dir}</span>
           </div>
@@ -171,6 +201,33 @@ export default function RunExplorerCustomPage() {
                 </span>
                 <span>Actions: {selectedRun.risk_governor.actions.join(', ')}</span>
               </div>
+            </section>
+            <section>
+              <h3>Strategy explanation</h3>
+              <p>{selectedRun.strategy_explanation.summary}</p>
+              <h4>Risk warnings</h4>
+              {renderList(selectedRun.strategy_explanation.warnings, 'no risk warnings')}
+              <h4>Risk logic</h4>
+              {renderList(selectedRun.strategy_explanation.risk_logic, 'no risk notes')}
+              <h4>Entry logic</h4>
+              {renderList(selectedRun.strategy_explanation.entry_logic, 'no entry notes')}
+              <h4>Exit logic</h4>
+              {renderList(selectedRun.strategy_explanation.exit_logic, 'no exit notes')}
+            </section>
+            <section>
+              <h3>Position sizing preview</h3>
+              <div className="summary-grid">
+                <span>Position value: {formatMetric(selectedRun.position_sizing_preview.position_value, 2)}</span>
+                <span>Margin required: {formatMetric(selectedRun.position_sizing_preview.margin_required, 2)}</span>
+                <span>Risk amount: {formatMetric(selectedRun.position_sizing_preview.risk_amount, 2)}</span>
+                <span>Leverage: {formatMetric(selectedRun.position_sizing_preview.leverage, 2)}</span>
+              </div>
+              <h4>Position warnings</h4>
+              {renderList(selectedRun.position_sizing_preview.warnings, 'no position sizing warnings')}
+            </section>
+            <section>
+              <h3>Fitness explanation</h3>
+              {renderList(selectedRun.strategy_explanation.fitness_explanation, 'no fitness explanation')}
             </section>
             <section>
               <h3>TradingSystemConfig Preview</h3>
