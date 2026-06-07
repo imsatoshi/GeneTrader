@@ -21,6 +21,20 @@ function buildPath(values: number[], minValue: number, maxValue: number) {
 }
 
 export default function FitnessChart({ data }: { data: GenerationMetric[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="chart-frame fitness-chart" data-testid="fitness-chart">
+        <svg aria-label="Fitness chart" role="img" viewBox="0 0 320 220">
+          <line className="chart-axis" x1="18" x2="302" y1="180" y2="180" />
+          <line className="chart-axis" x1="18" x2="18" y1="18" y2="180" />
+          <text className="chart-label" textAnchor="middle" x="160" y="110">
+            No fitness data
+          </text>
+        </svg>
+      </div>
+    );
+  }
+
   const series: Series[] = [
     { name: 'Best', color: '#28745d', values: data.map((item) => item.bestFitness) },
     { name: 'Average', color: '#b97d2b', values: data.map((item) => item.avgFitness) },
