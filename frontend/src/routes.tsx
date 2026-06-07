@@ -13,6 +13,7 @@ const PortfolioSummaryPage = lazy(() => import('./pages/PortfolioSummaryPage'));
 const RequirementsPage = lazy(() => import('./pages/RequirementsPage'));
 const ResultsPage = lazy(() => import('./pages/ResultsPage'));
 const RiskDashboardPage = lazy(() => import('./pages/RiskDashboardPage'));
+const RiskGovernorPanelPage = lazy(() => import('./pages/RiskGovernorPanelPage'));
 const RunComparisonPage = lazy(() => import('./pages/RunComparisonPage'));
 const RunExplorerPage = lazy(() => import('./pages/RunExplorerPage'));
 const RunExplorerCustomPage = lazy(() => import('./pages/RunExplorerCustomPage'));
@@ -34,6 +35,7 @@ export function AppRoutes() {
       <Route path="/custom-run-explorer" element={<RunExplorerCustomPage />} />
       <Route path="/run-comparison" element={<RunComparisonPage />} />
       <Route path="/risk-dashboard" element={<RiskDashboardPage />} />
+      <Route path="/risk-governor" element={<RiskGovernorPanelPage />} />
       <Route path="/results" element={<ResultsPage />} />
       <Route path="/charts" element={<ChartsPage />} />
       <Route path="/settings" element={<SettingsPage />} />

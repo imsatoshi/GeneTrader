@@ -434,6 +434,11 @@ pre {
   font-weight: 800;
 }
 
+.warning-list li.risk-ok,
+.warning-list li.risk-warning {
+  background: rgba(53, 92, 75, 0.1);
+}
+
 .muted-text {
   margin: 0;
   background: rgba(53, 92, 75, 0.1);
