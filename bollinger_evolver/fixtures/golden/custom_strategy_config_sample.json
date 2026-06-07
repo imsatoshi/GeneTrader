@@ -1,0 +1,56 @@
+{
+  "bollinger_stddev": 2.0,
+  "bollinger_window": 20,
+  "constraints": {
+    "no_exchange_api": true,
+    "no_freqtrade_execution": true,
+    "risk_governor_advisory_only": true
+  },
+  "entry": {
+    "bollinger_stddev": 2.0,
+    "bollinger_window": 20,
+    "rsi_max": 35.0,
+    "rsi_period": 14
+  },
+  "execution_controls": {
+    "cooldown_candles": 3,
+    "dry_run_only": true,
+    "real_execution_enabled": false
+  },
+  "exit": {
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": 0.08,
+    "trailing_stop_pct": 0.02
+  },
+  "genome_id": "golden-custom-001",
+  "leverage": 1.0,
+  "max_portfolio_exposure": 0.3,
+  "parameters": {
+    "add_position_threshold_pct": 0.025,
+    "cooldown_candles": 3,
+    "entry_bb_stddev": 2.0,
+    "entry_bb_window": 20,
+    "entry_rsi_max": 35.0,
+    "entry_rsi_period": 14,
+    "exit_stop_loss_pct": 0.03,
+    "exit_take_profit_pct": 0.08,
+    "leverage": 1.0,
+    "max_additions": 2,
+    "max_portfolio_exposure": 0.3,
+    "reduce_position_threshold_pct": 0.04,
+    "risk_per_trade": 0.01,
+    "trailing_stop_pct": 0.02
+  },
+  "position_sizing": {
+    "add_position_threshold_pct": 0.025,
+    "leverage": 1.0,
+    "max_additions": 2,
+    "max_portfolio_exposure": 0.3,
+    "reduce_position_threshold_pct": 0.04,
+    "risk_per_trade": 0.01
+  },
+  "risk_per_trade": 0.01,
+  "schema_version": "custom-strategy/v1",
+  "stoploss": 0.03,
+  "takeprofit": 0.08
+}

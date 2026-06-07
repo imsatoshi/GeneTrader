@@ -1,0 +1,71 @@
+{
+  "average_fitness": 0.11,
+  "best_fitness": 0.24,
+  "best_genome": {
+    "genome_id": "gen001",
+    "parameters": {
+      "bb_stddev": 2.0,
+      "bb_window": 20,
+      "leverage": 1.0,
+      "risk_per_trade": 0.01,
+      "stop_loss_pct": 0.03,
+      "take_profit_pct": 0.08
+    }
+  },
+  "diversity": 1.0,
+  "generation": 1,
+  "genomes": [
+    {
+      "drawdown": 0.04,
+      "fitness": 0.24,
+      "fitness_components": {
+        "final_fitness": 0.24,
+        "profit_component": 0.12
+      },
+      "genome": {
+        "genome_id": "gen001",
+        "parameters": {
+          "bb_stddev": 2.0,
+          "bb_window": 20,
+          "leverage": 1.0,
+          "risk_per_trade": 0.01,
+          "stop_loss_pct": 0.03,
+          "take_profit_pct": 0.08
+        }
+      },
+      "genome_id": "gen001",
+      "leverage": 1.0,
+      "max_consecutive_losses": 2,
+      "profit": 0.12,
+      "rank": 1,
+      "risk_per_trade": 0.01,
+      "sharpe": 1.2,
+      "total_trades": 20,
+      "win_rate": 0.55
+    }
+  ],
+  "population_size": 4,
+  "run_id": "golden-ga-session",
+  "schema_version": "ga-generation-artifact/v1",
+  "session_summary": {
+    "average_fitness": 0.11,
+    "best_fitness": 0.24,
+    "diversity": 1.0,
+    "fitness_series": [
+      {
+        "average_fitness": 0.11,
+        "best_fitness": 0.24,
+        "diversity": 1.0,
+        "generation": 1
+      }
+    ],
+    "generation": 1,
+    "leaderboard": [],
+    "population_size": 4,
+    "run_id": "golden-ga-session",
+    "schema_version": "ga-session-summary/v1",
+    "source": "mock-ga-execution",
+    "status": "completed"
+  },
+  "source": "mock-ga-execution"
+}

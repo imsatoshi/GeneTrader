@@ -1,0 +1,18 @@
+{
+  "leverage": 1.0,
+  "max_consecutive_losses": 2,
+  "max_drawdown": 0.04,
+  "metadata": {
+    "genome_id": "golden-normalized",
+    "pair": "BTC/USDT",
+    "schema_version": "normalized-backtest-result/v1",
+    "source": "mock-backtest-adapter",
+    "timeframe": "1h"
+  },
+  "profit": 0.12,
+  "risk_per_trade": 0.01,
+  "schema_version": "normalized-backtest-result/v1",
+  "sharpe": 1.2,
+  "total_trades": 20,
+  "win_rate": 0.55
+}

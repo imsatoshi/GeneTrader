@@ -1,0 +1,21 @@
+{
+  "schema_version": "owner-review-pack/v1",
+  "status": "PENDING_OWNER_REVIEW",
+  "parameter_table": [],
+  "hard_constraints": [],
+  "risk_summary": {
+    "schema_version": "owner-review-risk-summary/v1"
+  },
+  "fixtures": [],
+  "review_decision_options": [
+    "APPROVED",
+    "NEEDS CHANGES"
+  ],
+  "real_backtest_gate": "BLOCKED",
+  "safety": {
+    "exchange_api_used": false,
+    "external_process_used": false,
+    "fixture_only": true,
+    "real_account_information_included": false
+  }
+}

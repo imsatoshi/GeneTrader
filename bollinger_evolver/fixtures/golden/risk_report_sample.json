@@ -1,0 +1,28 @@
+{
+  "schema_version": "mock-risk-report/v1",
+  "fixture": "safe_default",
+  "strategy_id": "fixture-safe-default",
+  "metrics": {
+    "drawdown": 0.07,
+    "max_consecutive_losses": 2,
+    "profit": 0.12,
+    "sharpe": 1.4,
+    "win_rate": 0.56
+  },
+  "position_sizing_preview": {
+    "schema_version": "position-sizing/v1"
+  },
+  "risk_governor": {
+    "schema_version": "risk-governor/v1"
+  },
+  "risk_budget": {
+    "schema_version": "risk-budget-simulation/v1"
+  },
+  "warnings": [],
+  "safety": {
+    "exchange_api_used": false,
+    "external_process_used": false,
+    "fixture_only": true,
+    "real_backtest_used": false
+  }
+}

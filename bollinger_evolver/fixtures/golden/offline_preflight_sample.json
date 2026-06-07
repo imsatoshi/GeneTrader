@@ -1,0 +1,32 @@
+{
+  "accepted_files": 1,
+  "datasets": [
+    {
+      "format": "json",
+      "pair": "BTC/USDT",
+      "path": "BTC_USDT-1h.json",
+      "size_bytes": 1,
+      "timeframe": "1h"
+    }
+  ],
+  "generated_by": "bollinger_evolver",
+  "issues": [],
+  "metadata": {
+    "contract_version": "1.0",
+    "metadata_only": true
+  },
+  "ok": true,
+  "rejected_files": 0,
+  "root": "<fixture>",
+  "scanned_files": 1,
+  "schema_name": "offline_data_preflight_report",
+  "schema_version": "1.0",
+  "summary": {
+    "accepted_files": 1,
+    "rejected_files": 0,
+    "scanned_files": 1,
+    "total_size_bytes": 1
+  },
+  "total_size_bytes": 1,
+  "warnings": []
+}
