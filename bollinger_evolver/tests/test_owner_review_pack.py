@@ -55,6 +55,8 @@ class TestOwnerReviewPack(unittest.TestCase):
         self.assertGreaterEqual(len(pack["parameter_table"]), 14)
         self.assertIn("risk_summary", pack)
         self.assertIn("risk_dashboard_summary", pack)
+        self.assertIn("mock_pipeline_summary", pack)
+        self.assertIn("frontend_status_summary", pack)
         self.assertIn("safe_default", [fixture["fixture"] for fixture in pack["fixtures"]])
         self.assertIn("strategy_config", pack["fixtures"][0])
         self.assertIn("position_sizing_preview", pack["fixtures"][0])
@@ -81,6 +83,29 @@ class TestOwnerReviewPack(unittest.TestCase):
         self.assertIn("pause_trading", dashboard["circuit_breaker_status_counts"])
         self.assertTrue(all("risk_per_trade" in row for row in dashboard["rows"]))
 
+    def test_owner_review_pack_contains_mock_pipeline_summary(self) -> None:
+        pack = owner_review_pack.build_owner_review_pack()
+        pipeline = pack["mock_pipeline_summary"]
+
+        self.assertEqual(pipeline["schema_version"], "mock-e2e-pipeline-summary/v1")
+        self.assertEqual(pipeline["source"], "mock-first")
+        self.assertIn("session_summary", pipeline)
+        self.assertIn("fitness_series", pipeline["session_summary"])
+        self.assertIn("portfolio", pipeline)
+        self.assertIn("risk_metrics", pipeline)
+        self.assertFalse(pipeline["safety"]["real_backtest_used"])
+
+    def test_owner_review_pack_contains_frontend_status_summary(self) -> None:
+        pack = owner_review_pack.build_owner_review_pack()
+        frontend = pack["frontend_status_summary"]
+
+        self.assertEqual(frontend["schema_version"], "owner-review-frontend-status/v1")
+        self.assertIn("RunComparisonPage", frontend["pages"])
+        self.assertIn("RiskDashboardPage", frontend["pages"])
+        self.assertIn("mock E2E pipeline summary", frontend["contract_surfaces"])
+        self.assertFalse(frontend["backend_access"])
+        self.assertFalse(frontend["real_data_access"])
+
     def test_owner_review_pack_rejects_disallowed_output(self) -> None:
         root = owner_review_pack._repo_root()
 
@@ -103,6 +128,15 @@ class TestOwnerReviewPack(unittest.TestCase):
         encoded = json.dumps(pack, sort_keys=True)
 
         self.assertIn("owner-review-pack/v1", encoded)
+
+    def test_owner_review_summary_markdown_includes_mock_pipeline_status(self) -> None:
+        pack = owner_review_pack.build_owner_review_pack()
+
+        summary = owner_review_pack.render_owner_review_summary(pack)
+
+        self.assertIn("## Mock Pipeline Summary", summary)
+        self.assertIn("## Frontend Review Status", summary)
+        self.assertIn("Real backtest remains BLOCKED", summary)
 
 
 if __name__ == "__main__":

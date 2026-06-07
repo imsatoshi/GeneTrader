@@ -11,6 +11,10 @@ from typing import Any, Sequence
 
 from bollinger_evolver.custom_strategy_schema import CustomStrategyBounds, CustomStrategyGenome
 from bollinger_evolver.fixtures.custom_strategy_fixtures import get_custom_strategy_fixtures
+from bollinger_evolver.reports.mock_e2e_pipeline_summary import (
+    MockE2EPipelineSummaryConfig,
+    build_mock_e2e_pipeline_summary,
+)
 from bollinger_evolver.risk_cli import build_fixture_risk_report
 
 
@@ -174,6 +178,56 @@ def _risk_dashboard_summary(fixtures: list[dict[str, Any]]) -> dict[str, Any]:
     return summary
 
 
+def _frontend_status_summary() -> dict[str, Any]:
+    summary = {
+        "schema_version": "owner-review-frontend-status/v1",
+        "mock_only": True,
+        "pages": [
+            "RunExplorerCustomPage",
+            "RunComparisonPage",
+            "RiskDashboardPage",
+            "HyperparamSweepDetailedTable",
+            "MonteCarloPanel",
+            "PortfolioExposurePanel",
+            "RiskGovernorPanel",
+            "RiskScenarioPanel",
+            "LocalHealthDashboardEnhanced",
+            "OwnerReviewStatus",
+        ],
+        "contract_surfaces": [
+            "runRegistryCustom",
+            "runComparison",
+            "riskDashboard",
+            "golden fixtures",
+            "mock E2E pipeline summary",
+        ],
+        "validation": {
+            "frontend_test": "npm.cmd test",
+            "frontend_build": "npm.cmd run build",
+            "backend_contract": "test_frontend_contract_alignment",
+        },
+        "real_data_access": False,
+        "backend_access": False,
+    }
+    json.dumps(summary, sort_keys=True)
+    return summary
+
+
+def _mock_pipeline_summary() -> dict[str, Any]:
+    return build_mock_e2e_pipeline_summary(
+        MockE2EPipelineSummaryConfig(
+            run_id="owner-review-mock-e2e-summary",
+            population_size=6,
+            generations=1,
+            seed=400,
+            top_n=2,
+            trade_count=20,
+            pairs=("BTC/USDT", "ETH/USDT"),
+            monte_carlo_runs=10,
+        )
+    )
+
+
 def build_owner_review_pack(*, equity: float = 10_000.0) -> dict[str, Any]:
     """Build a JSON-safe owner review pack from static custom strategy fixtures."""
 
@@ -194,6 +248,7 @@ def build_owner_review_pack(*, equity: float = 10_000.0) -> dict[str, Any]:
             }
         )
 
+    mock_pipeline_summary = _mock_pipeline_summary()
     pack = {
         "schema_version": "owner-review-pack/v1",
         "status": "PENDING_OWNER_REVIEW",
@@ -208,6 +263,8 @@ def build_owner_review_pack(*, equity: float = 10_000.0) -> dict[str, Any]:
         ],
         "risk_summary": _risk_summary(fixture_summaries),
         "risk_dashboard_summary": _risk_dashboard_summary(fixture_summaries),
+        "mock_pipeline_summary": mock_pipeline_summary,
+        "frontend_status_summary": _frontend_status_summary(),
         "fixtures": fixture_summaries,
         "review_decision_options": ["APPROVED", "NEEDS CHANGES"],
         "real_backtest_gate": "BLOCKED",
@@ -256,6 +313,20 @@ def render_owner_review_summary(pack: Mapping[str, Any]) -> str:
         f"Max portfolio exposure: {pack['risk_dashboard_summary']['max_portfolio_exposure']}",
         f"Max risk per trade: {pack['risk_dashboard_summary']['max_risk_per_trade']}",
         f"Max leverage: {pack['risk_dashboard_summary']['max_leverage']}",
+        "",
+        "## Mock Pipeline Summary",
+        "",
+        f"Pipeline run id: {pack['mock_pipeline_summary']['run_id']}",
+        f"Best fitness: {pack['mock_pipeline_summary']['metrics']['best_fitness']}",
+        f"Stability score: {pack['mock_pipeline_summary']['risk_metrics']['stability_score']}",
+        f"Monte Carlo failure rate: {pack['mock_pipeline_summary']['risk_metrics']['monte_carlo_failure_rate']}",
+        f"Portfolio drawdown: {pack['mock_pipeline_summary']['portfolio']['portfolio_drawdown']}",
+        "",
+        "## Frontend Review Status",
+        "",
+        f"Mock-only frontend pages: {len(pack['frontend_status_summary']['pages'])}",
+        f"Backend access: {pack['frontend_status_summary']['backend_access']}",
+        f"Real data access: {pack['frontend_status_summary']['real_data_access']}",
         "",
         "## Fixture Risk Warnings",
         "",
