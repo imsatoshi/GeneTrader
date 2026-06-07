@@ -12,9 +12,11 @@ from bollinger_evolver.custom_strategy_schema import (
     custom_strategy_config_from_genome,
 )
 from bollinger_evolver.trading_system_adapter import (
+    build_position_sizing_preview,
     build_trading_system_config,
     write_trading_system_config,
 )
+from bollinger_evolver.fixtures.custom_strategy_fixtures import get_custom_strategy_fixture
 
 
 def _strategy_config(**overrides):
@@ -107,6 +109,34 @@ class TestTradingSystemAdapter(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "disallowed"):
             write_trading_system_config(config, _repo_root() / "user_data" / "strategies" / "config.json")
+
+    def test_position_sizing_preview_safe_default_calculates(self) -> None:
+        fixture = get_custom_strategy_fixture("safe_default")
+        config = build_trading_system_config(fixture["strategy_config"])
+
+        preview = build_position_sizing_preview(config, equity=10_000.0)
+
+        self.assertEqual(preview["schema_version"], "position-sizing/v1")
+        self.assertGreater(preview["position_value"], 0)
+        self.assertEqual(preview["source"], "trading-system-config")
+
+    def test_position_sizing_preview_high_risk_fixture_warns(self) -> None:
+        fixture = get_custom_strategy_fixture("high_leverage_high_drawdown")
+        config = build_trading_system_config(fixture["strategy_config"])
+
+        preview = build_position_sizing_preview(config, equity=10_000.0)
+
+        self.assertIn("high_portfolio_exposure", preview["warnings"])
+        self.assertIn("high_leverage_config", preview["warnings"])
+
+    def test_position_sizing_preview_is_json_serializable(self) -> None:
+        fixture = get_custom_strategy_fixture("safe_default")
+        config = build_trading_system_config(fixture["strategy_config"])
+
+        preview = build_position_sizing_preview(config, equity=10_000.0)
+
+        encoded = json.dumps(preview, sort_keys=True)
+        self.assertIn("position-sizing/v1", encoded)
 
 
 if __name__ == "__main__":

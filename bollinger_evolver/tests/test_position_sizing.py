@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import math
+import json
 import unittest
 
+from bollinger_evolver.position_sizing import calculate_position_size
 from bollinger_evolver.strategies.indicator_helpers import DEFAULT_GENES
 from bollinger_evolver.strategies.position_sizing import (
     calculate_dca_stake,
@@ -156,6 +158,53 @@ class TestStoplossAndLeverage(unittest.TestCase):
         self.assertEqual(calculate_leverage(75.0, 10.0, "futures", DEFAULT_GENES), 2.0)
         self.assertEqual(calculate_leverage(90.0, 10.0, "futures", DEFAULT_GENES), 3.0)
         self.assertEqual(calculate_leverage(90.0, 2.0, "futures", DEFAULT_GENES), 2.0)
+
+
+class TestMockPositionSizingEngine(unittest.TestCase):
+    def test_calculate_position_size_uses_risk_budget_and_leverage(self) -> None:
+        result = calculate_position_size(
+            equity=1000.0,
+            risk_per_trade=0.01,
+            stoploss_pct=0.01,
+            leverage=3.0,
+        )
+
+        self.assertEqual(result["position_value"], 1000.0)
+        self.assertAlmostEqual(result["margin_required"], 333.3333333333)
+        self.assertEqual(result["risk_amount"], 10.0)
+        self.assertEqual(result["leverage"], 3.0)
+
+    def test_calculate_position_size_rejects_zero_stoploss(self) -> None:
+        with self.assertRaisesRegex(ValueError, "stoploss_pct"):
+            calculate_position_size(equity=1000.0, risk_per_trade=0.01, stoploss_pct=0.0, leverage=1.0)
+
+    def test_calculate_position_size_rejects_non_positive_leverage(self) -> None:
+        with self.assertRaisesRegex(ValueError, "leverage"):
+            calculate_position_size(equity=1000.0, risk_per_trade=0.01, stoploss_pct=0.02, leverage=0.0)
+
+    def test_calculate_position_size_rejects_risk_outside_zero_to_one(self) -> None:
+        with self.assertRaisesRegex(ValueError, "risk_per_trade"):
+            calculate_position_size(equity=1000.0, risk_per_trade=1.2, stoploss_pct=0.02, leverage=1.0)
+
+    def test_calculate_position_size_applies_max_position_value(self) -> None:
+        result = calculate_position_size(
+            equity=1000.0,
+            risk_per_trade=0.02,
+            stoploss_pct=0.01,
+            leverage=2.0,
+            max_position_value=500.0,
+        )
+
+        self.assertEqual(result["position_value"], 500.0)
+        self.assertEqual(result["risk_amount"], 5.0)
+        self.assertIn("max_position_value_applied", result["warnings"])
+
+    def test_calculate_position_size_output_is_json_serializable(self) -> None:
+        result = calculate_position_size(equity=1000.0, risk_per_trade=0.01, stoploss_pct=0.02, leverage=2.0)
+
+        encoded = json.dumps(result, sort_keys=True)
+
+        self.assertIn("position-sizing/v1", encoded)
 
 
 if __name__ == "__main__":

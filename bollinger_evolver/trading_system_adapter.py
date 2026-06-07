@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from bollinger_evolver.position_sizing import calculate_position_size
 from bollinger_evolver.risk_governor import RiskGovernorConfig
 
 
@@ -156,6 +157,42 @@ def build_trading_system_config(strategy_config: Mapping[str, Any]) -> dict[str,
     if _contains_sensitive_field(payload):
         raise ValueError("trading_system_config_contains_secret_field")
     return _json_safe_copy(payload)
+
+
+def build_position_sizing_preview(
+    trading_system_config: Mapping[str, Any],
+    *,
+    equity: float,
+) -> dict[str, Any]:
+    """Build a mock position sizing preview from a JSON-safe trading config."""
+
+    source = _require_mapping(trading_system_config, field_name="trading_system_config")
+    position = _require_mapping(source.get("position"), field_name="position")
+    exit_config = _require_mapping(source.get("exit"), field_name="exit")
+    risk_control = _require_mapping(source.get("risk_control"), field_name="risk_control")
+    max_portfolio_exposure = _get_number(risk_control, "max_portfolio_exposure")
+    numeric_equity = _get_number({"equity": equity}, "equity")
+    if max_portfolio_exposure < 0.0:
+        raise ValueError("max_portfolio_exposure_must_be_non_negative")
+
+    preview = calculate_position_size(
+        equity=numeric_equity,
+        risk_per_trade=_get_number(position, "risk_per_trade"),
+        stoploss_pct=_get_number(exit_config, "stoploss_pct"),
+        leverage=_get_number(position, "base_leverage"),
+        max_position_value=numeric_equity * max_portfolio_exposure,
+    )
+    warnings = list(preview["warnings"])
+    if max_portfolio_exposure > 0.30:
+        warnings.append("high_portfolio_exposure")
+    if _get_number(position, "base_leverage") >= 3.0:
+        warnings.append("high_leverage_config")
+    preview["warnings"] = sorted(dict.fromkeys(warnings))
+    preview["source"] = "trading-system-config"
+    preview["max_portfolio_exposure"] = round(max_portfolio_exposure, 10)
+    preview["max_position_value"] = round(numeric_equity * max_portfolio_exposure, 10)
+    json.dumps(preview, sort_keys=True)
+    return preview
 
 
 def _resolve_config_output_path(output_path: str | Path) -> Path:
