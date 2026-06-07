@@ -99,6 +99,39 @@ The custom mock pipeline evaluates:
 - Should `max_portfolio_exposure` include open correlated positions outside this
   strategy family?
 
+## Review Pack Commands
+
+Generate a local owner review pack in an explicit temporary output directory:
+
+```powershell
+python -m bollinger_evolver.owner_review_pack --output <tempdir>
+```
+
+Generate one fixture-level risk report:
+
+```powershell
+python -m bollinger_evolver.risk_cli explain --fixture safe_default --output <tempdir>
+```
+
+These commands are local fixture-only report generators. They do not approve or
+unlock real backtesting.
+
+## Decision Rule
+
+Owner must return exactly one of:
+
+```text
+APPROVED
+```
+
+or:
+
+```text
+NEEDS CHANGES
+```
+
+Until `APPROVED` is returned by the owner, real backtest remains `BLOCKED`.
+
 ## Verdict
 
 PENDING OWNER REVIEW

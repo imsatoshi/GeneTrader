@@ -100,6 +100,32 @@ needing to mutate the original object.
 - Confirm whether `cooldown_candles` should be expressed in candles only or also
   mapped to wall-clock time in the final trading system adapter.
 
+## Owner Review Artifacts
+
+The local review pack generator can produce a JSON and Markdown bundle for
+manual inspection:
+
+```powershell
+python -m bollinger_evolver.owner_review_pack --output <tempdir>
+```
+
+The pack summarizes:
+
+- parameter table and bounds
+- hard constraints
+- fixture metrics
+- risk warnings
+- position sizing previews
+- explainability summaries
+
+The standalone risk CLI can produce fixture-specific reports:
+
+```powershell
+python -m bollinger_evolver.risk_cli explain --fixture safe_default --output <tempdir>
+```
+
+Both commands are fixture-only and require an explicit output directory.
+
 ## Deferred Work
 
 - Real exchange execution remains out of scope.
