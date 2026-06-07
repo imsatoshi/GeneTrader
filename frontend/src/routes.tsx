@@ -9,6 +9,7 @@ const MockBatchDashboardPage = lazy(() => import('./pages/MockBatchDashboardPage
 const MockDashboardPage = lazy(() => import('./pages/MockDashboardPage'));
 const OfflineDataPage = lazy(() => import('./pages/OfflineDataPage'));
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
+const PortfolioSummaryPage = lazy(() => import('./pages/PortfolioSummaryPage'));
 const RequirementsPage = lazy(() => import('./pages/RequirementsPage'));
 const ResultsPage = lazy(() => import('./pages/ResultsPage'));
 const RiskDashboardPage = lazy(() => import('./pages/RiskDashboardPage'));
@@ -28,6 +29,7 @@ export function AppRoutes() {
       <Route path="/ga-runs" element={<GaRunsPage />} />
       <Route path="/hyperparam-sweep" element={<HyperparamSweepPage />} />
       <Route path="/monte-carlo" element={<MonteCarloPanelPage />} />
+      <Route path="/portfolio-summary" element={<PortfolioSummaryPage />} />
       <Route path="/run-explorer" element={<RunExplorerPage />} />
       <Route path="/custom-run-explorer" element={<RunExplorerCustomPage />} />
       <Route path="/run-comparison" element={<RunComparisonPage />} />

@@ -212,6 +212,10 @@ select {
   overflow: auto;
 }
 
+.compact-table {
+  box-shadow: none;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -410,6 +414,15 @@ pre {
   padding: 0;
   margin: 0;
   list-style: none;
+}
+
+.insight-list {
+  display: grid;
+  gap: 8px;
+  padding-left: 1.1rem;
+  margin: 0;
+  color: #355c4b;
+  font-weight: 700;
 }
 
 .warning-list li,

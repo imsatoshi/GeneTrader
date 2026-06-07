@@ -9,6 +9,7 @@ const navItems = [
   { to: '/ga-runs', label: 'GA Runs' },
   { to: '/hyperparam-sweep', label: 'Sweep' },
   { to: '/monte-carlo', label: 'Monte Carlo' },
+  { to: '/portfolio-summary', label: 'Portfolio' },
   { to: '/run-explorer', label: 'Run Explorer' },
   { to: '/custom-run-explorer', label: 'Custom Runs' },
   { to: '/run-comparison', label: 'Run Compare' },
