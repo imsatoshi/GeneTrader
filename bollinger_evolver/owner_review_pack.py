@@ -128,6 +128,52 @@ def _risk_summary(fixtures: list[dict[str, Any]]) -> dict[str, Any]:
     return summary
 
 
+def _circuit_breaker_status(drawdown: float) -> str:
+    if drawdown >= 0.20:
+        return "pause_trading"
+    if drawdown >= 0.10:
+        return "reduce_risk"
+    return "none"
+
+
+def _risk_dashboard_summary(fixtures: list[dict[str, Any]]) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    status_counts = {"none": 0, "reduce_risk": 0, "pause_trading": 0}
+    for fixture in fixtures:
+        metrics = fixture["metrics"]
+        config = fixture["strategy_config"]
+        sizing = config["position_sizing"]
+        drawdown = float(metrics.get("drawdown", metrics.get("max_drawdown", 0.0)))
+        loss_streak = int(metrics.get("max_consecutive_losses", 0))
+        status = _circuit_breaker_status(drawdown)
+        status_counts[status] += 1
+        row = {
+            "fixture": fixture["fixture"],
+            "max_drawdown": round(drawdown, 10),
+            "loss_streak": loss_streak,
+            "portfolio_exposure": round(float(sizing["max_portfolio_exposure"]), 10),
+            "risk_per_trade": round(float(sizing["risk_per_trade"]), 10),
+            "leverage": round(float(sizing["leverage"]), 10),
+            "circuit_breaker_status": status,
+            "risk_warning_count": len(fixture["risk_warnings"]),
+        }
+        rows.append(row)
+
+    summary = {
+        "schema_version": "owner-review-risk-dashboard-summary/v1",
+        "fixture_count": len(rows),
+        "max_drawdown": max((row["max_drawdown"] for row in rows), default=0.0),
+        "max_loss_streak": max((row["loss_streak"] for row in rows), default=0),
+        "max_portfolio_exposure": max((row["portfolio_exposure"] for row in rows), default=0.0),
+        "max_risk_per_trade": max((row["risk_per_trade"] for row in rows), default=0.0),
+        "max_leverage": max((row["leverage"] for row in rows), default=0.0),
+        "circuit_breaker_status_counts": status_counts,
+        "rows": rows,
+    }
+    json.dumps(summary, sort_keys=True)
+    return summary
+
+
 def build_owner_review_pack(*, equity: float = 10_000.0) -> dict[str, Any]:
     """Build a JSON-safe owner review pack from static custom strategy fixtures."""
 
@@ -140,6 +186,7 @@ def build_owner_review_pack(*, equity: float = 10_000.0) -> dict[str, Any]:
                 "fixture": fixture_name,
                 "strategy_id": risk_report["strategy_id"],
                 "description": fixture_payload[fixture_name]["description"],
+                "strategy_config": fixture_payload[fixture_name]["strategy_config"],
                 "metrics": fixture_payload[fixture_name]["metrics"],
                 "risk_warnings": risk_report["warnings"],
                 "position_sizing_preview": risk_report["position_sizing_preview"],
@@ -160,6 +207,7 @@ def build_owner_review_pack(*, equity: float = 10_000.0) -> dict[str, Any]:
             "json_safe_outputs_required",
         ],
         "risk_summary": _risk_summary(fixture_summaries),
+        "risk_dashboard_summary": _risk_dashboard_summary(fixture_summaries),
         "fixtures": fixture_summaries,
         "review_decision_options": ["APPROVED", "NEEDS CHANGES"],
         "real_backtest_gate": "BLOCKED",
@@ -201,6 +249,13 @@ def render_owner_review_summary(pack: Mapping[str, Any]) -> str:
         f"Fixtures with warnings: {pack['risk_summary']['fixtures_with_warnings']}",
         f"Highest risk fixture: {pack['risk_summary']['highest_risk_fixture']}",
         f"Max drawdown: {pack['risk_summary']['max_drawdown']}",
+        "",
+        "## Risk Dashboard Summary",
+        "",
+        f"Max loss streak: {pack['risk_dashboard_summary']['max_loss_streak']}",
+        f"Max portfolio exposure: {pack['risk_dashboard_summary']['max_portfolio_exposure']}",
+        f"Max risk per trade: {pack['risk_dashboard_summary']['max_risk_per_trade']}",
+        f"Max leverage: {pack['risk_dashboard_summary']['max_leverage']}",
         "",
         "## Fixture Risk Warnings",
         "",

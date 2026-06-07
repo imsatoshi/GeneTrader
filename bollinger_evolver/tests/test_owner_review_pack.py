@@ -54,7 +54,9 @@ class TestOwnerReviewPack(unittest.TestCase):
 
         self.assertGreaterEqual(len(pack["parameter_table"]), 14)
         self.assertIn("risk_summary", pack)
+        self.assertIn("risk_dashboard_summary", pack)
         self.assertIn("safe_default", [fixture["fixture"] for fixture in pack["fixtures"]])
+        self.assertIn("strategy_config", pack["fixtures"][0])
         self.assertIn("position_sizing_preview", pack["fixtures"][0])
         self.assertIn("explainability_summary", pack["fixtures"][0])
 
@@ -65,6 +67,19 @@ class TestOwnerReviewPack(unittest.TestCase):
         self.assertGreater(pack["risk_summary"]["fixture_count"], 0)
         self.assertIn("visualization", pack["risk_summary"])
         self.assertIn("high", pack["risk_summary"]["risk_level_counts"])
+
+    def test_owner_review_pack_contains_risk_dashboard_summary(self) -> None:
+        pack = owner_review_pack.build_owner_review_pack()
+        dashboard = pack["risk_dashboard_summary"]
+
+        self.assertEqual(dashboard["schema_version"], "owner-review-risk-dashboard-summary/v1")
+        self.assertGreater(dashboard["fixture_count"], 0)
+        self.assertGreaterEqual(dashboard["max_drawdown"], 0.18)
+        self.assertGreaterEqual(dashboard["max_loss_streak"], 7)
+        self.assertGreaterEqual(dashboard["max_leverage"], 3.0)
+        self.assertIn("reduce_risk", dashboard["circuit_breaker_status_counts"])
+        self.assertIn("pause_trading", dashboard["circuit_breaker_status_counts"])
+        self.assertTrue(all("risk_per_trade" in row for row in dashboard["rows"]))
 
     def test_owner_review_pack_rejects_disallowed_output(self) -> None:
         root = owner_review_pack._repo_root()
