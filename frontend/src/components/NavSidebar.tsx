@@ -7,6 +7,7 @@ const navItems = [
   { to: '/mock-dashboard', label: 'Mock Dashboard' },
   { to: '/mock-batch-dashboard', label: 'Batch Dashboard' },
   { to: '/ga-runs', label: 'GA Runs' },
+  { to: '/hyperparam-sweep', label: 'Sweep' },
   { to: '/run-explorer', label: 'Run Explorer' },
   { to: '/custom-run-explorer', label: 'Custom Runs' },
   { to: '/run-comparison', label: 'Run Compare' },

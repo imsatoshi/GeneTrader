@@ -348,6 +348,10 @@ select {
   background: #fffaf0;
 }
 
+input[type="number"] {
+  appearance: textfield;
+}
+
 button {
   min-height: 44px;
   padding: 10px 14px;
