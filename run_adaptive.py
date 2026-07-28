@@ -136,6 +136,8 @@ class AdaptiveRunner:
             version_control=self.version_control,
             performance_db=self.db,
             config=adaptive_config,
+            strategy_deployer=self.deployer,
+            rollback_manager=self.rollback_manager,
         )
 
         # Scheduler
@@ -152,7 +154,12 @@ class AdaptiveRunner:
 
     def start_api(self, host: str = '0.0.0.0', port: int = 8090):
         """Start the Agent API server."""
-        api_key = getattr(self.settings, 'agent_api_key', '') or os.environ.get('AGENT_API_KEY', 'default-key')
+        api_key = getattr(self.settings, 'agent_api_key', '') or os.environ.get('AGENT_API_KEY', '')
+        if not api_key:
+            logger.warning(
+                "未配置 agent_api_key（ga.json）或 AGENT_API_KEY 环境变量，"
+                "API 将拒绝所有请求。请配置密钥后重启。"
+            )
 
         self.api = AgentAPI(
             host=host,

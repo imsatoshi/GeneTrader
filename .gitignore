@@ -4,6 +4,12 @@ __pycache__/
 *$py.class
 *.so
 
+# Runtime state and databases
+data/performance.db
+data/adaptive_state.json
+data/strategy_versions/
+data/strategy_backups/
+
 fitness_log.txt
 
 generation_*.txt

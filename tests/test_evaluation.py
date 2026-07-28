@@ -200,7 +200,8 @@ class TestFitnessFunction(unittest.TestCase):
             'sortino_ratio': 2.5,
             'profit_factor': 2.0,
             'daily_avg_trades': 3.5,
-            'avg_trade_duration': 720  # 12 hours
+            'avg_trade_duration': 720,  # 12 hours
+            'total_trades': 200
         }
         self.bad_results = {
             'total_profit_percent': -0.20,  # -20% loss
@@ -210,7 +211,8 @@ class TestFitnessFunction(unittest.TestCase):
             'sortino_ratio': 0.5,
             'profit_factor': 0.5,
             'daily_avg_trades': 0.5,
-            'avg_trade_duration': 10000  # Too long
+            'avg_trade_duration': 10000,  # Too long
+            'total_trades': 50
         }
 
     @patch('strategy.evaluation.open', create=True)

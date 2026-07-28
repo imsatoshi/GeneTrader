@@ -119,7 +119,9 @@ class AdaptiveOptimizer:
         version_control: Optional[StrategyVersionControl] = None,
         performance_db: Optional[PerformanceDB] = None,
         config: Optional[AdaptiveConfig] = None,
-        state_file: str = "data/adaptive_state.json"
+        state_file: str = "data/adaptive_state.json",
+        strategy_deployer: Optional[StrategyDeployer] = None,
+        rollback_manager: Optional[RollbackManager] = None,
     ):
         """
         Initialize adaptive optimizer.
@@ -131,6 +133,9 @@ class AdaptiveOptimizer:
             performance_db: Performance database
             config: Adaptive optimization configuration
             state_file: Path to state persistence file
+            strategy_deployer: Deployer configured with the real target strategy
+                dir; without it the default container path is assumed
+            rollback_manager: External rollback manager to reuse
         """
         self.strategy_name = strategy_name
         self.config = config or AdaptiveConfig()
@@ -157,8 +162,8 @@ class AdaptiveOptimizer:
             win_rate_threshold=self.config.win_rate_decline_trigger,
         )
 
-        self.deployer = StrategyDeployer(self.version_control, self.client)
-        self.rollback_manager = RollbackManager(
+        self.deployer = strategy_deployer or StrategyDeployer(self.version_control, self.client)
+        self.rollback_manager = rollback_manager or RollbackManager(
             self.version_control,
             self.monitor,
             self.detector,
@@ -167,6 +172,8 @@ class AdaptiveOptimizer:
                 max_drawdown=self.config.drawdown_trigger
             )
         )
+        # 让自动回滚真正恢复策略文件，而不是只改版本库状态
+        self.rollback_manager.set_deploy_callback(self.deployer.rollback)
 
         # State
         self._state = AdaptiveState.IDLE

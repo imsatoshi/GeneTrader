@@ -88,6 +88,3 @@ class Individual:
                 available_pairs.append(old_pair)
 
                 self.trading_pairs[i] = new_pair
-
-        # Preserve order by only updating changed pairs
-        self.trading_pairs = list(current_pairs)

@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 from typing import List, Optional, Tuple
 from datetime import datetime, date
 
@@ -126,6 +127,7 @@ def main():
 
     except Exception as e:
         logger.exception(f"An error occurred: {str(e)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

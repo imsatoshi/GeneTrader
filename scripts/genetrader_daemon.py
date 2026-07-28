@@ -198,7 +198,9 @@ class GeneTraderDaemon:
                 check_interval_minutes=self.check_interval // 60,
                 min_hours_between_optimizations=self.optimize_interval // 3600,
                 require_approval=getattr(self.settings, 'agent_approval_required_for_deployment', False),
-            )
+            ),
+            strategy_deployer=self.deployer,
+            rollback_manager=self.rollback_manager,
         )
         logger.info("✅ Adaptive optimizer initialized")
 
