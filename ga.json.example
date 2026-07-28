@@ -84,12 +84,13 @@
     "gradual_rollout_enabled": true,
     "auto_rollback_enabled": true,
     "rollback_drawdown_threshold": 0.15,
+    "rollback_require_confirmation": false,
 
     "_comment_agent_api": "Agent API settings for Claude/AI integration",
     "agent_api_enabled": false,
-    "agent_api_host": "0.0.0.0",
+    "agent_api_host": "127.0.0.1",
     "agent_api_port": 8090,
     "agent_check_interval_hours": 4,
     "agent_approval_required_for_deployment": true,
-    "agent_api_key": "your-secret-api-key"
+    "agent_api_key": "CHANGE_ME_at_least_16_chars"
 }

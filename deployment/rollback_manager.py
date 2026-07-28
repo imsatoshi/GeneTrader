@@ -60,7 +60,7 @@ class RollbackEvent:
 @dataclass
 class RollbackConfig:
     """Configuration for automatic rollback."""
-    enabled: bool = True
+    enabled: bool = False
     max_drawdown: float = 0.15
     max_consecutive_losses: int = 5
     min_win_rate: float = 0.30
@@ -68,7 +68,7 @@ class RollbackConfig:
     check_interval_minutes: int = 5
     cooldown_minutes: int = 60  # Minimum time between rollbacks
     notify_on_rollback: bool = True
-    require_confirmation: bool = False
+    require_confirmation: bool = True
 
 
 class RollbackManager:
@@ -320,24 +320,42 @@ class RollbackManager:
             logger.error(f"No previous version to rollback to for {strategy_name}")
             return None
 
+        metrics_before_dict = metrics_before.__dict__ if hasattr(metrics_before, '__dict__') else {}
+
         # Confirmation check
-        if self.config.require_confirmation and self._confirm_callback:
+        if self.config.require_confirmation:
+            if not self._confirm_callback:
+                logger.error(f"Rollback confirmation callback required for {strategy_name}")
+                return None
             if not self._confirm_callback(strategy_name, previous_version, reason):
                 logger.info(f"Rollback not confirmed for {strategy_name}")
                 return None
 
-        # Execute rollback
-        success = False
+        # Execute rollback. Without a deploy callback the strategy file would
+        # never be restored, so record the failure instead of faking success.
+        if not self._deploy_callback:
+            logger.error(f"Rollback deploy callback required for {strategy_name}")
+            event = RollbackEvent(
+                timestamp=datetime.now(),
+                strategy_name=strategy_name,
+                from_version=current.version_id,
+                to_version=previous_version,
+                reason=reason,
+                metrics_before=metrics_before_dict,
+                metrics_after={},
+                success=False,
+                notes="deploy_callback_required",
+            )
+            self._history.append(event)
+            self._save_history()
+            return event
 
-        if self._deploy_callback:
-            success = self._deploy_callback(strategy_name, previous_version)
-        else:
-            # Update version control
+        success = self._deploy_callback(strategy_name, previous_version)
+        if success:
             self.version_control.update_status(
                 strategy_name, current.version_id, VersionStatus.ROLLED_BACK
             )
             self.version_control.set_active(strategy_name, previous_version)
-            success = True
 
         # Create event
         event = RollbackEvent(
@@ -346,7 +364,7 @@ class RollbackManager:
             from_version=current.version_id,
             to_version=previous_version,
             reason=reason,
-            metrics_before=metrics_before.__dict__ if hasattr(metrics_before, '__dict__') else {},
+            metrics_before=metrics_before_dict,
             metrics_after={},
             success=success,
         )

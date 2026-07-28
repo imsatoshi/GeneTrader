@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.so
 
+.pytest_cache/
+
 # Runtime state and databases
 data/performance.db
 data/adaptive_state.json

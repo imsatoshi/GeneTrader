@@ -190,10 +190,14 @@ class Settings:
         self.gradual_rollout_enabled = self.config.get('gradual_rollout_enabled', True)
         self.auto_rollback_enabled = self.config.get('auto_rollback_enabled', True)
         self.rollback_drawdown_threshold = self.config.get('rollback_drawdown_threshold', 0.15)
+        # RollbackConfig defaults to requiring confirmation so that a bare
+        # RollbackConfig() never rolls back unattended. Operators who opt into
+        # auto_rollback_enabled get unattended rollback unless they set this.
+        self.rollback_require_confirmation = self.config.get('rollback_require_confirmation', False)
 
         # Agent integration settings
         self.agent_api_enabled = self.config.get('agent_api_enabled', False)
-        self.agent_api_host = self.config.get('agent_api_host', '0.0.0.0')
+        self.agent_api_host = self.config.get('agent_api_host', '127.0.0.1')
         self.agent_api_port = self.config.get('agent_api_port', 8090)
         self.agent_check_interval_hours = self.config.get('agent_check_interval_hours', 4)
         self.agent_approval_required_for_deployment = self.config.get('agent_approval_required_for_deployment', True)

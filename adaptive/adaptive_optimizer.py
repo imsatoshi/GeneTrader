@@ -69,7 +69,7 @@ class AdaptiveConfig:
 
     # Approval settings
     require_approval: bool = True
-    auto_approve_threshold: float = 0.8  # Auto-approve if improvement > 80%
+    auto_approve_threshold: float = 0.8  # Reserved for future explicit approval policy
 
 
 @dataclass
@@ -445,15 +445,13 @@ class AdaptiveOptimizer:
 
             # Check approval
             if self.config.require_approval:
-                if improvement >= self.config.auto_approve_threshold:
-                    logger.info(f"Auto-approving: {improvement:.1%} improvement")
-                    approved = True
-                elif self._approval_callback:
+                if self._approval_callback:
                     approved = self._approval_callback(
                         new_version.version_id,
                         {'improvement': improvement, 'metrics': new_metrics}
                     )
                 else:
+                    logger.info("Optimization requires approval but no approval callback is set")
                     approved = False
             else:
                 approved = True

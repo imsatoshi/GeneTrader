@@ -176,6 +176,7 @@ class GeneTraderDaemon:
             config=RollbackConfig(
                 enabled=getattr(self.settings, 'auto_rollback_enabled', True),
                 max_drawdown=getattr(self.settings, 'rollback_drawdown_threshold', 0.15),
+                require_confirmation=getattr(self.settings, 'rollback_require_confirmation', False),
             )
         )
         logger.info("✅ Rollback manager initialized")
@@ -209,16 +210,23 @@ class GeneTraderDaemon:
         self.api = None
         if getattr(self.settings, 'agent_api_enabled', False):
             api_port = getattr(self.settings, 'agent_api_port', 8090)
-            api_key = getattr(self.settings, 'agent_api_key', '')
-            self.api = AgentAPI(
-                port=api_port,
-                api_key=api_key,
-                performance_db=self.db,
-                version_control=self.version_control,
-                adaptive_optimizer=self.adaptive,
-                scheduler=self.scheduler,
-            )
-            logger.info(f"✅ Agent API will start on port {api_port}")
+            api_host = getattr(self.settings, 'agent_api_host', '127.0.0.1')
+            api_key = getattr(self.settings, 'agent_api_key', '') or os.environ.get('AGENT_API_KEY', '')
+            try:
+                self.api = AgentAPI(
+                    host=api_host,
+                    port=api_port,
+                    api_key=api_key,
+                    performance_db=self.db,
+                    version_control=self.version_control,
+                    adaptive_optimizer=self.adaptive,
+                    scheduler=self.scheduler,
+                )
+                logger.info(f"✅ Agent API will start on {api_host}:{api_port}")
+            except ValueError as e:
+                # A weak or missing master key must not silently expose the API.
+                self.api = None
+                logger.error(f"❌ Agent API disabled: {e}")
 
         logger.info("=" * 60)
         logger.info("Initialization complete")

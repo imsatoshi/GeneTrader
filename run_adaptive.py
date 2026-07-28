@@ -44,7 +44,7 @@ from monitoring.degradation_detector import DegradationDetector
 
 from deployment.version_control import StrategyVersionControl
 from deployment.strategy_deployer import StrategyDeployer
-from deployment.rollback_manager import RollbackManager
+from deployment.rollback_manager import RollbackManager, RollbackConfig
 
 from adaptive.adaptive_optimizer import AdaptiveOptimizer, AdaptiveConfig
 from adaptive.scheduler import OptimizationScheduler, ScheduleConfig
@@ -118,6 +118,11 @@ class AdaptiveRunner:
             version_control=self.version_control,
             performance_monitor=self.monitor,
             degradation_detector=self.detector,
+            config=RollbackConfig(
+                enabled=getattr(self.settings, 'auto_rollback_enabled', True),
+                max_drawdown=getattr(self.settings, 'rollback_drawdown_threshold', 0.15),
+                require_confirmation=getattr(self.settings, 'rollback_require_confirmation', False),
+            ),
         )
 
         # Adaptive optimizer
@@ -152,13 +157,13 @@ class AdaptiveRunner:
 
         logger.info("Adaptive optimization system initialized")
 
-    def start_api(self, host: str = '0.0.0.0', port: int = 8090):
+    def start_api(self, host: str = '127.0.0.1', port: int = 8090):
         """Start the Agent API server."""
         api_key = getattr(self.settings, 'agent_api_key', '') or os.environ.get('AGENT_API_KEY', '')
         if not api_key:
-            logger.warning(
-                "未配置 agent_api_key（ga.json）或 AGENT_API_KEY 环境变量，"
-                "API 将拒绝所有请求。请配置密钥后重启。"
+            raise ValueError(
+                "Agent API key required. Set agent_api_key in ga.json or the "
+                "AGENT_API_KEY environment variable."
             )
 
         self.api = AgentAPI(
@@ -310,6 +315,8 @@ Examples:
                         help='Force immediate optimization')
     parser.add_argument('--api-port', type=int, default=0,
                         help='Start Agent API on this port (0 = disabled)')
+    parser.add_argument('--api-host', type=str, default=None,
+                        help='Host for Agent API (default: config agent_api_host or 127.0.0.1)')
     parser.add_argument('--interval', type=int, default=60,
                         help='Check interval in seconds (default: 60)')
 
@@ -346,7 +353,8 @@ Examples:
     else:
         # Start API if requested
         if args.api_port > 0:
-            runner.start_api(port=args.api_port)
+            api_host = args.api_host or getattr(settings, 'agent_api_host', '127.0.0.1')
+            runner.start_api(host=api_host, port=args.api_port)
 
         # Run main loop
         runner.run(interval_seconds=args.interval)
