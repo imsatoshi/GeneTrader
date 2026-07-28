@@ -300,9 +300,9 @@ class GeneStrategy(IStrategy):
             #elif (current_time - timedelta(minutes=400) > trade.open_date_utc) & (current_profit > 0) & (current_profit < self.sell_custom_roi_profit_5.value) & (last_candle['sma_200_dec_1h']):
             #    return 'roi_target_5'
 
-            if (current_profit > self.sell_trail_profit_min_1.value) & (current_profit < self.sell_trail_profit_max_1.value) & (((trade.max_rate - trade.open_rate) / 100) > (current_profit + self.sell_trail_down_1.value)):
+            if (current_profit > self.sell_trail_profit_min_1.value) & (current_profit < self.sell_trail_profit_max_1.value) & (((trade.max_rate - trade.open_rate) / trade.open_rate) > (current_profit + self.sell_trail_down_1.value)):
                 return 'trail_target_1'
-            elif (current_profit > self.sell_trail_profit_min_2.value) & (current_profit < self.sell_trail_profit_max_2.value) & (((trade.max_rate - trade.open_rate) / 100) > (current_profit + self.sell_trail_down_2.value)):
+            elif (current_profit > self.sell_trail_profit_min_2.value) & (current_profit < self.sell_trail_profit_max_2.value) & (((trade.max_rate - trade.open_rate) / trade.open_rate) > (current_profit + self.sell_trail_down_2.value)):
                 return 'trail_target_2'
             elif (current_profit > 3) & (last_candle['rsi'] > 85):
                  return 'RSI-85 target'
@@ -537,8 +537,8 @@ class GeneStrategy(IStrategy):
 
         informative['ha_close'] = inf_heikinashi['close']
         informative['rocr'] = ta.ROCR(informative['ha_close'], timeperiod=168)
-        informative['rsi_14'] = ta.RSI(dataframe, timeperiod=14)
-        informative['cmf'] = chaikin_money_flow(dataframe, 20)
+        informative['rsi_14'] = ta.RSI(informative, timeperiod=14)
+        informative['cmf'] = chaikin_money_flow(informative, 20)
         sup_series = informative['low'].rolling(window = 5, center=True).apply(lambda row: self.is_support(row), raw=True).shift(2)
         informative['sup_level'] = Series(np.where(sup_series, np.where(informative['close'] < informative['open'], informative['close'], informative['open']), float('NaN'))).ffill()
         informative['roc'] = ta.ROC(informative, timeperiod=9)

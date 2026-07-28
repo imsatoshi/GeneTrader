@@ -393,7 +393,8 @@ class DegradationDetector:
         self._cusum_std = std
 
         # Calculate CUSUM for recent values
-        recent = profits[:self.lookback_periods // 2]
+        # profits are newest-first; CUSUM must accumulate in chronological order
+        recent = list(reversed(profits[:self.lookback_periods // 2]))
         cusum_pos = 0.0
         cusum_neg = 0.0
         slack = 0.5 * std  # Slack parameter
