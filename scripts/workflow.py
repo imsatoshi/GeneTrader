@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+from urllib.parse import quote
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -244,16 +245,23 @@ class TradeWorkflow:
             # 通过 SSH 执行重启命令
             if not is_restful:
                 port = str(self.remote_server['port'])
-                subprocess.run([
+                result = subprocess.run([
                     'ssh', "-i", self.remote_server['key_path'],
                     "-p", port,
                     self.remote_server['username'] + '@' + self.remote_server['hostname'],
                     'systemctl restart freqtrade'
                 ])
+                if result.returncode != 0:
+                    logger.error(f"SSH 重启 freqtrade 失败，返回码: {result.returncode}")
+                    return False
                 return True
             else:
-                # restart freqtrade by restful api  
-                return self.restart_freqtrade(self.remote_server['api_url'], self.remote_server['username'], self.remote_server['password'])
+                # restart freqtrade by restful api
+                return self.restart_freqtrade(
+                    self.remote_server['api_url'],
+                    self.remote_server['freqtrade_username'],
+                    self.remote_server['freqtrade_password']
+                )
         except Exception as e:
             logger.error(f"重启交易程序失败: {str(e)}")
             return False
@@ -278,7 +286,7 @@ class TradeWorkflow:
         else:
             strategy_name = settings.base_strategy_file.split("/")[-1].split(".")[0]
             message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {strategy_name} {message}"
-            message = message.replace(" ", "%20")
+            message = quote(message, safe='')
             url = f"{self.bark_endpoint}/{self.bark_key}/{message}"
             try:
                 response = requests.get(url)
@@ -364,8 +372,11 @@ class TradeWorkflow:
             
         try:
             # 使用 -i 参数指定 SSH 私钥
-            subprocess.run(['scp', '-i', self.remote_server['key_path'], f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:/root/trade/user_data/config.json', 'user_data/'])
-            subprocess.run(['scp', '-i', self.remote_server['key_path'], f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:/root/trade/user_data/strategies/GeneStrategy.py', 'user_data/strategies/'])
+            result1 = subprocess.run(['scp', '-i', self.remote_server['key_path'], f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:/root/trade/user_data/config.json', 'user_data/'])
+            result2 = subprocess.run(['scp', '-i', self.remote_server['key_path'], f'{self.remote_server["username"]}@{self.remote_server["hostname"]}:/root/trade/user_data/strategies/GeneStrategy.py', 'user_data/strategies/'])
+            if result1.returncode != 0 or result2.returncode != 0:
+                logger.error(f"从服务器下载文件失败 (config: {result1.returncode}, strategy: {result2.returncode})")
+                return False
             return True
         except Exception as e:
             logger.error(f"下载策略到本地失败: {str(e)}")
@@ -383,11 +394,15 @@ class TradeWorkflow:
         pattern = r'class GeneTrader_gen\d+_\d+_\d+\(IStrategy\):'
         # new_content = re.sub(pattern, f'class {new_class_name}(IStrategy)', content)
         new_content = re.sub(pattern, f'class {new_class_name}(IStrategy):\n    def version(self) -> str:\n        return {timestring}\n', content)
+        if new_content == content:
+            logger.error(f"未在 {file_path} 中找到匹配的策略类定义，重命名失败")
+            return False
         # 写回文件
         with open(src_path, 'w') as file:
             file.write(new_content)
-        
+
         logger.info(f"Successfully renamed strategy class to {new_class_name}")
+        return True
 
     def parse_backtest_results(self, result):
         try:
@@ -476,7 +491,7 @@ class TradeWorkflow:
                 self.send_notification("当前没有最佳策略")
                 return False
             
-            splits = current_best.strip(".txt").split("_")
+            splits = current_best.removesuffix(".txt").split("_")
             generation = splits[-3]
             timestamp = splits[-2]
             number = splits[-1].rstrip(',')  # 移除可能的逗号
@@ -505,7 +520,9 @@ class TradeWorkflow:
 
             # 6. strategy 统一处理
             logger.info("rename strategy: {} to GeneStrategy".format(strategy_file))
-            self.rename_strategy_class(strategy_file, "strategies/GeneStrategy.py")
+            if not self.rename_strategy_class(strategy_file, "strategies/GeneStrategy.py"):
+                self.send_notification("策略类重命名失败")
+                return False
 
             # 7. 复制 config_file 到 strategies 目录， 文件名改为config.json
             logger.info("copy config file")

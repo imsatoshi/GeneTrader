@@ -112,6 +112,7 @@ class GeneTraderDaemon:
         self._last_optimization_time: Optional[datetime] = None
         self._consecutive_failures = 0
         self._alerts_sent_today = 0
+        self._alerts_date = datetime.now().date()
 
     def _init_components(self):
         """Initialize all system components."""
@@ -198,7 +199,9 @@ class GeneTraderDaemon:
                 check_interval_minutes=self.check_interval // 60,
                 min_hours_between_optimizations=self.optimize_interval // 3600,
                 require_approval=getattr(self.settings, 'agent_approval_required_for_deployment', False),
-            )
+            ),
+            strategy_deployer=self.deployer,
+            rollback_manager=self.rollback_manager,
         )
         logger.info("✅ Adaptive optimizer initialized")
 
@@ -212,6 +215,7 @@ class GeneTraderDaemon:
                 api_key=api_key,
                 performance_db=self.db,
                 version_control=self.version_control,
+                adaptive_optimizer=self.adaptive,
                 scheduler=self.scheduler,
             )
             logger.info(f"✅ Agent API will start on port {api_port}")
@@ -353,7 +357,11 @@ class GeneTraderDaemon:
         for alert in result.alerts:
             logger.warning(f"  Alert: {alert.alert_type.value} - {alert.message}")
 
-        # Send notification (limit to once per hour)
+        # Send notification (limit to 24 per day)
+        today = datetime.now().date()
+        if today != self._alerts_date:
+            self._alerts_date = today
+            self._alerts_sent_today = 0
         if self._alerts_sent_today < 24:
             send_notification(
                 self.settings,

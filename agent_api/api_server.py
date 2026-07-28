@@ -111,6 +111,22 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
             ))
             return
 
+        if not self.auth_manager.check_permission(api_key, 'read'):
+            self._send_response(APIResponse(
+                success=False,
+                error="Read permission required",
+                status_code=403
+            ))
+            return
+
+        if not self.auth_manager.check_rate_limit(api_key.key_id):
+            self._send_response(APIResponse(
+                success=False,
+                error="Rate limit exceeded",
+                status_code=429
+            ))
+            return
+
         parsed = urlparse(self.path)
         path = parsed.path.rstrip('/')
 
@@ -171,6 +187,14 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
                 success=False,
                 error="Write permission required",
                 status_code=403
+            ))
+            return
+
+        if not self.auth_manager.check_rate_limit(api_key.key_id):
+            self._send_response(APIResponse(
+                success=False,
+                error="Rate limit exceeded",
+                status_code=429
             ))
             return
 
@@ -429,11 +453,27 @@ class AgentAPIHandler(BaseHTTPRequestHandler):
             ))
             return
 
-        # This would trigger the rollback manager
-        self._send_response(APIResponse(
-            success=True,
-            data={'message': f'Rollback requested for {strategy_name}'}
-        ))
+        if not self.adaptive_optimizer:
+            self._send_response(APIResponse(
+                success=False,
+                error="Rollback not available: no adaptive optimizer attached to API server",
+                status_code=501
+            ))
+            return
+
+        success = self.adaptive_optimizer.deployer.rollback(strategy_name, to_version)
+        if success:
+            self._send_response(APIResponse(
+                success=True,
+                data={'message': f'Rolled back {strategy_name}'
+                                 + (f' to {to_version}' if to_version else ' to previous version')}
+            ))
+        else:
+            self._send_response(APIResponse(
+                success=False,
+                error=f"Rollback failed for {strategy_name}, check server logs",
+                status_code=500
+            ))
 
 
 class AgentAPI:

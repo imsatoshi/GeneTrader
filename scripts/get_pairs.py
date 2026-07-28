@@ -181,10 +181,13 @@ def update_config_json(pairs: List[str], output_config: str) -> bool:
         config['exchange']['pair_whitelist'] = pairs
 
         # Save to specified filename in user_data directory
+        # (write to temp file then rename, so a crash never leaves a corrupt config)
         output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'user_data', output_config)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        tmp_path = output_path + '.tmp'
+        with open(tmp_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, output_path)
 
         logger.info(f"Successfully saved trading pairs to: {output_path}")
         return True

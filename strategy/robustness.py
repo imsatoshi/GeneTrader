@@ -134,8 +134,8 @@ class ParameterSensitivityAnalyzer:
                 if perturbed_fitness is not None and original_fitness > 0:
                     change = abs(perturbed_fitness - original_fitness) / original_fitness
                     fitness_changes.append(change)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Sensitivity eval failed for param index {index}: {e}")
 
         if not fitness_changes:
             return 0.5  # Unknown sensitivity
@@ -164,8 +164,8 @@ class ParameterSensitivityAnalyzer:
             if perturbed_fitness is not None and original_fitness > 0:
                 change = abs(perturbed_fitness - original_fitness) / original_fitness
                 return min(1.0, change)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Sensitivity eval failed for boolean param index {index}: {e}")
 
         return 0.5
 
