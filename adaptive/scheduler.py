@@ -11,6 +11,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 from utils.logging_config import logger
@@ -135,11 +136,11 @@ class OptimizationScheduler:
                 self._queue.append(ScheduledOptimization(
                     id=task_data['id'],
                     strategy_name=task_data['strategy_name'],
-                    scheduled_time=datetime.fromisoformat(task_data['scheduled_time']),
+                    scheduled_time=parse_utc(task_data['scheduled_time']),
                     priority=SchedulePriority(task_data['priority']),
                     trigger_reason=task_data['trigger_reason'],
                     status=task_data['status'],
-                    created_at=datetime.fromisoformat(task_data['created_at']),
+                    created_at=parse_utc(task_data['created_at']),
                 ))
 
             # Load history
@@ -147,13 +148,13 @@ class OptimizationScheduler:
                 self._history.append(ScheduledOptimization(
                     id=task_data['id'],
                     strategy_name=task_data['strategy_name'],
-                    scheduled_time=datetime.fromisoformat(task_data['scheduled_time']),
+                    scheduled_time=parse_utc(task_data['scheduled_time']),
                     priority=SchedulePriority(task_data['priority']),
                     trigger_reason=task_data['trigger_reason'],
                     status=task_data['status'],
-                    created_at=datetime.fromisoformat(task_data['created_at']),
-                    started_at=datetime.fromisoformat(task_data['started_at']) if task_data.get('started_at') else None,
-                    completed_at=datetime.fromisoformat(task_data['completed_at']) if task_data.get('completed_at') else None,
+                    created_at=parse_utc(task_data['created_at']),
+                    started_at=parse_utc(task_data['started_at']),
+                    completed_at=parse_utc(task_data['completed_at']),
                 ))
 
         except Exception as e:
@@ -192,7 +193,7 @@ class OptimizationScheduler:
 
     def _generate_id(self) -> str:
         """Generate unique task ID."""
-        return f"opt_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._history)}"
+        return f"opt_{utc_now().strftime('%Y%m%d_%H%M%S')}_{len(self._history)}"
 
     def _can_schedule(self, strategy_name: str) -> tuple[bool, str]:
         """
@@ -201,7 +202,7 @@ class OptimizationScheduler:
         Returns:
             (can_schedule, reason)
         """
-        now = datetime.now()
+        now = utc_now()
 
         # Check daily limit
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -251,7 +252,7 @@ class OptimizationScheduler:
         priority: SchedulePriority
     ) -> datetime:
         """Calculate when to schedule based on priority and timing preferences."""
-        now = datetime.now()
+        now = utc_now()
 
         if priority == SchedulePriority.CRITICAL:
             # Run immediately
@@ -342,7 +343,7 @@ class OptimizationScheduler:
             if len(self._running) >= self.config.max_concurrent:
                 return None
 
-            now = datetime.now()
+            now = utc_now()
 
             # Find next ready task
             ready_task = None
@@ -374,7 +375,7 @@ class OptimizationScheduler:
 
         # Cleanup
         with self._lock:
-            ready_task.completed_at = datetime.now()
+            ready_task.completed_at = utc_now()
             del self._running[ready_task.id]
             self._history.append(ready_task)
             self._save_state()
@@ -446,7 +447,7 @@ class OptimizationScheduler:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get scheduler statistics."""
-        now = datetime.now()
+        now = utc_now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_ago = now - timedelta(days=7)
 

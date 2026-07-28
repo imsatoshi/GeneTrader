@@ -312,7 +312,9 @@ def create_validator_from_settings(settings: Any) -> WalkForwardValidator:
     total_weeks = getattr(settings, 'total_data_weeks', 52)
     train_weeks = getattr(settings, 'walk_forward_train_weeks', 26)
     test_weeks = getattr(settings, 'walk_forward_test_weeks', 4)
-    min_train = getattr(settings, 'walk_forward_min_train', 12)
+    # Settings and ga.json name this walk_forward_min_train_weeks; reading the
+    # shorter name meant the configured value was silently ignored.
+    min_train = getattr(settings, 'walk_forward_min_train_weeks', 12)
     method = getattr(settings, 'walk_forward_method', 'rolling')
 
     return WalkForwardValidator(

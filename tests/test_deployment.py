@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now
 from unittest.mock import MagicMock, patch
 
 from deployment.version_control import (
@@ -257,6 +258,34 @@ class TestStrategyDeployer(unittest.TestCase):
         deployed_file = os.path.join(self.target_dir, "TestStrategy.py")
         self.assertTrue(os.path.exists(deployed_file))
 
+    def test_deploy_requires_approval_callback_by_default(self):
+        """Test deployment fails closed when approval is required but unavailable."""
+        self.vc.create_version(
+            "TestStrategy", self.strategy_file,
+            backtest_metrics={'total_profit_pct': 0.15, 'max_drawdown': 0.10}
+        )
+
+        result = self.deployer.deploy("TestStrategy", "v1", DeploymentConfig())
+
+        self.assertEqual(result.status, DeploymentStatus.FAILED)
+        self.assertIn("approval callback", result.error_message.lower())
+        deployed_file = os.path.join(self.target_dir, "TestStrategy.py")
+        self.assertFalse(os.path.exists(deployed_file))
+
+    def test_deploy_with_approval_callback(self):
+        """Test deployment proceeds when approval callback allows it."""
+        self.vc.create_version(
+            "TestStrategy", self.strategy_file,
+            backtest_metrics={'total_profit_pct': 0.15, 'max_drawdown': 0.10}
+        )
+        self.deployer.set_approval_callback(lambda strategy, version: True)
+
+        result = self.deployer.deploy("TestStrategy", "v1", DeploymentConfig())
+
+        self.assertEqual(result.status, DeploymentStatus.COMPLETED)
+        self.assertTrue(result.approved)
+        self.assertTrue(any("not executed" in note for note in result.notes))
+
     def test_rollback(self):
         """Test rollback functionality."""
         # Create and deploy v1
@@ -344,7 +373,7 @@ class TestShadowTrader(unittest.TestCase):
             strategy_name="TestStrategy",
             version_id="v1",
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
+            started_at=utc_now(),
             total_trades=20,
             winning_trades=12,
             losing_trades=8,
@@ -371,7 +400,7 @@ class TestShadowTrader(unittest.TestCase):
             strategy_name="TestStrategy",
             version_id="v1",
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
+            started_at=utc_now(),
             total_trades=3,  # Too few trades
             win_rate=0.3,    # Too low
             max_drawdown=0.30,  # Too high
@@ -396,8 +425,8 @@ class TestShadowTrader(unittest.TestCase):
             strategy_name="TestStrategy",
             version_id="v1",
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
-            ended_at=datetime.now(),
+            started_at=utc_now(),
+            ended_at=utc_now(),
             total_trades=20,
             win_rate=0.6,
         )
@@ -424,9 +453,10 @@ class TestRollbackManager(unittest.TestCase):
         self.vc = StrategyVersionControl(self.versions_dir)
         self.manager = RollbackManager(
             self.vc,
-            config=RollbackConfig(enabled=True, cooldown_minutes=0),
+            config=RollbackConfig(enabled=True, cooldown_minutes=0, require_confirmation=False),
             rollback_history_file=self.history_file
         )
+        self.manager.set_deploy_callback(lambda strategy_name, version_id: True)
 
         # Create test strategy
         self.strategy_file = os.path.join(self.temp_dir, "test_strategy.py")

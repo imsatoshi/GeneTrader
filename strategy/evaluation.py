@@ -16,6 +16,7 @@ import re
 from typing import Dict, Any, Union, Optional
 from utils.logging_config import logger
 from config.config import LOG_CONFIG, PROJECT_ROOT
+from config.settings import settings
 
 
 # Pre-compiled regex patterns for better performance
@@ -214,6 +215,12 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int,
     # =========================================
     # DISQUALIFICATION CHECKS (Anti-Overfitting)
     # =========================================
+    # Thresholds come from ga.json (max_drawdown_limit / min_profit_factor /
+    # min_win_rate) so tightening them in config actually changes which
+    # candidates survive, instead of only affecting live monitoring.
+    max_drawdown_limit = getattr(settings, 'max_drawdown_limit', 0.35)
+    min_profit_factor = getattr(settings, 'min_profit_factor', 1.0)
+    min_win_rate = getattr(settings, 'min_win_rate', 0.30)
 
     # 1. Minimum trade count for statistical significance
     min_trades = max(backtest_weeks // 2, 15)
@@ -221,19 +228,28 @@ def fitness_function(parsed_result: Dict[str, Any], generation: int,
         logger.warning(f"Strategy {strategy_name}: Insufficient trades ({total_trades} < {min_trades})")
         return -1.0
 
-    # 2. Maximum drawdown limit (>35% = too risky)
-    if max_drawdown > 0.35:
-        logger.warning(f"Strategy {strategy_name}: Excessive drawdown ({max_drawdown:.1%} > 35%)")
+    # 2. Maximum drawdown limit (too risky)
+    if max_drawdown > max_drawdown_limit:
+        logger.warning(
+            f"Strategy {strategy_name}: Excessive drawdown "
+            f"({max_drawdown:.1%} > {max_drawdown_limit:.1%})"
+        )
         return -2.0
 
     # 3. Minimum profit factor (must be profitable on average)
-    if profit_factor < 1.0:
-        logger.warning(f"Strategy {strategy_name}: Unprofitable (PF={profit_factor:.2f} < 1.0)")
+    if profit_factor < min_profit_factor:
+        logger.warning(
+            f"Strategy {strategy_name}: Unprofitable "
+            f"(PF={profit_factor:.2f} < {min_profit_factor:.2f})"
+        )
         return -3.0
 
     # 4. Minimum win rate (avoid extreme strategies)
-    if win_rate < 0.30:
-        logger.warning(f"Strategy {strategy_name}: Win rate too low ({win_rate:.1%} < 30%)")
+    if win_rate < min_win_rate:
+        logger.warning(
+            f"Strategy {strategy_name}: Win rate too low "
+            f"({win_rate:.1%} < {min_win_rate:.1%})"
+        )
         return -4.0
 
     # =========================================

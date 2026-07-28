@@ -9,6 +9,7 @@ import math
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from typing import Any, Dict, List, Optional, Tuple
 from utils.logging_config import logger
 
@@ -101,7 +102,7 @@ class PerformanceMonitor:
         Returns:
             PerformanceSnapshot if collected, None if too soon since last snapshot
         """
-        now = datetime.now()
+        now = utc_now()
 
         # Check if we should collect
         if self._last_snapshot_time:
@@ -337,7 +338,7 @@ class PerformanceMonitor:
         Returns:
             Current PerformanceMetrics
         """
-        now = datetime.now()
+        now = utc_now()
 
         # Check cache
         if not force_refresh and self._cached_metrics and self._cache_time:
@@ -450,7 +451,7 @@ class PerformanceMonitor:
         Returns:
             List of PerformanceSnapshot objects
         """
-        since = datetime.now() - timedelta(hours=hours)
+        since = utc_now() - timedelta(hours=hours)
         return self.db.get_snapshots(since=since)
 
     def save_backtest_baseline(

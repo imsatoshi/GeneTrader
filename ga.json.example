@@ -30,7 +30,6 @@
     "num_pairs": 1,
     "diversity_threshold": 0.1,
     "max_mutation_prob": 0.4,
-
     "_comment_anti_overfit": "Anti-overfitting settings (critical for live trading success)",
     "enable_walk_forward": true,
     "walk_forward_method": "rolling",
@@ -41,20 +40,17 @@
     "min_trades_per_week": 0.5,
     "max_drawdown_limit": 0.35,
     "min_profit_factor": 1.0,
-    "min_win_rate": 0.30,
+    "min_win_rate": 0.3,
     "enable_diversity_selection": true,
     "diversity_selection_weight": 0.3,
-
     "_comment_optimizer": "Optimizer settings - choose 'genetic' or 'optuna'",
     "optimizer_type": "genetic",
-
     "_comment_optuna": "Optuna optimizer settings (Issue #13 - more efficient for large search spaces)",
     "optuna_n_trials": 900,
     "optuna_sampler": "tpe",
     "optuna_n_startup_trials": 10,
     "optuna_pruning": false,
     "optuna_n_jobs": 1,
-
     "remote_path": "/your/remote/path",
     "hostname": "remote_ip",
     "port": 22,
@@ -67,7 +63,6 @@
     "api_url": "http://localhost:8080",
     "freqtrade_username": "your_username",
     "freqtrade_password": "your_password",
-
     "_comment_adaptive": "On-the-fly adaptive optimization settings",
     "adaptive_optimization_enabled": false,
     "performance_check_interval_minutes": 5,
@@ -78,18 +73,19 @@
     "recent_data_weight": 0.7,
     "performance_db_path": "data/performance.db",
     "metrics_window_hours": 168,
-
     "_comment_deployment": "Safe deployment settings",
     "shadow_trading_hours": 24,
     "gradual_rollout_enabled": true,
     "auto_rollback_enabled": true,
     "rollback_drawdown_threshold": 0.15,
-
+    "rollback_require_confirmation": false,
+    "_comment_heartbeat": "External dead man's switch, e.g. https://hc-ping.com/<uuid>. Empty disables.",
+    "heartbeat_url": "",
     "_comment_agent_api": "Agent API settings for Claude/AI integration",
     "agent_api_enabled": false,
-    "agent_api_host": "0.0.0.0",
+    "agent_api_host": "127.0.0.1",
     "agent_api_port": 8090,
     "agent_check_interval_hours": 4,
     "agent_approval_required_for_deployment": true,
-    "agent_api_key": "your-secret-api-key"
+    "agent_api_key": "CHANGE_ME_at_least_16_chars"
 }

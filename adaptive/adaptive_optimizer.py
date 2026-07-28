@@ -10,6 +10,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 from utils.logging_config import logger
@@ -69,7 +70,7 @@ class AdaptiveConfig:
 
     # Approval settings
     require_approval: bool = True
-    auto_approve_threshold: float = 0.8  # Auto-approve if improvement > 80%
+    auto_approve_threshold: float = 0.8  # Reserved for future explicit approval policy
 
 
 @dataclass
@@ -200,13 +201,11 @@ class AdaptiveOptimizer:
                 data = json.load(f)
 
             if data.get('last_optimization_time'):
-                self._last_optimization_time = datetime.fromisoformat(
-                    data['last_optimization_time']
-                )
+                self._last_optimization_time = parse_utc(data['last_optimization_time'])
 
             for event_data in data.get('optimization_history', []):
                 self._optimization_history.append(OptimizationEvent(
-                    timestamp=datetime.fromisoformat(event_data['timestamp']),
+                    timestamp=parse_utc(event_data['timestamp']),
                     strategy_name=event_data['strategy_name'],
                     trigger_reason=event_data['trigger_reason'],
                     old_version=event_data['old_version'],
@@ -292,7 +291,7 @@ class AdaptiveOptimizer:
         if self._state == AdaptiveState.IDLE:
             return self._state
 
-        now = datetime.now()
+        now = utc_now()
 
         # Check interval
         if self._last_check_time:
@@ -384,12 +383,12 @@ class AdaptiveOptimizer:
         """Check if optimization is allowed."""
         # Check time since last optimization
         if self._last_optimization_time:
-            hours_since = (datetime.now() - self._last_optimization_time).total_seconds() / 3600
+            hours_since = (utc_now() - self._last_optimization_time).total_seconds() / 3600
             if hours_since < self.config.min_hours_between_optimizations:
                 return False
 
         # Check weekly limit
-        week_ago = datetime.now() - timedelta(days=7)
+        week_ago = utc_now() - timedelta(days=7)
         recent_optimizations = sum(
             1 for e in self._optimization_history
             if e.timestamp > week_ago
@@ -445,15 +444,13 @@ class AdaptiveOptimizer:
 
             # Check approval
             if self.config.require_approval:
-                if improvement >= self.config.auto_approve_threshold:
-                    logger.info(f"Auto-approving: {improvement:.1%} improvement")
-                    approved = True
-                elif self._approval_callback:
+                if self._approval_callback:
                     approved = self._approval_callback(
                         new_version.version_id,
                         {'improvement': improvement, 'metrics': new_metrics}
                     )
                 else:
+                    logger.info("Optimization requires approval but no approval callback is set")
                     approved = False
             else:
                 approved = True
@@ -479,7 +476,7 @@ class AdaptiveOptimizer:
 
             # Record event
             event = OptimizationEvent(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 strategy_name=self.strategy_name,
                 trigger_reason="degradation_detected",
                 old_version=old_version_id,
@@ -489,7 +486,7 @@ class AdaptiveOptimizer:
             )
 
             self._optimization_history.append(event)
-            self._last_optimization_time = datetime.now()
+            self._last_optimization_time = utc_now()
             self._save_state()
 
             if self._on_optimization_callback:
@@ -535,7 +532,7 @@ class AdaptiveOptimizer:
             'can_optimize': self._can_optimize(),
             'optimization_count_this_week': sum(
                 1 for e in self._optimization_history
-                if e.timestamp > datetime.now() - timedelta(days=7)
+                if e.timestamp > utc_now() - timedelta(days=7)
             ),
             'last_check': self._last_check_time.isoformat() if self._last_check_time else None,
         }

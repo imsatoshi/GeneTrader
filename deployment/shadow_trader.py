@@ -10,6 +10,7 @@ import os
 import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from utils.logging_config import logger
@@ -136,7 +137,7 @@ class ShadowTrader:
 
     def _generate_session_id(self, strategy_name: str, version_id: str) -> str:
         """Generate unique session ID."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = utc_now().strftime("%Y%m%d_%H%M%S")
         return f"shadow_{strategy_name}_{version_id}_{timestamp}"
 
     def start_shadow_trading(
@@ -170,7 +171,7 @@ class ShadowTrader:
             strategy_name=strategy_name,
             version_id=version_id,
             status=ShadowStatus.PENDING,
-            started_at=datetime.now()
+            started_at=utc_now()
         )
 
         self._active_session = result
@@ -209,7 +210,7 @@ class ShadowTrader:
         config = config or ShadowConfig()
 
         # Calculate timerange for recent data
-        end_date = datetime.now()
+        end_date = utc_now()
         start_date = end_date - timedelta(days=timerange_days)
         timerange = f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"
 
@@ -320,8 +321,8 @@ class ShadowTrader:
             strategy_name=strategy_name,
             version_id=version_id,
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
-            ended_at=datetime.now(),
+            started_at=utc_now(),
+            ended_at=utc_now(),
             duration_hours=0.0,
             total_trades=backtest_metrics.get('total_trades', 0),
             winning_trades=backtest_metrics.get('wins', 0),
@@ -357,7 +358,7 @@ class ShadowTrader:
                 self._process.kill()
 
         self._active_session.status = ShadowStatus.CANCELLED
-        self._active_session.ended_at = datetime.now()
+        self._active_session.ended_at = utc_now()
 
         result = self._active_session
         self._active_session = None
@@ -413,8 +414,8 @@ class ShadowTrader:
                 strategy_name=data['strategy_name'],
                 version_id=data['version_id'],
                 status=ShadowStatus(data['status']),
-                started_at=datetime.fromisoformat(data['started_at']),
-                ended_at=datetime.fromisoformat(data['ended_at']) if data.get('ended_at') else None,
+                started_at=parse_utc(data['started_at']),
+                ended_at=parse_utc(data['ended_at']),
                 duration_hours=data.get('duration_hours', 0),
                 total_trades=data.get('total_trades', 0),
                 winning_trades=data.get('winning_trades', 0),

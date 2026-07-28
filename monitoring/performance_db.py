@@ -11,6 +11,7 @@ import os
 from contextlib import contextmanager
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc, utc_iso
 from typing import Any, Dict, List, Optional, Generator
 from utils.logging_config import logger
 
@@ -40,7 +41,7 @@ class PerformanceSnapshot:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         d = asdict(self)
-        d['timestamp'] = self.timestamp.isoformat()
+        d['timestamp'] = utc_iso(self.timestamp)
         if self.extra_data:
             d['extra_data'] = json.dumps(self.extra_data)
         return d
@@ -50,7 +51,7 @@ class PerformanceSnapshot:
         """Create from dictionary."""
         data = data.copy()
         if isinstance(data.get('timestamp'), str):
-            data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+            data['timestamp'] = parse_utc(data['timestamp'])
         if isinstance(data.get('extra_data'), str):
             data['extra_data'] = json.loads(data['extra_data'])
         return cls(**data)
@@ -223,7 +224,7 @@ class PerformanceDB:
                     open_trades, balance, extra_data
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                snapshot.timestamp.isoformat(),
+                utc_iso(snapshot.timestamp),
                 snapshot.strategy_name,
                 snapshot.total_profit,
                 snapshot.total_profit_pct,
@@ -265,8 +266,8 @@ class PerformanceDB:
             ''', (
                 trade.trade_id,
                 trade.pair,
-                trade.open_date.isoformat(),
-                trade.close_date.isoformat() if trade.close_date else None,
+                utc_iso(trade.open_date),
+                utc_iso(trade.close_date) if trade.close_date else None,
                 trade.open_rate,
                 trade.close_rate,
                 trade.profit_ratio,
@@ -364,10 +365,10 @@ class PerformanceDB:
                 params.append(strategy_name)
             if since:
                 query += ' AND timestamp >= ?'
-                params.append(since.isoformat())
+                params.append(utc_iso(since))
             if until:
                 query += ' AND timestamp <= ?'
-                params.append(until.isoformat())
+                params.append(utc_iso(until))
 
             query += ' ORDER BY timestamp DESC LIMIT ?'
             params.append(limit)
@@ -415,10 +416,10 @@ class PerformanceDB:
                 params.append(strategy)
             if since:
                 query += ' AND close_date >= ?'
-                params.append(since.isoformat())
+                params.append(utc_iso(since))
             if until:
                 query += ' AND close_date <= ?'
-                params.append(until.isoformat())
+                params.append(utc_iso(until))
 
             query += ' ORDER BY close_date DESC LIMIT ?'
             params.append(limit)
@@ -431,8 +432,8 @@ class PerformanceDB:
                 trades.append(TradeRecord(
                     trade_id=row['trade_id'],
                     pair=row['pair'],
-                    open_date=datetime.fromisoformat(row['open_date']),
-                    close_date=datetime.fromisoformat(row['close_date']) if row['close_date'] else None,
+                    open_date=parse_utc(row['open_date']),
+                    close_date=parse_utc(row['close_date']),
                     open_rate=row['open_rate'],
                     close_rate=row['close_rate'],
                     profit_ratio=row['profit_ratio'],
@@ -461,7 +462,7 @@ class PerformanceDB:
         Returns:
             List of snapshots within the window
         """
-        since = datetime.now() - timedelta(hours=window_hours)
+        since = utc_now() - timedelta(hours=window_hours)
         return self.get_snapshots(
             strategy_name=strategy_name,
             since=since,
@@ -478,7 +479,7 @@ class PerformanceDB:
         Returns:
             Number of deleted records
         """
-        cutoff = datetime.now() - timedelta(days=retention_days)
+        cutoff = utc_now() - timedelta(days=retention_days)
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -486,14 +487,14 @@ class PerformanceDB:
             # Delete old snapshots
             cursor.execute(
                 'DELETE FROM performance_snapshots WHERE timestamp < ?',
-                (cutoff.isoformat(),)
+                (utc_iso(cutoff),)
             )
             snapshots_deleted = cursor.rowcount
 
             # Delete old trades
             cursor.execute(
                 'DELETE FROM trade_records WHERE close_date < ?',
-                (cutoff.isoformat(),)
+                (utc_iso(cutoff),)
             )
             trades_deleted = cursor.rowcount
 

@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now
 from unittest.mock import MagicMock, patch
 
 from monitoring.freqtrade_client import FreqtradeClient, Trade, Balance, SystemStatus
@@ -66,7 +67,7 @@ class TestPerformanceDB(unittest.TestCase):
     def test_save_and_get_snapshot(self):
         """Test saving and retrieving snapshots."""
         snapshot = PerformanceSnapshot(
-            timestamp=datetime.now(),
+            timestamp=utc_now(),
             strategy_name='TestStrategy',
             total_profit=100.0,
             total_profit_pct=0.05,
@@ -92,8 +93,8 @@ class TestPerformanceDB(unittest.TestCase):
         trade = TradeRecord(
             trade_id=1,
             pair='ETH/USDT',
-            open_date=datetime.now() - timedelta(hours=2),
-            close_date=datetime.now(),
+            open_date=utc_now() - timedelta(hours=2),
+            close_date=utc_now(),
             open_rate=2000.0,
             close_rate=2100.0,
             profit_ratio=0.05,
@@ -134,7 +135,7 @@ class TestPerformanceDB(unittest.TestCase):
         # Add multiple snapshots
         for i in range(10):
             snapshot = PerformanceSnapshot(
-                timestamp=datetime.now() - timedelta(hours=i * 24),
+                timestamp=utc_now() - timedelta(hours=i * 24),
                 strategy_name='TestStrategy',
                 total_profit=100.0 + i * 10,
                 total_profit_pct=0.05 + i * 0.01,
@@ -158,7 +159,7 @@ class TestPerformanceDB(unittest.TestCase):
         """Test cleanup of old data."""
         # Add old snapshot
         old_snapshot = PerformanceSnapshot(
-            timestamp=datetime.now() - timedelta(days=400),
+            timestamp=utc_now() - timedelta(days=400),
             strategy_name='TestStrategy',
             total_profit=100.0,
             total_profit_pct=0.05,
@@ -175,7 +176,7 @@ class TestPerformanceDB(unittest.TestCase):
 
         # Add recent snapshot
         recent_snapshot = PerformanceSnapshot(
-            timestamp=datetime.now(),
+            timestamp=utc_now(),
             strategy_name='TestStrategy',
             total_profit=200.0,
             total_profit_pct=0.10,
@@ -223,7 +224,7 @@ class TestPerformanceMonitor(unittest.TestCase):
 
     def test_calculate_metrics_with_trades(self):
         """Test metrics calculation with trades."""
-        now = datetime.now()
+        now = utc_now()
         trades = [
             Trade(
                 trade_id=1, pair='BTC/USDT', is_open=False,
@@ -304,7 +305,7 @@ class TestDegradationDetector(unittest.TestCase):
     ) -> PerformanceSnapshot:
         """Create a test snapshot."""
         return PerformanceSnapshot(
-            timestamp=datetime.now() - timedelta(hours=hours_ago),
+            timestamp=utc_now() - timedelta(hours=hours_ago),
             strategy_name='TestStrategy',
             total_profit=profit_pct * 1000,
             total_profit_pct=profit_pct,
@@ -466,7 +467,7 @@ class TestAlertSerialization(unittest.TestCase):
     def test_alert_to_dict(self):
         """Test alert serialization."""
         alert = DegradationAlert(
-            timestamp=datetime.now(),
+            timestamp=utc_now(),
             alert_type=AlertType.PROFIT_DECLINE,
             severity=AlertSeverity.WARNING,
             message="Test alert",
