@@ -8,8 +8,12 @@
 Automated trading strategies face challenges in optimizing performance due to chaotic and non-stationary market dynamics. This project implements a Genetic Algorithm (GA) to optimize trading strategy parameters and trading pair selection, offering a more robust and adaptive solution compared to conventional methods. By integrating GA with the Freqtrade framework, I aim to:  
 
 - Enhance trading performance through hyperparameter optimization.  
-- Automate strategy evaluation and replacement with the best-performing strategies.  
+- Automate strategy evaluation and ranking across large parameter spaces.  
 - Provide an efficient and configurable optimization workflow for traders.  
+
+**Scope:** this project searches for strategy parameters and reports what it
+finds. It does not place trades and does not deploy anything to a live bot —
+taking a candidate to production is a manual step outside this repository.
 
 This project leverage GA to explore parameter spaces and improve profitability.
 
@@ -26,7 +30,9 @@ This project implements a genetic algorithm to optimize trading strategy paramet
 - Saving of best individuals from each generation
 - Configurable optimization parameters
 - Optional data downloading before running the algorithm
-- Offline Optimization and Automatic Strategy Replacement: Supports offline optimization of trading strategies, automatically comparing with the currently running online strategy, and replacing the online strategy with the best offline strategy if it performs better
+- Checkpointing, so a long run can resume after a crash with `--resume`
+- Walk-forward validation: train each fold on its own window, score it out of sample
+- Selection bar: how good the best of N candidates would have looked by luck alone
 
 ## Prerequisites
 
@@ -196,11 +202,13 @@ Examples:
 
 ## Project Structure
 
-- `main.py`: Main script to run the genetic algorithm
-- `config/settings.py`: Settings class to load configuration
+- `main.py`: Main script to run the optimization
+- `config/settings.py`: Settings class to load and validate configuration
 - `utils/`: Utility functions for logging and file operations
-- `genetic_algorithm/`: Classes and functions for the genetic algorithm
-- `strategy/`: Strategy-related code, including backtesting and template generation
+- `genetic_algorithm/`: Individuals, population, crossover, mutation, selection
+- `optimization/`: GA and Optuna drivers, checkpointing, walk-forward folds
+- `strategy/`: Backtesting, fitness, template generation, walk-forward, selection bar
+- `scripts/`: Reporting and maintenance tools (`selection_bar.py`, `get_pairs.py`, ...)
 - `data/`: Data handling, including the downloader module
 
 ## How It Works

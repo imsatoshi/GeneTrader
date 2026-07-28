@@ -42,23 +42,11 @@ class Settings:
         'walk_forward_test_weeks': {'min': 1, 'type': int},
         'walk_forward_min_train_weeks': {'min': 4, 'type': int},
         'total_data_weeks': {'min': 8, 'type': int},
-        'min_trades_per_week': {'min': 0.0, 'type': float},
         'max_drawdown_limit': {'min': 0.0, 'max': 1.0, 'type': float},
         'min_profit_factor': {'min': 0.0, 'type': float},
         'min_win_rate': {'min': 0.0, 'max': 1.0, 'type': float},
         'diversity_selection_weight': {'min': 0.0, 'max': 1.0, 'type': float},
         # On-the-fly optimization settings
-        'performance_check_interval_minutes': {'min': 1, 'type': int},
-        'degradation_check_interval_minutes': {'min': 1, 'type': int},
-        'reoptimization_trigger_threshold': {'min': 0.0, 'max': 1.0, 'type': float},
-        'minimum_trades_for_evaluation': {'min': 1, 'type': int},
-        'minimum_days_between_optimizations': {'min': 0, 'type': int},
-        'recent_data_weight': {'min': 0.0, 'max': 1.0, 'type': float},
-        'metrics_window_hours': {'min': 1, 'type': int},
-        'shadow_trading_hours': {'min': 0, 'type': int},
-        'rollback_drawdown_threshold': {'min': 0.0, 'max': 1.0, 'type': float},
-        'agent_api_port': {'min': 1, 'max': 65535, 'type': int},
-        'agent_check_interval_hours': {'min': 1, 'type': int},
     }
 
     def __init__(self, config_file: str = 'ga.json'):
@@ -158,7 +146,6 @@ class Settings:
         self.walk_forward_test_weeks = self.config.get('walk_forward_test_weeks', 4)
         self.walk_forward_min_train_weeks = self.config.get('walk_forward_min_train_weeks', 12)
         self.total_data_weeks = self.config.get('total_data_weeks', 52)
-        self.min_trades_per_week = self.config.get('min_trades_per_week', 0.5)
         self.max_drawdown_limit = self.config.get('max_drawdown_limit', 0.35)
         self.min_profit_factor = self.config.get('min_profit_factor', 1.0)
         self.min_win_rate = self.config.get('min_win_rate', 0.30)
@@ -173,39 +160,6 @@ class Settings:
                     f"walk_forward_test_weeks ({self.walk_forward_test_weeks}) exceeds "
                     f"total_data_weeks ({self.total_data_weeks})"
                 )
-
-        # On-the-fly optimization / Adaptive optimization settings
-        self.adaptive_optimization_enabled = self.config.get('adaptive_optimization_enabled', False)
-        self.performance_check_interval_minutes = self.config.get('performance_check_interval_minutes', 5)
-        self.degradation_check_interval_minutes = self.config.get('degradation_check_interval_minutes', 60)
-        self.reoptimization_trigger_threshold = self.config.get('reoptimization_trigger_threshold', 0.3)
-        self.minimum_trades_for_evaluation = self.config.get('minimum_trades_for_evaluation', 20)
-        self.minimum_days_between_optimizations = self.config.get('minimum_days_between_optimizations', 3)
-        self.recent_data_weight = self.config.get('recent_data_weight', 0.7)
-        self.performance_db_path = self.config.get('performance_db_path', 'data/performance.db')
-        self.metrics_window_hours = self.config.get('metrics_window_hours', 168)  # 7 days
-
-        # Safe deployment settings
-        self.shadow_trading_hours = self.config.get('shadow_trading_hours', 24)
-        self.gradual_rollout_enabled = self.config.get('gradual_rollout_enabled', True)
-        self.auto_rollback_enabled = self.config.get('auto_rollback_enabled', True)
-        self.rollback_drawdown_threshold = self.config.get('rollback_drawdown_threshold', 0.15)
-        # RollbackConfig defaults to requiring confirmation so that a bare
-        # RollbackConfig() never rolls back unattended. Operators who opt into
-        # auto_rollback_enabled get unattended rollback unless they set this.
-        self.rollback_require_confirmation = self.config.get('rollback_require_confirmation', False)
-        # External dead man's switch (e.g. healthchecks.io). The daemon pings it
-        # each cycle; the service alerts when pings stop, which is the only way
-        # a crashed daemon gets noticed. Empty disables heartbeats.
-        self.heartbeat_url = self.config.get('heartbeat_url', '')
-
-        # Agent integration settings
-        self.agent_api_enabled = self.config.get('agent_api_enabled', False)
-        self.agent_api_host = self.config.get('agent_api_host', '127.0.0.1')
-        self.agent_api_port = self.config.get('agent_api_port', 8090)
-        self.agent_check_interval_hours = self.config.get('agent_check_interval_hours', 4)
-        self.agent_approval_required_for_deployment = self.config.get('agent_approval_required_for_deployment', True)
-        self.agent_api_key = self.config.get('agent_api_key', '')
 
         # Set proxy environment variables
         for key, value in self.config.get('proxy', {}).items():

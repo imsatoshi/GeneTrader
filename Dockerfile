@@ -16,8 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt || \
 # Copy the rest of the application
 COPY . /app
 
-# Make port 8080 available to the world outside this container
-EXPOSE 8080
+# No port is exposed: this image runs a search and exits, it serves nothing.
 
 # Define environment variable
 ENV NAME=GeneTrader

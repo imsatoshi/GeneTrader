@@ -2,6 +2,10 @@
 
 > 日期: 2026-02-26
 > 分析范围: 全项目代码审查 + 策略优化建议
+>
+> **注意**：这是一份时点报告。原第 4 节（实盘部署）和第 5 节（Agent 集成）
+> 描述的自适应/部署/API 子系统已于 2026-07 移除——它从未在生产运行过，
+> 而实盘由人工维护。这两节已删除；其余关于选币、参数与验证的建议仍然适用。
 
 ---
 
@@ -103,70 +107,10 @@ python scripts/get_pairs.py --mode volume --top-n 30
 
 ---
 
-## 4. 如何实盘去跑
-
-### 步骤
-
-1. **准备 Freqtrade** — 配置交易所 API Key
-2. **部署策略** — 优化结果在 `bestgenerations/`
-3. **启动自适应守护进程**:
-   ```bash
-   python run_adaptive.py --strategy GeneStrategy --api-port 8090
-   ```
-4. **配置安全参数**:
-   ```json
-   {
-     "shadow_trading_hours": 24,
-     "gradual_rollout_enabled": true,
-     "auto_rollback_enabled": true,
-     "rollback_drawdown_threshold": 0.15,
-     "agent_approval_required_for_deployment": true
-   }
-   ```
-
-### 安全建议
-
-- 初始资金不超过总资产的 10%
-- `max_open_trades` 设为 3-5
-- 确保 `auto_rollback_enabled: true`
-- 前两周密切监控
-
----
-
-## 5. 如何更好的和智能体结合
-
-### 推荐架构
-
-```
-Claude Agent
-    ↓ 定期查询 /api/v1/metrics
-    ↓ 分析表现 + 结合市场情报
-    ↓ 决定是否优化 /api/v1/optimization/trigger
-    ↓ 审核新策略 /api/v1/deployment/approve
-    ↓ 监控部署 /api/v1/status
-```
-
-### Claude 比纯统计的优势
-
-1. **理解上下文**: 结合市场事件判断退化原因
-2. **跨策略分析**: 多策略组合管理
-3. **自然语言解释**: 可读的分析报告
-
-### 进一步增强
-
-1. 加入市场情报（恐惧贪婪指数、新闻等）
-2. 多策略调度 — 根据市场 regime 动态分配权重
-3. 自动化报告 — 通过 Bark 推送每日/每周报告
-4. 闭环学习 — 记录决策结果用于改进
-
----
-
 ## 总结
 
-GeneTrader 架构完整、工程质量高。核心竞争力：
+GeneTrader 的核心竞争力是参数搜索本身：
 - GA + Optuna 双优化引擎
-- 完善的防过拟合体系
-- 生产级安全部署流水线
-- 原生 AI Agent 集成
+- 防过拟合体系（淘汰阈值、walk-forward、选择门槛）
 
-最大改进空间在实践层面：选好币、调好权重、充分验证、小资金先跑。
+最大改进空间在实践层面：选好币、调好权重、充分验证。
