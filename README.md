@@ -208,14 +208,35 @@ Examples:
 1. The script loads configuration settings from a JSON file.
 2. It generates a dynamic strategy template and extracts parameters.
 3. If requested, it downloads historical data for backtesting.
-4. The genetic algorithm creates an initial population of trading strategies or loads the latest checkpoint if resuming.
+4. The genetic algorithm creates an initial population of trading strategies, or restores the latest checkpoint when `--resume` is passed.
 5. For each generation:
    - Strategies are evaluated in parallel using backtesting.
    - The best strategies are selected for the next generation.
    - Crossover and mutation operations are applied to create new strategies.
    - The best individual from each generation is saved.
-   - A checkpoint is saved at regular intervals.
-6. After all generations, the overall best strategy is reported.
+   - A checkpoint is written every `checkpoint_frequency` generations.
+6. After all generations, the overall best strategy is reported and the checkpoint is cleared.
+
+### Resuming an interrupted run
+
+A long optimization run writes its population, generation counter, best
+individual, and RNG state to `checkpoint_dir`. If the run is killed, restart it
+with the same config and add `--resume`:
+
+```bash
+python main.py --config ga.json --resume
+```
+
+The checkpoint is discarded when a run completes, and ignored if
+`population_size` changed. `--resume` applies to the genetic optimizer only;
+Optuna runs always start fresh.
+
+### Walk-forward validation
+
+Set `enable_walk_forward: true` to train each fold on its own historical window
+and score it on the following out-of-sample window, instead of optimizing
+against one recent window. This is slower — each fold runs a full GA — but it is
+the only guard here against fitting the most recent noise.
 
 ## Contributing
 

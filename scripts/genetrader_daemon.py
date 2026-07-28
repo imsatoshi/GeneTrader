@@ -29,7 +29,9 @@ import signal
 import sys
 import time
 import threading
+import requests
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from typing import Optional
 
 # Add project root to path
@@ -112,7 +114,7 @@ class GeneTraderDaemon:
         self._last_optimization_time: Optional[datetime] = None
         self._consecutive_failures = 0
         self._alerts_sent_today = 0
-        self._alerts_date = datetime.now().date()
+        self._alerts_date = utc_now().date()
 
     def _init_components(self):
         """Initialize all system components."""
@@ -281,9 +283,11 @@ class GeneTraderDaemon:
         while self.running:
             try:
                 self._check_cycle()
+                self._send_heartbeat()
             except Exception as e:
                 logger.error(f"Error in check cycle: {e}")
                 self._consecutive_failures += 1
+                self._send_heartbeat(failed=True)
 
                 if self._consecutive_failures >= 5:
                     send_notification(
@@ -299,9 +303,26 @@ class GeneTraderDaemon:
             if self._shutdown_event.is_set():
                 break
 
+    def _send_heartbeat(self, failed: bool = False) -> None:
+        """Ping an external dead man's switch (healthchecks.io style).
+
+        Bark notifications only fire while this process is alive, so a crashed
+        or hung daemon is indistinguishable from a quiet market. An external
+        service that alerts on *missing* pings is what catches silent death.
+        Configure `heartbeat_url` in ga.json; unset disables this.
+        """
+        url = getattr(self.settings, 'heartbeat_url', '')
+        if not url:
+            return
+        try:
+            requests.get(f"{url}/fail" if failed else url, timeout=10)
+        except Exception as e:
+            # A heartbeat must never take the daemon down with it.
+            logger.warning(f"Heartbeat ping failed: {e}")
+
     def _check_cycle(self):
         """Perform one check cycle."""
-        now = datetime.now()
+        now = utc_now()
         self._last_check_time = now
 
         logger.debug(f"Check cycle at {now.isoformat()}")
@@ -366,7 +387,7 @@ class GeneTraderDaemon:
             logger.warning(f"  Alert: {alert.alert_type.value} - {alert.message}")
 
         # Send notification (limit to 24 per day)
-        today = datetime.now().date()
+        today = utc_now().date()
         if today != self._alerts_date:
             self._alerts_date = today
             self._alerts_sent_today = 0
@@ -385,7 +406,7 @@ class GeneTraderDaemon:
         can_optimize = True
 
         if self._last_optimization_time:
-            elapsed = (datetime.now() - self._last_optimization_time).total_seconds()
+            elapsed = (utc_now() - self._last_optimization_time).total_seconds()
             if elapsed < self.optimize_interval:
                 can_optimize = False
                 logger.info(f"Skipping optimization: {elapsed/3600:.1f}h since last run")
@@ -399,7 +420,7 @@ class GeneTraderDaemon:
             )
 
             if task:
-                self._last_optimization_time = datetime.now()
+                self._last_optimization_time = utc_now()
                 send_notification(
                     self.settings,
                     "🔧 Optimization Scheduled",

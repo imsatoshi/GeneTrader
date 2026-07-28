@@ -194,6 +194,10 @@ class Settings:
         # RollbackConfig() never rolls back unattended. Operators who opt into
         # auto_rollback_enabled get unattended rollback unless they set this.
         self.rollback_require_confirmation = self.config.get('rollback_require_confirmation', False)
+        # External dead man's switch (e.g. healthchecks.io). The daemon pings it
+        # each cycle; the service alerts when pings stop, which is the only way
+        # a crashed daemon gets noticed. Empty disables heartbeats.
+        self.heartbeat_url = self.config.get('heartbeat_url', '')
 
         # Agent integration settings
         self.agent_api_enabled = self.config.get('agent_api_enabled', False)

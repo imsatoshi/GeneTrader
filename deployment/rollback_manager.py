@@ -9,6 +9,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 from utils.logging_config import logger
@@ -130,7 +131,7 @@ class RollbackManager:
             self._history = []
             for event_data in data.get('events', []):
                 self._history.append(RollbackEvent(
-                    timestamp=datetime.fromisoformat(event_data['timestamp']),
+                    timestamp=parse_utc(event_data['timestamp']),
                     strategy_name=event_data['strategy_name'],
                     from_version=event_data['from_version'],
                     to_version=event_data['to_version'],
@@ -201,7 +202,7 @@ class RollbackManager:
         # Check cooldown
         last_rollback = self._last_rollback_time.get(strategy_name)
         if last_rollback:
-            elapsed = (datetime.now() - last_rollback).total_seconds() / 60
+            elapsed = (utc_now() - last_rollback).total_seconds() / 60
             if elapsed < self.config.cooldown_minutes:
                 logger.debug(f"Rollback cooldown active for {strategy_name}")
                 return None
@@ -336,7 +337,7 @@ class RollbackManager:
         if not self._deploy_callback:
             logger.error(f"Rollback deploy callback required for {strategy_name}")
             event = RollbackEvent(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 strategy_name=strategy_name,
                 from_version=current.version_id,
                 to_version=previous_version,
@@ -359,7 +360,7 @@ class RollbackManager:
 
         # Create event
         event = RollbackEvent(
-            timestamp=datetime.now(),
+            timestamp=utc_now(),
             strategy_name=strategy_name,
             from_version=current.version_id,
             to_version=previous_version,
@@ -371,7 +372,7 @@ class RollbackManager:
 
         # Record rollback
         self._history.append(event)
-        self._last_rollback_time[strategy_name] = datetime.now()
+        self._last_rollback_time[strategy_name] = utc_now()
         self._save_history()
 
         # Notify
@@ -462,7 +463,7 @@ class RollbackManager:
         Returns:
             Number of rollbacks
         """
-        cutoff = datetime.now() - timedelta(hours=hours)
+        cutoff = utc_now() - timedelta(hours=hours)
 
         return sum(
             1 for e in self._history
@@ -475,7 +476,7 @@ class RollbackManager:
         if not last_rollback:
             return False
 
-        elapsed = (datetime.now() - last_rollback).total_seconds() / 60
+        elapsed = (utc_now() - last_rollback).total_seconds() / 60
         return elapsed < self.config.cooldown_minutes
 
     def get_cooldown_remaining(self, strategy_name: str) -> int:
@@ -492,7 +493,7 @@ class RollbackManager:
         if not last_rollback:
             return 0
 
-        elapsed = (datetime.now() - last_rollback).total_seconds() / 60
+        elapsed = (utc_now() - last_rollback).total_seconds() / 60
         remaining = self.config.cooldown_minutes - elapsed
 
         return max(0, int(remaining))

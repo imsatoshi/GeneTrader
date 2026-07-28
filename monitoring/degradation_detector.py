@@ -10,6 +10,7 @@ import math
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from utils.logging_config import logger
@@ -267,7 +268,7 @@ class DegradationDetector:
         if profit_ratio < self.profit_threshold:
             severity = AlertSeverity.CRITICAL if profit_ratio < 0.5 else AlertSeverity.WARNING
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.PROFIT_DECLINE,
                 severity=severity,
                 message=f"Profit at {profit_ratio:.1%} of baseline ({latest.total_profit_pct:.2%} vs {baseline_profit:.2%})",
@@ -290,7 +291,7 @@ class DegradationDetector:
         if win_rate_drop > self.win_rate_threshold:
             severity = AlertSeverity.CRITICAL if win_rate_drop > 0.25 else AlertSeverity.WARNING
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.WIN_RATE_DROP,
                 severity=severity,
                 message=f"Win rate dropped by {win_rate_drop:.1%} ({latest.win_rate:.1%} vs {baseline_win_rate:.1%})",
@@ -310,7 +311,7 @@ class DegradationDetector:
         # Absolute drawdown check
         if latest.max_drawdown > self.drawdown_threshold:
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.DRAWDOWN_INCREASE,
                 severity=AlertSeverity.CRITICAL,
                 message=f"Drawdown {latest.max_drawdown:.1%} exceeds threshold {self.drawdown_threshold:.1%}",
@@ -325,7 +326,7 @@ class DegradationDetector:
 
         if dd_ratio > self.drawdown_increase_threshold:
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.DRAWDOWN_INCREASE,
                 severity=AlertSeverity.WARNING,
                 message=f"Drawdown increased to {dd_ratio:.1f}x baseline ({latest.max_drawdown:.1%} vs {baseline_dd:.1%})",
@@ -351,7 +352,7 @@ class DegradationDetector:
 
         if freq_ratio < self.frequency_threshold:
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.TRADE_FREQUENCY_DROP,
                 severity=AlertSeverity.WARNING,
                 message=f"Trade frequency at {freq_ratio:.1%} of baseline ({current_freq:.1f}/day vs {baseline_freq:.1f}/day)",
@@ -409,7 +410,7 @@ class DegradationDetector:
 
         if cusum_neg < -threshold_value:
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.STATISTICAL_DEVIATION,
                 severity=AlertSeverity.WARNING,
                 message=f"CUSUM detected negative shift: {cusum_neg / std:.1f} standard deviations",
@@ -451,7 +452,7 @@ class DegradationDetector:
 
         if vol_ratio > 2.0:  # Volatility doubled
             return DegradationAlert(
-                timestamp=datetime.now(),
+                timestamp=utc_now(),
                 alert_type=AlertType.VOLATILITY_SPIKE,
                 severity=AlertSeverity.INFO,
                 message=f"Volatility increased to {vol_ratio:.1f}x historical",

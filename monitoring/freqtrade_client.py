@@ -10,6 +10,7 @@ import time
 import requests
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from typing import Any, Dict, List, Optional
 from utils.logging_config import logger
 
@@ -44,8 +45,10 @@ class Trade:
             trade_id=data.get('trade_id', 0),
             pair=data.get('pair', ''),
             is_open=data.get('is_open', False),
-            open_date=datetime.fromisoformat(data['open_date'].replace('Z', '+00:00')) if data.get('open_date') else datetime.now(),
-            close_date=datetime.fromisoformat(data['close_date'].replace('Z', '+00:00')) if data.get('close_date') else None,
+            # Freqtrade returns UTC, but some versions omit the offset. Normalise
+            # to aware UTC so these never get compared against a naive datetime.
+            open_date=parse_utc(data.get('open_date')) or utc_now(),
+            close_date=parse_utc(data.get('close_date')),
             open_rate=float(data.get('open_rate', 0)),
             close_rate=float(data.get('close_rate', 0)) if data.get('close_rate') else None,
             profit_ratio=float(data.get('profit_ratio', 0)),
@@ -128,7 +131,7 @@ class FreqtradeClient:
         """Get or refresh access token."""
         # Check if we have a valid token
         if self._access_token and self._token_expiry:
-            if datetime.now() < self._token_expiry - timedelta(minutes=5):
+            if utc_now() < self._token_expiry - timedelta(minutes=5):
                 return self._access_token
 
         # Get new token
@@ -147,7 +150,7 @@ class FreqtradeClient:
 
         self._access_token = response.json()['access_token']
         # Token typically expires in 15 minutes
-        self._token_expiry = datetime.now() + timedelta(minutes=15)
+        self._token_expiry = utc_now() + timedelta(minutes=15)
 
         logger.debug("Obtained new Freqtrade access token")
         return self._access_token

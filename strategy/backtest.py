@@ -54,6 +54,25 @@ def render_strategy(params: list, strategy_name: str) -> str:
     rendered_strategy = strategy_template.substitute(strategy_params)
     return rendered_strategy
 
+def _cleanup_backtest_artifacts(*paths: str) -> None:
+    """Delete per-candidate scratch files.
+
+    One backtest writes a rendered strategy and a temp config. A population of
+    30 over 30 generations leaves 1800 of them behind, and the daemon runs
+    indefinitely, so these accumulate until the disk fills. Result logs are
+    kept: they are the only record of what a candidate actually did.
+    """
+    for path in paths:
+        if not path:
+            continue
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            logger.warning(f"Could not remove temporary file {path}: {e}")
+
+
 def run_backtest(genes: list, trading_pairs: list, generation: int,
                  custom_timerange: str = None, num_parameters: int = 0) -> float:
     """
@@ -134,6 +153,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int,
         "--cache", "none"
     ]
 
+    backtest_succeeded = False
     for attempt in range(settings.max_retries):
         logger.info(f"Running backtest command (attempt {attempt + 1}/{settings.max_retries})")
         try:
@@ -147,6 +167,7 @@ def run_backtest(genes: list, trading_pairs: list, generation: int,
 
             if result.returncode == 0:
                 logger.info(f"Backtesting successful for generation {generation}")
+                backtest_succeeded = True
                 break
             else:
                 if attempt < settings.max_retries - 1:
@@ -161,7 +182,20 @@ def run_backtest(genes: list, trading_pairs: list, generation: int,
             if attempt < settings.max_retries - 1:
                 time.sleep(settings.retry_delay)
     
-    parsed_result = parse_backtest_results(output_file)
+    if not backtest_succeeded:
+        # Every retry failed: the output file holds a partial or empty log, so
+        # parsing it would score this candidate on noise rather than results.
+        logger.error(
+            f"Backtesting failed after {settings.max_retries} attempts for generation "
+            f"{generation} (strategy {strategy_name})"
+        )
+        _cleanup_backtest_artifacts(strategy_file, config_file_name)
+        return float('-inf')
+
+    try:
+        parsed_result = parse_backtest_results(output_file)
+    finally:
+        _cleanup_backtest_artifacts(strategy_file, config_file_name)
 
     if parsed_result['total_trades'] == 0:
         return float('-inf')  # Heavily penalize strategies that don't trade

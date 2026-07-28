@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now
 from unittest.mock import MagicMock, patch
 
 from adaptive.weighted_optimizer import (
@@ -210,7 +211,7 @@ class TestAdaptiveOptimizer(unittest.TestCase):
     def test_state_persistence(self):
         """Test state is saved and loaded."""
         self.optimizer.start()
-        self.optimizer._last_optimization_time = datetime.now()
+        self.optimizer._last_optimization_time = utc_now()
         self.optimizer._save_state()
 
         # Create new instance
@@ -267,7 +268,7 @@ class TestOptimizationScheduler(unittest.TestCase):
 
         # Critical tasks should be scheduled for now
         self.assertLessEqual(
-            (task.scheduled_time - datetime.now()).total_seconds(),
+            (task.scheduled_time - utc_now()).total_seconds(),
             60  # Within a minute
         )
 
@@ -370,7 +371,7 @@ class TestScheduledOptimization(unittest.TestCase):
         task = ScheduledOptimization(
             id="test_123",
             strategy_name="TestStrategy",
-            scheduled_time=datetime.now(),
+            scheduled_time=utc_now(),
             priority=SchedulePriority.HIGH,
             trigger_reason="degradation"
         )

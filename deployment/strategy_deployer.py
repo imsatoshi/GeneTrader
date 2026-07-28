@@ -10,6 +10,7 @@ import shutil
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 from utils.logging_config import logger
@@ -199,7 +200,7 @@ class StrategyDeployer:
             return None
 
         # Create backup
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = utc_now().strftime("%Y%m%d_%H%M%S")
         backup_file = os.path.join(
             self.backup_dir,
             f"{strategy_name}_{timestamp}.py"
@@ -273,7 +274,7 @@ class StrategyDeployer:
             status=DeploymentStatus.PENDING,
             version_id=version_id,
             strategy_name=strategy_name,
-            started_at=datetime.now(),
+            started_at=utc_now(),
             total_phases=1
         )
 
@@ -282,16 +283,16 @@ class StrategyDeployer:
         try:
             # Step 1: Validation
             result.status = DeploymentStatus.VALIDATING
-            result.notes.append(f"[{datetime.now().isoformat()}] Starting validation")
+            result.notes.append(f"[{utc_now().isoformat()}] Starting validation")
 
             is_valid, message = self.validate_strategy(strategy_name, version_id)
             if not is_valid:
                 result.status = DeploymentStatus.FAILED
                 result.error_message = message
-                result.notes.append(f"[{datetime.now().isoformat()}] Validation failed: {message}")
+                result.notes.append(f"[{utc_now().isoformat()}] Validation failed: {message}")
                 return result
 
-            result.notes.append(f"[{datetime.now().isoformat()}] Validation passed")
+            result.notes.append(f"[{utc_now().isoformat()}] Validation passed")
 
             # Update version status
             self.version_control.update_status(
@@ -300,7 +301,7 @@ class StrategyDeployer:
 
             # Step 2: Approval (if required)
             if config.require_approval:
-                result.notes.append(f"[{datetime.now().isoformat()}] Waiting for approval")
+                result.notes.append(f"[{utc_now().isoformat()}] Waiting for approval")
 
                 if self._approval_callback:
                     approved = self._approval_callback(strategy_name, version_id)
@@ -313,25 +314,25 @@ class StrategyDeployer:
                     result.status = DeploymentStatus.FAILED
                     result.error_message = "Deployment approval callback required"
                     result.notes.append(
-                        f"[{datetime.now().isoformat()}] Approval callback missing; failing closed"
+                        f"[{utc_now().isoformat()}] Approval callback missing; failing closed"
                     )
                     return result
 
-                result.notes.append(f"[{datetime.now().isoformat()}] Approved")
+                result.notes.append(f"[{utc_now().isoformat()}] Approved")
 
             if config.shadow_trading_hours > 0:
                 result.notes.append(
-                    f"[{datetime.now().isoformat()}] Shadow trading not executed by StrategyDeployer"
+                    f"[{utc_now().isoformat()}] Shadow trading not executed by StrategyDeployer"
                 )
             if config.gradual_rollout:
                 result.notes.append(
-                    f"[{datetime.now().isoformat()}] Gradual rollout not executed by StrategyDeployer"
+                    f"[{utc_now().isoformat()}] Gradual rollout not executed by StrategyDeployer"
                 )
 
             # Step 3: Backup current strategy
             backup_path = self.backup_current_strategy(strategy_name)
             if backup_path:
-                result.notes.append(f"[{datetime.now().isoformat()}] Backed up to {backup_path}")
+                result.notes.append(f"[{utc_now().isoformat()}] Backed up to {backup_path}")
 
             # Step 4: Deploy
             result.status = DeploymentStatus.DEPLOYING
@@ -342,7 +343,7 @@ class StrategyDeployer:
                 result.error_message = "Failed to deploy strategy file"
                 return result
 
-            result.notes.append(f"[{datetime.now().isoformat()}] Strategy file deployed")
+            result.notes.append(f"[{utc_now().isoformat()}] Strategy file deployed")
 
             # Update version status to deployed
             self.version_control.update_status(
@@ -353,18 +354,18 @@ class StrategyDeployer:
             self.version_control.set_active(strategy_name, version_id)
 
             result.status = DeploymentStatus.MONITORING
-            result.notes.append(f"[{datetime.now().isoformat()}] Deployment completed, entering monitoring phase")
+            result.notes.append(f"[{utc_now().isoformat()}] Deployment completed, entering monitoring phase")
 
             # Mark as completed
             result.status = DeploymentStatus.COMPLETED
-            result.completed_at = datetime.now()
+            result.completed_at = utc_now()
 
             logger.info(f"Successfully deployed {strategy_name} {version_id}")
 
         except Exception as e:
             result.status = DeploymentStatus.FAILED
             result.error_message = str(e)
-            result.notes.append(f"[{datetime.now().isoformat()}] Error: {e}")
+            result.notes.append(f"[{utc_now().isoformat()}] Error: {e}")
             logger.error(f"Deployment failed: {e}")
 
         return result
@@ -440,7 +441,7 @@ class StrategyDeployer:
 
         self._current_deployment.status = DeploymentStatus.FAILED
         self._current_deployment.error_message = "Deployment cancelled"
-        self._current_deployment.completed_at = datetime.now()
+        self._current_deployment.completed_at = utc_now()
 
         # Update version status
         self.version_control.update_status(
@@ -494,7 +495,7 @@ class GradualRolloutManager:
             True if rollout started
         """
         self._current_phase = 0
-        self._phase_start_time = datetime.now()
+        self._phase_start_time = utc_now()
         self._rollout_active = True
 
         logger.info(f"Started gradual rollout: {strategy_name} {version_id}")
@@ -507,7 +508,7 @@ class GradualRolloutManager:
         if not self._rollout_active or not self._phase_start_time:
             return False
 
-        elapsed = datetime.now() - self._phase_start_time
+        elapsed = utc_now() - self._phase_start_time
         return elapsed >= timedelta(hours=self.phase_duration_hours)
 
     def advance_phase(self) -> bool:
@@ -521,7 +522,7 @@ class GradualRolloutManager:
             return False
 
         self._current_phase += 1
-        self._phase_start_time = datetime.now()
+        self._phase_start_time = utc_now()
 
         if self._current_phase >= len(self.phases):
             self._rollout_active = False

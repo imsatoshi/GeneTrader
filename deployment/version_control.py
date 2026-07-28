@@ -11,6 +11,7 @@ import os
 import shutil
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
+from utils.time_utils import utc_now, to_utc, parse_utc
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from utils.logging_config import logger
@@ -60,12 +61,12 @@ class StrategyVersion:
     def from_dict(cls, data: Dict[str, Any]) -> 'StrategyVersion':
         """Create from dictionary."""
         data = data.copy()
-        data['created_at'] = datetime.fromisoformat(data['created_at'])
+        data['created_at'] = parse_utc(data['created_at'])
         data['status'] = VersionStatus(data['status'])
         if data.get('deployed_at'):
-            data['deployed_at'] = datetime.fromisoformat(data['deployed_at'])
+            data['deployed_at'] = parse_utc(data['deployed_at'])
         if data.get('deactivated_at'):
-            data['deactivated_at'] = datetime.fromisoformat(data['deactivated_at'])
+            data['deactivated_at'] = parse_utc(data['deactivated_at'])
         return cls(**data)
 
 
@@ -220,7 +221,7 @@ class StrategyVersionControl:
         version = StrategyVersion(
             version_id=version_id,
             strategy_name=strategy_name,
-            created_at=datetime.now(),
+            created_at=utc_now(),
             status=VersionStatus.CREATED,
             file_path=dest_file,
             file_hash=file_hash,
@@ -291,9 +292,9 @@ class StrategyVersionControl:
 
                 # Track deployment/deactivation times
                 if status == VersionStatus.DEPLOYED or status == VersionStatus.ACTIVE:
-                    v.deployed_at = datetime.now()
+                    v.deployed_at = utc_now()
                 elif status in [VersionStatus.ROLLED_BACK, VersionStatus.DEPRECATED]:
-                    v.deactivated_at = datetime.now()
+                    v.deactivated_at = utc_now()
 
                 self._save_versions(strategy_name, versions)
                 logger.info(f"Updated {strategy_name} {version_id}: {old_status.value} -> {status.value}")
@@ -331,11 +332,11 @@ class StrategyVersionControl:
         for v in versions:
             if v.status == VersionStatus.ACTIVE and v.version_id != version_id:
                 v.status = VersionStatus.DEPLOYED
-                v.deactivated_at = datetime.now()
+                v.deactivated_at = utc_now()
 
         # Activate target
         target.status = VersionStatus.ACTIVE
-        target.deployed_at = datetime.now()
+        target.deployed_at = utc_now()
 
         self._save_versions(strategy_name, versions)
         logger.info(f"Set {strategy_name} {version_id} as active")

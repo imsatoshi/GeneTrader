@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 from typing import List, Optional, Tuple
 from datetime import datetime, date
@@ -29,7 +30,8 @@ def load_trading_pairs(config_file: str) -> List[str]:
 
 
 def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
-                     initial_individuals: Optional[List[Individual]] = None) -> List[Tuple[int, Individual]]:
+                     initial_individuals: Optional[List[Individual]] = None,
+                     resume: bool = False) -> List[Tuple[int, Individual]]:
     """
     Run optimization using the specified optimizer.
 
@@ -37,6 +39,7 @@ def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
         settings: Settings object containing optimization configuration
         optimizer_type: Type of optimizer to use ('genetic' or 'optuna')
         initial_individuals: Optional list of initial individuals
+        resume: Resume the genetic optimizer from its latest checkpoint
 
     Returns:
         List of (generation/trial, best_individual) tuples
@@ -50,12 +53,29 @@ def run_optimization(settings: Settings, optimizer_type: str = 'genetic',
             optimizer_type = 'genetic'
         else:
             logger.info("Using Optuna optimizer")
+            if resume:
+                logger.warning("--resume is not supported by the Optuna optimizer; starting fresh")
             optimizer = OptunaOptimizer(settings, settings.parameters, all_pairs)
             return optimizer.optimize(initial_individuals)
 
     logger.info("Using Genetic Algorithm optimizer")
     optimizer = GeneticOptimizer(settings, settings.parameters, all_pairs)
-    return optimizer.optimize(initial_individuals)
+
+    if getattr(settings, 'enable_walk_forward', False):
+        logger.info("Walk-forward validation enabled")
+        best_individuals, validation = optimizer.optimize_with_walk_forward(initial_individuals)
+        if validation:
+            logger.info(
+                f"Walk-forward validation: composite fitness "
+                f"{validation.get('composite_fitness', float('nan')):.4f} "
+                f"over {validation.get('num_folds', 0)} folds"
+            )
+        return best_individuals
+
+    best_individuals = optimizer.optimize(initial_individuals, resume=resume)
+    # A completed run invalidates the checkpoint; keep it only for crashes.
+    optimizer.clear_checkpoint()
+    return best_individuals
 
 
 def save_best_individual(individual: Individual, generation: int, settings: Settings):
@@ -81,6 +101,11 @@ def main():
     parser.add_argument('--optimizer', type=str, default='genetic', choices=['genetic', 'optuna'],
                         help='Optimizer to use: genetic (default) or optuna')
     args = parser.parse_args()
+
+    # Worker processes and lazily-imported modules read the global settings
+    # singleton, which loads GENETRADER_CONFIG (default ga.json). Without this,
+    # --config would drive the GA loop while backtests silently use ga.json.
+    os.environ['GENETRADER_CONFIG'] = args.config
 
     try:
         # Initialize settings
@@ -111,7 +136,7 @@ def main():
 
         # Run optimization
         logger.info(f"Starting optimization with {optimizer_type} optimizer")
-        best_individuals = run_optimization(settings, optimizer_type)
+        best_individuals = run_optimization(settings, optimizer_type, resume=args.resume)
 
         # Save best individuals
         for gen, ind in best_individuals:

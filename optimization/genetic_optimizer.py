@@ -9,6 +9,8 @@ Features:
 - Elitism to preserve best solutions
 """
 import gc
+import os
+import pickle
 import random
 import multiprocessing
 from typing import List, Tuple, Any, Dict, Optional
@@ -69,7 +71,64 @@ class GeneticOptimizer(BaseOptimizer):
 
         return population
 
-    def optimize(self, initial_individuals: List[Individual] = None) -> List[Tuple[int, Individual]]:
+    def _checkpoint_path(self, checkpoint_name: str) -> str:
+        """Path of the checkpoint file inside the configured checkpoint dir."""
+        return os.path.join(self.settings.checkpoint_dir, f"{checkpoint_name}.pkl")
+
+    def _save_checkpoint(self, checkpoint_name: str, next_generation: int,
+                         population: Population,
+                         best_individuals: List[Tuple[int, Individual]]) -> None:
+        """Persist optimizer state so --resume can continue after a crash."""
+        path = self._checkpoint_path(checkpoint_name)
+        state = {
+            'next_generation': next_generation,
+            'individuals': population.individuals,
+            'best_individuals': best_individuals,
+            'overall_best': self.best_individual,
+            'random_state': random.getstate(),
+            'population_size': self.settings.population_size,
+            'generations': self.settings.generations,
+        }
+        tmp_path = path + '.tmp'
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(tmp_path, 'wb') as f:
+            pickle.dump(state, f)
+        os.replace(tmp_path, path)
+        logger.info(f"Checkpoint saved: {path} (next generation: {next_generation + 1})")
+
+    def _load_checkpoint(self, checkpoint_name: str) -> Optional[Dict[str, Any]]:
+        """Load a checkpoint if one exists and matches the current run shape."""
+        path = self._checkpoint_path(checkpoint_name)
+        if not os.path.exists(path):
+            logger.info(f"No checkpoint found at {path}; starting fresh")
+            return None
+        try:
+            with open(path, 'rb') as f:
+                state = pickle.load(f)
+        except Exception as e:
+            logger.error(f"Failed to load checkpoint {path}: {e}; starting fresh")
+            return None
+        if state.get('population_size') != self.settings.population_size:
+            logger.warning(
+                "Checkpoint population_size does not match current settings; starting fresh"
+            )
+            return None
+        if state.get('next_generation', 0) >= self.settings.generations:
+            logger.warning("Checkpoint is already past the final generation; starting fresh")
+            return None
+        return state
+
+    def clear_checkpoint(self, checkpoint_name: str = 'ga_checkpoint') -> None:
+        """Remove the checkpoint after a fully completed run."""
+        path = self._checkpoint_path(checkpoint_name)
+        if os.path.exists(path):
+            os.remove(path)
+            logger.info(f"Checkpoint removed: {path}")
+
+    def optimize(self, initial_individuals: List[Individual] = None,
+                 timerange: Optional[str] = None,
+                 resume: bool = False,
+                 checkpoint_name: Optional[str] = 'ga_checkpoint') -> List[Tuple[int, Individual]]:
         """
         Run genetic algorithm optimization with anti-overfitting measures.
 
@@ -77,27 +136,50 @@ class GeneticOptimizer(BaseOptimizer):
         - Diversity-aware selection to prevent premature convergence
         - Elitism to preserve best solutions
         - Population diversity maintenance
+        - Periodic checkpointing (resume with resume=True)
 
         Args:
             initial_individuals: Optional list of initial individuals to seed the population
+            timerange: Optional freqtrade timerange (e.g. "20240101-20240301") used
+                for every backtest in this run; None uses the configured recent window
+            resume: Resume from the latest checkpoint if one exists
+            checkpoint_name: Base name for checkpoint files; None disables checkpointing
 
         Returns:
             List of tuples containing (generation number, best individual)
         """
-        # Calculate population size accounting for initial individuals
-        population_size = self.settings.population_size - len(initial_individuals or [])
-        population = self._create_population(population_size, initial_individuals)
+        best_individuals: List[Tuple[int, Individual]] = []
+        start_generation = 0
+        population = None
 
-        best_individuals = []
+        if resume and checkpoint_name:
+            state = self._load_checkpoint(checkpoint_name)
+            if state:
+                start_generation = state['next_generation']
+                best_individuals = state['best_individuals']
+                self.best_individual = state['overall_best']
+                population = Population(state['individuals'])
+                random.setstate(state['random_state'])
+                logger.info(f"Resumed from checkpoint at generation {start_generation + 1}")
+
+        if population is None:
+            # Calculate population size accounting for initial individuals
+            population_size = self.settings.population_size - len(initial_individuals or [])
+            population = self._create_population(population_size, initial_individuals)
+
         num_parameters = len(self.parameters)
+        checkpoint_frequency = getattr(self.settings, 'checkpoint_frequency', 0)
 
         # Check if diversity selection is enabled
         enable_diversity = getattr(self.settings, 'enable_diversity_selection', False)
         diversity_weight = getattr(self.settings, 'diversity_selection_weight', 0.3)
         diversity_threshold = getattr(self.settings, 'diversity_threshold', 0.1)
 
-        with multiprocessing.Pool(processes=self.settings.pool_processes) as pool:
-            for gen in range(self.settings.generations):
+        pool_processes = getattr(self.settings, 'pool_processes', 1)
+        pool = multiprocessing.Pool(processes=pool_processes) if pool_processes > 1 else None
+
+        try:
+            for gen in range(start_generation, self.settings.generations):
                 logger.info(f"Generation {gen+1}")
 
                 # Log population diversity
@@ -105,13 +187,16 @@ class GeneticOptimizer(BaseOptimizer):
                     diversity = calculate_population_diversity(population.individuals)
                     logger.info(f"Population diversity: {diversity:.4f}")
 
-                # Evaluate fitness in parallel
+                # Evaluate fitness (in parallel when pool_processes > 1)
+                eval_args = [
+                    (ind.genes, ind.trading_pairs, gen + 1, timerange, num_parameters)
+                    for ind in population.individuals
+                ]
                 try:
-                    fitnesses = pool.starmap(
-                        run_backtest,
-                        [(ind.genes, ind.trading_pairs, gen+1, None, num_parameters)
-                         for ind in population.individuals]
-                    )
+                    if pool is not None:
+                        fitnesses = pool.starmap(run_backtest, eval_args)
+                    else:
+                        fitnesses = [run_backtest(*args) for args in eval_args]
 
                     for ind, fit in zip(population.individuals, fitnesses):
                         ind.fitness = fit if fit is not None else float('-inf')
@@ -127,6 +212,10 @@ class GeneticOptimizer(BaseOptimizer):
                             ind.fitness = float('-inf')
                 except Exception as e:
                     logger.error(f"Unexpected error in generation {gen+1}: {type(e).__name__}: {str(e)}")
+                    # A failed evaluation must not leave individuals carrying
+                    # fitness inherited from a previous generation's genes.
+                    for ind in population.individuals:
+                        ind.fitness = float('-inf')
 
                 # Filter out individuals with negative or None fitness
                 valid_individuals = [
@@ -206,7 +295,14 @@ class GeneticOptimizer(BaseOptimizer):
 
                 logger.info(f"Best individual in generation {gen+1}: Fitness: {best_individual.fitness:.4f}")
 
+                if checkpoint_name and checkpoint_frequency and (gen + 1) % checkpoint_frequency == 0:
+                    self._save_checkpoint(checkpoint_name, gen + 1, population, best_individuals)
+
                 gc.collect()
+        finally:
+            if pool is not None:
+                pool.terminate()
+                pool.join()
 
         return best_individuals
 
@@ -302,10 +398,14 @@ class GeneticOptimizer(BaseOptimizer):
         initial_individuals: List[Individual],
         fold_name: str
     ) -> List[Tuple[int, Individual]]:
-        """Run optimization for a single fold."""
-        # This would need to be implemented to run backtest with custom timerange
-        # For now, we use the standard optimize method
-        return self.optimize(initial_individuals)
+        """Run optimization for a single fold on that fold's training window."""
+        # Folds do not checkpoint: fold state is cheap to recompute and a shared
+        # checkpoint file would mix populations from different time windows.
+        return self.optimize(
+            initial_individuals,
+            timerange=timerange,
+            checkpoint_name=None,
+        )
 
     def _evaluate_on_period(self, individual: Individual, timerange: str) -> float:
         """Evaluate an individual on a specific time period."""

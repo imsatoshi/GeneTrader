@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 from datetime import datetime, timedelta
+from utils.time_utils import utc_now
 from unittest.mock import MagicMock, patch
 
 from deployment.version_control import (
@@ -372,7 +373,7 @@ class TestShadowTrader(unittest.TestCase):
             strategy_name="TestStrategy",
             version_id="v1",
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
+            started_at=utc_now(),
             total_trades=20,
             winning_trades=12,
             losing_trades=8,
@@ -399,7 +400,7 @@ class TestShadowTrader(unittest.TestCase):
             strategy_name="TestStrategy",
             version_id="v1",
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
+            started_at=utc_now(),
             total_trades=3,  # Too few trades
             win_rate=0.3,    # Too low
             max_drawdown=0.30,  # Too high
@@ -424,8 +425,8 @@ class TestShadowTrader(unittest.TestCase):
             strategy_name="TestStrategy",
             version_id="v1",
             status=ShadowStatus.COMPLETED,
-            started_at=datetime.now(),
-            ended_at=datetime.now(),
+            started_at=utc_now(),
+            ended_at=utc_now(),
             total_trades=20,
             win_rate=0.6,
         )
