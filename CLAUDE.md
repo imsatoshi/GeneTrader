@@ -1,173 +1,101 @@
-# Claude Code Integration for GeneTrader
+# GeneTrader
 
-This document describes how Claude Code can interact with the GeneTrader adaptive optimization system.
+Parameter search for Freqtrade strategies. A genetic algorithm (or Optuna)
+proposes strategy parameters and trading pairs, runs each candidate through a
+Freqtrade backtest, and scores the result with a fitness function tuned against
+overfitting.
 
-## Quick Start
+**This repository does not trade.** It produces candidate strategy files and
+scores; deploying anything to a live bot is a manual step taken outside it.
+There is no monitoring, no auto-deployment, and no rollback here by design —
+that layer was removed once it became clear the live bot is curated by hand.
+
+## Running a search
 
 ```bash
-# Check current strategy performance
-python run_adaptive.py --strategy GeneTrader --check-only
-
-# Start adaptive monitoring with Agent API
-python run_adaptive.py --strategy GeneTrader --api-port 8090
+cp ga.json.example ga.json          # then edit paths and search settings
+python main.py                       # genetic algorithm (default)
+python main.py --optimizer optuna    # TPE search, better for high dimensions
+python main.py --download --start-date 20240101
+python main.py --resume              # continue from the latest checkpoint
 ```
 
-## Architecture Overview
+Results land in `results_dir`, the best individual per generation in
+`best_generations_dir`, and checkpoints in `checkpoint_dir`. A completed run
+clears its checkpoint; a crashed one leaves it for `--resume`.
 
-GeneTrader uses an on-the-fly optimization system that:
-1. **Monitors** live trading performance from Freqtrade
-2. **Detects** strategy degradation using statistical methods (CUSUM, SPC)
-3. **Optimizes** with time-weighted recent data when degradation is detected
-4. **Deploys** safely with shadow trading and gradual rollout
-5. **Rollbacks** automatically if new strategy underperforms
+`--config` sets `GENETRADER_CONFIG` for the worker processes, so a custom
+config applies to the backtests as well as the search loop.
 
-## Claude Code Workflow
+## Reading the output
 
-When the user asks about trading strategy performance or optimization:
+Two numbers matter more than the raw winner.
 
-### 1. Check Strategy Performance
+**Selection bar.** Evaluating N candidates and reporting the best means running
+N experiments and publishing the winner; part of that score is the luck of
+being luckiest of N. Each generation logs what the best of N zero-skill
+candidates would have been expected to reach, given the spread the search
+actually produced:
+
 ```bash
-python run_adaptive.py --strategy <STRATEGY_NAME> --check-only
+python scripts/selection_bar.py --per-generation
 ```
 
-This returns JSON with:
-- `status`: "healthy" or "degraded"
-- `degradation_score`: 0-1 (higher = worse)
-- `alerts`: List of detected issues
-- `recommendation`: Suggested action
-- `current_metrics`: Latest performance data
+A winner below its own bar has not beaten noise. Clearing it is necessary, not
+sufficient — evaluations inside a GA are not independent trials, and fitness is
+not normally distributed. Treat it as a screen.
 
-### 2. Analyze Degradation
-If degradation is detected, analyze the alerts:
-- `PROFIT_DECLINE`: Profit fell below baseline
-- `WIN_RATE_DROP`: Win rate dropped significantly
-- `DRAWDOWN_INCREASE`: Drawdown exceeds threshold
-- `CONSECUTIVE_LOSSES`: Too many losing trades in a row
+**Walk-forward.** Set `enable_walk_forward: true` to train each fold on its own
+historical window and score it on the following out-of-sample window. This is
+the real test for curve-fitting and the reason to prefer it over a single
+recent-window search. It costs one full GA run per fold.
 
-### 3. Trigger Optimization (if appropriate)
-```bash
-python run_adaptive.py --strategy <STRATEGY_NAME> --force-optimize
-```
+## Fitness
 
-Only trigger optimization if:
-- Degradation score > 0.3
-- At least 20 trades in evaluation window
-- More than 3 days since last optimization
+`strategy/evaluation.py` scores a backtest on seven weighted components
+(profit, risk-adjusted return, drawdown, win rate, trade frequency, statistical
+confidence, duration) and applies a complexity penalty.
 
-### 4. Monitor Optimization Progress
-If Agent API is running (port 8090), use:
-```bash
-curl -H "X-API-Key: <API_KEY>" http://localhost:8090/api/v1/optimization/status
-```
+Candidates are disqualified outright — before scoring — when they trade too
+little for the result to mean anything, exceed `max_drawdown_limit`, fall below
+`min_profit_factor`, or fall below `min_win_rate`. Those three thresholds come
+from the config, so tightening them in `ga.json` changes which candidates
+survive.
 
-### 5. Approve/Reject Deployment
-When new strategy is ready for deployment:
-```bash
-# Approve
-curl -X POST -H "X-API-Key: <API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"request_id": "<REQUEST_ID>"}' \
-  http://localhost:8090/api/v1/deployment/approve
+Watch for backtests reporting max drawdown 0 **and** profit factor 0 **and** a
+perfect win rate. Freqtrade prints that when it has no losing trade to divide
+by, which usually means the strategy never closes a loser and the risk is
+sitting in open positions the summary cannot see. The profit-factor
+disqualification rejects them; `scripts/selection_bar.py` filters them out of
+its statistics and reports how many it dropped.
 
-# Reject
-curl -X POST -H "X-API-Key: <API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"request_id": "<REQUEST_ID>", "reason": "Insufficient improvement"}' \
-  http://localhost:8090/api/v1/deployment/reject
-```
-
-## Decision Guidelines for Claude
-
-### When to Recommend Optimization
-- Profit declined > 50% from baseline
-- Win rate dropped > 15% from baseline
-- Drawdown exceeds 20%
-- 5+ consecutive losing trades
-
-### When to Approve Deployment
-- New strategy shows > 20% improvement in backtest
-- Drawdown is lower or similar
-- Win rate is maintained or improved
-- Shadow trading validation passed
-
-### When to Reject Deployment
-- Improvement < 10%
-- Drawdown increased significantly
-- Win rate dropped
-- Insufficient backtest trades
-
-### When to Recommend Rollback
-- Live drawdown exceeds 15%
-- 5+ consecutive losses in live trading
-- Performance significantly worse than shadow testing
-
-## API Endpoints Reference
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/health` | GET | Health check |
-| `/api/v1/status` | GET | System status |
-| `/api/v1/metrics?strategy=X&hours=168` | GET | Performance metrics |
-| `/api/v1/versions?strategy=X` | GET | Strategy versions |
-| `/api/v1/optimization/status` | GET | Optimization status |
-| `/api/v1/approvals/pending` | GET | Pending approvals |
-| `/api/v1/optimization/trigger` | POST | Trigger optimization |
-| `/api/v1/deployment/approve` | POST | Approve deployment |
-| `/api/v1/deployment/reject` | POST | Reject deployment |
-| `/api/v1/rollback` | POST | Trigger rollback |
-
-## Configuration
-
-Key settings in `ga.json`:
-```json
-{
-  "adaptive_optimization_enabled": true,
-  "performance_check_interval_minutes": 5,
-  "degradation_check_interval_minutes": 60,
-  "reoptimization_trigger_threshold": 0.3,
-  "minimum_trades_for_evaluation": 20,
-  "minimum_days_between_optimizations": 3,
-  "recent_data_weight": 0.7,
-  "shadow_trading_hours": 24,
-  "auto_rollback_enabled": true,
-  "rollback_drawdown_threshold": 0.15,
-  "agent_api_enabled": true,
-  "agent_api_port": 8090,
-  "agent_approval_required_for_deployment": true
-}
-```
-
-## Files Structure
+## Layout
 
 ```
-monitoring/           # Live performance monitoring
-  freqtrade_client.py   # Freqtrade API client
-  performance_monitor.py # Metrics collection
-  degradation_detector.py # Statistical detection
-
-deployment/           # Safe deployment
-  version_control.py    # Strategy versioning
-  strategy_deployer.py  # Deployment pipeline
-  rollback_manager.py   # Auto-rollback
-
-adaptive/             # Adaptive optimization
-  adaptive_optimizer.py # Main orchestrator
-  weighted_optimizer.py # Time-weighted optimization
-  scheduler.py          # Rate limiting & scheduling
-
-agent_api/            # External API
-  api_server.py         # REST API
-  websocket_manager.py  # Real-time updates
-  auth.py               # Authentication
+main.py                  entry point
+optimization/            GA and Optuna drivers, checkpointing, walk-forward folds
+genetic_algorithm/       individuals, population, crossover/mutation/selection
+strategy/
+  backtest.py            renders a candidate and shells out to Freqtrade
+  evaluation.py          parses backtest output, computes fitness
+  gen_template.py        builds a strategy file from the base template
+  walk_forward.py        fold generation
+  selection_bar.py       expected best-of-N under no skill
+  robustness.py          parameter sensitivity, Monte Carlo
+scripts/
+  selection_bar.py       report the bar from fitness logs
+  workflow.py            end-to-end run: optimize, compare, notify
+  get_pairs.py           refresh the pair whitelist from Binance
+  monitor_delistings.py  watch for delisting announcements
+config/settings.py       config loading and validation
 ```
 
-## Example Session
+## When helping with this repository
 
-User: "检查我的策略表现如何"
-
-Claude should run:
-```bash
-python run_adaptive.py --strategy GeneTrader --check-only
-```
-
-Then analyze the output and provide recommendations based on the decision guidelines above.
+- Backtests shell out to Freqtrade and take minutes each. A default search is
+  hundreds of them. Never launch a full run to test a change; patch
+  `run_backtest` instead, as `tests/test_ga_core.py` does.
+- `tests/` runs without a `ga.json` — `conftest.py` falls back to
+  `ga.json.example`. Keep it that way.
+- The strategy file in `strategies/` is generated. The source of truth is
+  `base_strategy_file` in the config, which lives outside this repository.

@@ -24,6 +24,7 @@ from genetic_algorithm.operators import (
 )
 from strategy.backtest import run_backtest
 from strategy.walk_forward import WalkForwardValidator, create_validator_from_settings
+from strategy.selection_bar import from_fitnesses as selection_bar
 from utils.logging_config import logger
 
 
@@ -294,6 +295,15 @@ class GeneticOptimizer(BaseOptimizer):
                     self.best_individual = best_individual
 
                 logger.info(f"Best individual in generation {gen+1}: Fitness: {best_individual.fitness:.4f}")
+
+                # How good would the best of this many candidates have looked
+                # anyway? A winner below its own bar has not beaten noise.
+                bar = selection_bar(
+                    [ind.fitness for ind in population.individuals],
+                    n_trials=(gen + 1) * self.settings.population_size,
+                )
+                if bar:
+                    logger.info(f"Generation {gen+1} {bar.summary()}")
 
                 if checkpoint_name and checkpoint_frequency and (gen + 1) % checkpoint_frequency == 0:
                     self._save_checkpoint(checkpoint_name, gen + 1, population, best_individuals)
